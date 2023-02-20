@@ -7,12 +7,12 @@ class LocalExec:
                  collect_output=True,
                  cwd=None,
                  stdin=None,
-                 do_async=False,
+                 exec_async=False,
                  sleep_ms=0):
         self.cmd = cmd
         self.sudo = sudo
         self.stdin = stdin
-        self.do_async = do_async
+        self.exec_async = exec_async
         self.sleep_ms = sleep_ms
         self.collect_output = collect_output
         if cwd is None:
@@ -43,6 +43,8 @@ class LocalExec:
         self.stdout = self.stdout.decode("utf-8")
         self.stderr = self.stderr.decode("utf-8")
         self.exit_code = self.proc.returncode
+        if not self.exec_async:
+            self.wait()
 
     def kill(self):
         if self.proc is not None:
