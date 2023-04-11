@@ -9,6 +9,7 @@ class LocalExec:
                  sudo=False,
                  collect_output=None,
                  cwd=None,
+                 env=None,
                  stdin=None,
                  exec_async=False,
                  sleep_ms=0):
@@ -17,6 +18,7 @@ class LocalExec:
             collect_output = jutil.collect_output
         self.cmd = cmd
         self.sudo = sudo
+        self.env = env
         self.stdin = stdin
         self.exec_async = exec_async
         self.sleep_ms = sleep_ms
@@ -37,6 +39,7 @@ class LocalExec:
             self.proc = subprocess.Popen(self.cmd,
                                          stdin=self.stdin,
                                          cwd=self.cwd,
+                                         env=self.env,
                                          shell=True)
         else:
             self.proc = subprocess.Popen(self.cmd,
@@ -44,6 +47,7 @@ class LocalExec:
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE,
                                          cwd=self.cwd,
+                                         env=self.env,
                                          shell=True)
         self.stdout, self.stderr = self.proc.communicate()
         self.stdout = self.stdout.decode("utf-8")

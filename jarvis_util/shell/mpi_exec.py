@@ -2,7 +2,7 @@ from jarvis_util.shell.local_exec import LocalExec
 
 
 class MpiExec(LocalExec):
-    def __init__(self, nprocs, cmd, ppn=None, env=None):
+    def __init__(self, cmd, nprocs=1, ppn=None, env=None):
         self.nprocs = nprocs
         self.ppn = ppn
         self.cmd = cmd
