@@ -16,5 +16,6 @@ class MpiExec(LocalExec):
         if self.ppn is not None:
             params.append(f"-ppn {self.ppn}")
         params += [f"-genv {key}={val}" for key, val in self.env.items()]
+        params.append(self.cmd)
         cmd = " ".join(params)
         return cmd
