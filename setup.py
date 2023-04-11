@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name="jarvis_cd",
+    name="jarvis_util",
     packages=setuptools.find_packages(),
     version="0.0.1",
     author="Luke Logan",

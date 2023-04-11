@@ -49,10 +49,6 @@ class LocalExec:
                                          cwd=self.cwd,
                                          env=self.env,
                                          shell=True)
-        self.stdout, self.stderr = self.proc.communicate()
-        self.stdout = self.stdout.decode("utf-8")
-        self.stderr = self.stderr.decode("utf-8")
-        self.exit_code = self.proc.returncode
         if not self.exec_async:
             self.wait()
 
@@ -63,8 +59,9 @@ class LocalExec:
 
     def wait(self):
         self.stdout, self.stderr = self.proc.communicate()
-        self.stdout = self.stdout.decode("utf-8")
-        self.stderr = self.stderr.decode("utf-8")
+        if self.collect_output:
+            self.stdout = self.stdout.decode("utf-8")
+            self.stderr = self.stderr.decode("utf-8")
         self.exit_code = self.proc.returncode
         self.proc.wait()
 
