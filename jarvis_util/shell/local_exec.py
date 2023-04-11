@@ -1,14 +1,20 @@
 import time
+import subprocess
+import os
+from jarvis_util.jutil_manager import JutilManager
 
 
 class LocalExec:
     def __init__(self, cmd,
                  sudo=False,
-                 collect_output=True,
+                 collect_output=None,
                  cwd=None,
                  stdin=None,
                  exec_async=False,
                  sleep_ms=0):
+        jutil = JutilManager.get_instance()
+        if collect_output is None:
+            collect_output = jutil.collect_output
         self.cmd = cmd
         self.sudo = sudo
         self.stdin = stdin
@@ -48,7 +54,7 @@ class LocalExec:
 
     def kill(self):
         if self.proc is not None:
-            LocalExecNode(f"kill -9 {self.GetPid()}", collect_output=False)
+            LocalExec(f"kill -9 {self.get_pid()}", collect_output=False)
             self.proc.kill()
 
     def wait(self):
