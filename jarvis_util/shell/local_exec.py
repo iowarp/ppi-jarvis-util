@@ -18,6 +18,11 @@ class LocalExec:
             collect_output = jutil.collect_output
         self.cmd = cmd
         self.sudo = sudo
+        if env is None:
+            env = {}
+        for key, val in os.environ.items():
+            if key not in env:
+                env[key] = val
         self.env = env
         self.stdin = stdin
         self.exec_async = exec_async
