@@ -2,7 +2,10 @@ from jarvis_util.shell.local_exec import LocalExec
 
 
 class MpiExec(LocalExec):
-    def __init__(self, cmd, nprocs=1, ppn=None, hostfile=None, env=None):
+    def __init__(self, cmd, nprocs=1, ppn=None,
+                 hostfile=None,
+                 exec_async=False, collect_output=True,
+                 env=None):
         self.nprocs = nprocs
         self.ppn = ppn
         self.cmd = cmd
@@ -10,7 +13,9 @@ class MpiExec(LocalExec):
         self.env = env
         if env is None:
             self.env = {}
-        super().__init__(self.mpicmd())
+        super().__init__(self.mpicmd(),
+                         exec_async=exec_async,
+                         collect_output=collect_output)
 
     def mpicmd(self):
         params = [f"mpirun -n {self.nprocs}"]
