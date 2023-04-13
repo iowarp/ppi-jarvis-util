@@ -4,7 +4,7 @@ from jarvis_util.shell.local_exec import LocalExec
 class MpiExec(LocalExec):
     def __init__(self, cmd, nprocs=1, ppn=None,
                  hostfile=None,
-                 exec_async=False, collect_output=True,
+                 exec_async=False, collect_output=None,
                  env=None):
         self.nprocs = nprocs
         self.ppn = ppn
