@@ -1,7 +1,8 @@
 from jarvis_util.serialize.serializer import Serializer
 import yaml
 
-class YAMLFile(Serializer):
+
+class YamlFile(Serializer):
     def __init__(self, path):
         self.path = path
 
