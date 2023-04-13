@@ -19,6 +19,8 @@ class Exec:
                                    env=exec_info.env)
         else:
             self.exec_ = MpiExec(cmd,
+                                 collect_output=collect_output,
+                                 exec_async=exec_async,
                                  nprocs=exec_info.nprocs,
                                  ppn=exec_info.ppn,
                                  hostfile=exec_info.hostfile,
