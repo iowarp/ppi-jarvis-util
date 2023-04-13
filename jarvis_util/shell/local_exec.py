@@ -34,6 +34,7 @@ class LocalExec:
             self.cwd = cwd
         self.stdout = None
         self.stderr = None
+        self.exit_code = None
         self._start_bash_processes()
 
     def _start_bash_processes(self):
@@ -69,6 +70,7 @@ class LocalExec:
             self.stderr = self.stderr.decode("utf-8")
         self.exit_code = self.proc.returncode
         self.proc.wait()
+        return self.exit_code
 
     def get_pid(self):
         if self.proc is not None:
