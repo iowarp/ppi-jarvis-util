@@ -1,4 +1,4 @@
-from jarvis_cd.serialize.serializer import Serializer
+from jarvis_util.serialize.serializer import Serializer
 import yaml
 
 class YAMLFile(Serializer):

@@ -1,5 +1,5 @@
 import pickle as pkl
-from jarvis_cd.serialize.serializer import Serializer
+from jarvis_util.serialize.serializer import Serializer
 import sys,os
 
 class PickleFile(Serializer):

@@ -1,5 +1,5 @@
 import configparser
-from jarvis_cd.serialize.serializer import Serializer
+from jarvis_util.serialize.serializer import Serializer
 
 class TextFile(Serializer):
     def __init__(self, path):
