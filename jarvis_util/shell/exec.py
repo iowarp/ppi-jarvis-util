@@ -12,7 +12,7 @@ class ExecInfo:
 
 class Exec:
     def __init__(self, cmd, exec_info, collect_output=None, exec_async=False):
-        if exec_info.hostfile is None:
+        if exec_info.hostfile is None or exec_info.nprocs == 1:
             self.exec_ = LocalExec(cmd,
                                    collect_output=collect_output,
                                    exec_async=exec_async,
