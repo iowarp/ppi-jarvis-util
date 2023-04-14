@@ -9,7 +9,7 @@ class MpiExec(LocalExec):
         self.nprocs = nprocs
         self.ppn = ppn
         self.cmd = cmd
-        self.hostfile = None
+        self.hostfile = hostfile
         self.env = env
         if env is None:
             self.env = {}
