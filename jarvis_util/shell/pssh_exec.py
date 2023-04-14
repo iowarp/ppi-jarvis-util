@@ -21,5 +21,5 @@ class PsshExec:
             self.wait()
 
     def wait(self):
-        for exec in self.execs_:
-            exec.wait()
+        for exe in self.execs_:
+            exe.wait()
