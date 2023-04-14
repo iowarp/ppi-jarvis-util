@@ -1,5 +1,5 @@
 from .local_exec import LocalExec
-from .ssh_exec import SshExec
+from .pssh_exec import PsshExec
 from .mpi_exec import MpiExec
 
 
@@ -20,13 +20,9 @@ class Exec:
                                    exec_async=exec_async,
                                    env=exec_info.env)
         else:
-            self.exec_ = MpiExec(cmd,
+            self.exec_ = PsshExec(cmd, exec_info,
                                  collect_output=collect_output,
-                                 exec_async=exec_async,
-                                 nprocs=exec_info.nprocs,
-                                 ppn=exec_info.ppn,
-                                 hostfile=exec_info.hostfile,
-                                 env=exec_info.env)
+                                 exec_async=exec_async)
 
     def wait(self):
         self.exec_.wait()
