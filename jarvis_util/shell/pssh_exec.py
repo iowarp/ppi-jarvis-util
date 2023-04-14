@@ -10,7 +10,7 @@ class PsshExec:
         self.exec_async = exec_async
         self.hosts = []
         if exec_info.hostfile is None:
-            pass
+            self.hosts = Hostfile(exec_info.hostfile).hosts
 
         self.execs_ = []
         for host in self.hosts:
