@@ -1,6 +1,7 @@
 from .local_exec import LocalExec
 from .mpi_exec import MpiExec
 
+
 class ExecInfo:
     def __init__(self, nprocs,
                  ppn=None, hostfile=None, env=None):
