@@ -1,10 +1,11 @@
 import os
-from jarvis_util.basic.exception import Error, ErrorCode
 import socket
 import re
+import itertools
+
 
 class Hostfile:
-    def __init__(self, hosts):
+    def __init__(self, hosts=None):
         self.hosts_ip = None
         self.hosts = None
         self.path = None
@@ -15,47 +16,106 @@ class Hostfile:
         else:
             self._set_hosts(hosts)
 
+    def parse(self, text, set_hosts=False):
+        hosts = []
+        self._expand_line(hosts, text)
+        if set_hosts:
+            self._set_hosts(hosts)
+        else:
+            self.hosts = hosts
+
     def _load_hostfile(self, path):
+        """
+        Expand a hostfile
+
+        :param path: the path to the hostfile
+        :return:
+        """
         if not os.path.exists(path):
-            raise Error(ErrorCode.HOSTFILE_NOT_FOUND).format(path)
+            raise Exception("hostfile not found")
         hosts = []
         with open(path, 'r') as fp:
             lines = fp.read().splitlines()
             for line in lines:
-                tokens = line.split('#')
-                host = tokens[0].strip()
-                if len(host) == 0:
-                    continue
-                hosts.append(host)
+                self._expand_line(hosts, line)
         self.path = path
         self._set_hosts(hosts)
         return self
+
+    def _expand_line(self, hosts, line):
+        """
+        Will expand brackets in a host declaration.
+        E.g., host-[0-5,...]-name
+
+        :param hosts: the current set of hosts
+        :param line: the line to parse
+        :return: None
+        """
+        toks = re.split('[\[\]]', line)
+        brkts = [tok for i, tok in enumerate(toks) if i % 2 == 1]
+        num_set = []
+
+        # Get the expanded set of numbers for each bracket
+        for i, brkt in enumerate(brkts):
+            num_set.append([])
+            self._expand_set(num_set[-1], brkt)
+
+        # Expand the host string
+        host_nums = self._product(num_set)
+        for host_num in host_nums:
+            host = []
+            for i, tok in enumerate(toks):
+                if i % 2 == 1:
+                    host.append(host_num[int(i/2)])
+                else:
+                    host.append(tok)
+            hosts.append("".join(host))
+
+    def _expand_set(self, num_set, brkt):
+        """
+        Expand a bracket set.
+        The bracket initially has notation: [0-5,0-9,...]
+        """
+
+        rngs = brkt.split(',')
+        for rng in rngs:
+            self._expand_range(num_set, rng)
+
+    def _expand_range(self, num_set, brkt):
+        """
+        Expand a range.
+        The range has notation: A-B or A
+
+        :param num_set: the numbers in the range
+        :param brkt:
+        :return:
+        """
+        if len(brkt) == 0:
+            return
+        if '-' in brkt:
+            min_max = brkt.split('-')
+            if len(min_max[0]) == len(min_max[1]):
+                nums = range(int(min_max[0]), int(min_max[1]) + 1)
+                num_set += [str(num).zfill(len(min_max[0])) for num in nums]
+            else:
+                nums = range(int(min_max[0]), int(min_max[1]) + 1)
+                num_set += [str(num) for num in nums]
+        else:
+            num_set.append(brkt)
+
+    def _product(self, num_set):
+        """
+        Return the cartesian product of the number set
+
+        :param num_set: The numbers to product
+        :return:
+        """
+        return [element for element in itertools.product(*num_set)]
 
     def _set_hosts(self, hosts):
         self.hosts = hosts
         self.hosts_ip = [socket.gethostbyname(host) for host in hosts]
         return self
-
-    #Hostset: 1,5-8,10
-    def select_hosts(self, hostset):
-        #Hosts are numbered from 1
-        hosts = []
-        hostset = str(hostset)
-        ranges = hostset.split(',')
-        for range in ranges:
-            range = range.split('-')
-            if len(range) == 2:
-                min = int(range[0])
-                max = int(range[1])
-                if min > max or min < 1 or max > len(self.hosts):
-                    raise Error(ErrorCode.INVALID_HOST_RANGE).format(len(self.hosts), min, max)
-                hosts += self.hosts[min-1:max]
-            else:
-                val = int(range[0])
-                if val < 1 or val > len(self.hosts):
-                    raise Error(ErrorCode.INVALID_HOST_ID).format(len(self.hosts), val)
-                hosts += [self.hosts[val-1]]
-        return Hostfile(hosts)
 
     def path(self):
         return self.path

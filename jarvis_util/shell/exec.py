@@ -1,4 +1,5 @@
 from .local_exec import LocalExec
+from .ssh_exec import SshExec
 from .mpi_exec import MpiExec
 
 

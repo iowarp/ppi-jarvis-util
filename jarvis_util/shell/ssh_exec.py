@@ -2,9 +2,10 @@ from .local_exec import LocalExec
 
 
 class SshExec(LocalExec):
-    def __init__(self, cmd,
+    def __init__(self, cmd, addr,
                  user=None, pkey=None, port=None, sudo=False, env=None,
                  exec_async=False, collect_output=True):
+        self.addr = addr
         self.user = user
         self.pkey = pkey
         self.port = port
@@ -20,6 +21,7 @@ class SshExec(LocalExec):
             lines.append(f"-i {self.pkey}")
         if self.port is not None:
             lines.append(f"-p {self.port}")
+        lines.append(f"{self.user}@{self.addr}")
         if self.env is not None:
             for key, val in self.env.items():
                 lines.append(f"{key}={val}")
