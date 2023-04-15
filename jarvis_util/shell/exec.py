@@ -6,7 +6,9 @@ from .exec_info import ExecInfo, ExecType
 
 
 class Exec:
-    def __init__(self, cmd, exec_info):
+    def __init__(self, cmd, exec_info=None):
+        if exec_info is None:
+            exec_info = ExecInfo()
         if exec_info.exec_type == ExecType.LOCAL:
             self.exec_ = LocalExec(cmd, exec_info)
         elif exec_info.exec_type == ExecType.SSH:
