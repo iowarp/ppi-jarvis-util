@@ -1,28 +1,20 @@
 from .local_exec import LocalExec
 from .pssh_exec import PsshExec
+from .pssh_exec import SshExec
 from .mpi_exec import MpiExec
-
-
-class ExecInfo:
-    def __init__(self, nprocs,
-                 ppn=None, hostfile=None, env=None):
-        self.nprocs = nprocs
-        self.ppn = ppn
-        self.hostfile = hostfile
-        self.env = env
+from .exec_info import ExecInfo, ExecType
 
 
 class Exec:
-    def __init__(self, cmd, exec_info, collect_output=None, exec_async=False):
-        if exec_info.hostfile is None or exec_info.nprocs == 1:
-            self.exec_ = LocalExec(cmd,
-                                   collect_output=collect_output,
-                                   exec_async=exec_async,
-                                   env=exec_info.env)
-        else:
-            self.exec_ = PsshExec(cmd, exec_info,
-                                 collect_output=collect_output,
-                                 exec_async=exec_async)
+    def __init__(self, cmd, exec_info):
+        if exec_info.exec_type == ExecType.LOCAL:
+            self.exec_ = LocalExec(cmd, exec_info)
+        elif exec_info.exec_type == ExecType.SSH:
+            self.exec_ = SshExec(cmd, exec_info)
+        elif exec_info.exec_type == ExecType.PSSH:
+            self.exec_ = PsshExec(cmd, exec_info)
+        elif exec_info.exec_type == ExecType.MPI:
+            self.exec_ = MpiExec(cmd, exec_info)
 
     def wait(self):
         self.exec_.wait()

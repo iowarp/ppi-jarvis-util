@@ -2,36 +2,32 @@ import time
 import subprocess
 import os
 from jarvis_util.jutil_manager import JutilManager
+from .exec_info import ExecInfo, ExecType
 
 
 class LocalExec:
-    def __init__(self, cmd,
-                 sudo=False,
-                 collect_output=None,
-                 cwd=None,
-                 env=None,
-                 stdin=None,
-                 exec_async=False,
-                 sleep_ms=0):
+    def __init__(self, cmd, exec_info):
         jutil = JutilManager.get_instance()
-        if collect_output is None:
-            collect_output = jutil.collect_output
+        self.collect_output = exec_info.collect_output
+        if self.collect_output is None:
+            self.collect_output = jutil.collect_output
         self.cmd = cmd
-        self.sudo = sudo
+        self.sudo = exec_info.sudo
+        env = exec_info.env
         if env is None:
             env = {}
         for key, val in os.environ.items():
             if key not in env:
                 env[key] = val
         self.env = env
-        self.stdin = stdin
-        self.exec_async = exec_async
-        self.sleep_ms = sleep_ms
-        self.collect_output = collect_output
-        if cwd is None:
+        self.stdin = exec_info.stdin
+        self.exec_async = exec_info.exec_async
+        self.sleep_ms = exec_info.sleep_ms
+        self.collect_output = exec_info.collect_output
+        if exec_info.cwd is None:
             self.cwd = os.getcwd()
         else:
-            self.cwd = cwd
+            self.cwd = exec_info.cwd
         self.stdout = None
         self.stderr = None
         self.exit_code = None
@@ -60,7 +56,8 @@ class LocalExec:
 
     def kill(self):
         if self.proc is not None:
-            LocalExec(f"kill -9 {self.get_pid()}", collect_output=False)
+            LocalExec(f"kill -9 {self.get_pid()}",
+                      ExecInfo(collect_output=False))
             self.proc.kill()
 
     def wait(self):
@@ -77,3 +74,7 @@ class LocalExec:
             return self.proc.pid
         else:
             return None
+
+class LocalExecInfo(ExecInfo):
+    def __init__(self, **kwargs):
+        super().__init__(exec_type=ExecType.LOCAL, **kwargs)
