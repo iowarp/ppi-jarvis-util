@@ -14,7 +14,7 @@ class ExecInfo:
     def __init__(self,  exec_type=ExecType.LOCAL, nprocs=None, ppn=None,
                  user=None, pkey=None, port=None, hostfile=None, env=None,
                  sleep_ms=0, sudo=False, cwd=None, hosts=None,
-                 collect_output=False, hide_output=False,
+                 collect_output=False, hide_output=False, file_output=None,
                  exec_async=False, stdin=None):
         self.exec_type = exec_type
         self.nprocs = nprocs
@@ -29,6 +29,7 @@ class ExecInfo:
         self.sudo = sudo
         self.sleep_ms = sleep_ms
         self.collect_output = collect_output
+        self.file_output = file_output
         self.hide_output = hide_output
         self.exec_async = exec_async
         self.stdin = stdin

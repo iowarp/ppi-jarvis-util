@@ -15,8 +15,11 @@ class LocalExec(Executable):
         # Managing console output and collection
         self.collect_output = exec_info.collect_output
         self.hide_output = exec_info.hide_output
+        self.file_output = exec_info.file_output
         if self.collect_output is None:
             self.collect_output = jutil.collect_output
+        if self.file_output is not None:
+            self.file_output = open(self.file_output, 'w')
         if self.hide_output is None:
             self.collect_output = jutil.hide_output
         self.stdout = io.StringIO()
@@ -47,52 +50,52 @@ class LocalExec(Executable):
         if self.sudo:
             self.cmd = f"sudo {self.cmd}"
         time.sleep(self.sleep_ms)
-        if not self.collect_output:
-            self.proc = subprocess.Popen(self.cmd,
-                                         stdin=self.stdin,
-                                         cwd=self.cwd,
-                                         env=self.env,
-                                         shell=True)
-        else:
-            self.proc = subprocess.Popen(self.cmd,
-                                         stdin=self.stdin,
-                                         stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE,
-                                         cwd=self.cwd,
-                                         env=self.env,
-                                         shell=True)
-            self.print_thread = threading.Thread(target=self.print_worker)
-            self.print_thread.start()
+        self.proc = subprocess.Popen(self.cmd,
+                                     stdin=self.stdin,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE,
+                                     cwd=self.cwd,
+                                     env=self.env,
+                                     shell=True)
+        self.print_thread = threading.Thread(target=self.print_worker)
+        self.print_thread.start()
         if not self.exec_async:
             self.wait()
 
+    def print_to_outputs(self, out, sysout):
+        for line in out:
+            line = line.decode('utf-8')
+            if not self.hide_output:
+                sysout.write(line)
+            if self.collect_output:
+                self.stdout.write(line)
+            if self.file_output is not None:
+                self.file_output.write(line)
+
     def print_worker(self):
         while self.executing_:
-            for line in self.proc.stdout:
-                line = line.decode('utf-8')
-                if not self.hide_output:
-                    sys.stdout.write(line)
-                self.stdout.write(line)
-            for line in self.proc.stderr:
-                line = line.decode('utf-8')
-                if not self.hide_output:
-                    sys.stderr.write(line)
-                self.stderr.write(line)
+            self.print_to_outputs(self.proc.stdout, sys.stdout)
+            self.print_to_outputs(self.proc.stderr, sys.stderr)
+            time.sleep(25 / 1000)
+
+    def join_print_worker(self):
+        if not self.print_thread:
+            return
+        self.executing_ = False
+        self.print_thread.join()
+        if self.file_output is not None:
+            self.file_output.close()
 
     def kill(self):
         if self.proc is not None:
             LocalExec(f"kill -9 {self.get_pid()}",
                       ExecInfo(collect_output=False))
             self.proc.kill()
-            self.executing_ = False
-            if self.print_thread is not None:
-                self.print_thread.join()
+            self.join_print_worker()
 
     def wait(self):
         self.proc.wait()
-        self.executing_ = False
-        if self.print_thread is not None:
-            self.print_thread.join()
+        self.join_print_worker()
         self.stdout = self.stdout.getvalue()
         self.stderr = self.stderr.getvalue()
         self.set_exit_code()
