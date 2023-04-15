@@ -11,13 +11,14 @@ class ExecType(Enum):
 
 class ExecInfo:
     def __init__(self,  exec_type=ExecType.LOCAL, nprocs=None, ppn=None,
-                 user=None, pkey=None, hostfile=None, env=None,
+                 user=None, pkey=None, port=None, hostfile=None, env=None,
                  sleep_ms=0, sudo=False, cwd=None, hosts=None,
                  collect_output=False, exec_async=False, stdin=None):
         self.exec_type = exec_type
         self.nprocs = nprocs
         self.user = user
         self.pkey = pkey
+        self.port = port
         self.ppn = ppn
         self.hostfile = hostfile
         self.hosts = hosts
