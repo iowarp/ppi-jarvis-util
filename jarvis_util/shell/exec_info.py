@@ -1,5 +1,6 @@
 from enum import Enum
 import copy
+from abc import ABC, abstractmethod
 
 
 class ExecType(Enum):
@@ -38,3 +39,17 @@ class ExecInfo:
 
     def copy(self):
         return self.mod()
+
+
+class Executable:
+    def __init__(self):
+        self.exit_code = None
+
+    @abstractmethod
+    def set_exit_code(self):
+        pass
+
+    @abstractmethod
+    def wait(self):
+        pass
+

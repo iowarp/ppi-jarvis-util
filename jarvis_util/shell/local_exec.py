@@ -2,11 +2,12 @@ import time
 import subprocess
 import os
 from jarvis_util.jutil_manager import JutilManager
-from .exec_info import ExecInfo, ExecType
+from .exec_info import ExecInfo, ExecType, Executable
 
 
-class LocalExec:
+class LocalExec(Executable):
     def __init__(self, cmd, exec_info):
+        super().__init__()
         jutil = JutilManager.get_instance()
         self.collect_output = exec_info.collect_output
         if self.collect_output is None:
@@ -30,7 +31,6 @@ class LocalExec:
             self.cwd = exec_info.cwd
         self.stdout = None
         self.stderr = None
-        self.exit_code = None
         self._start_bash_processes()
 
     def _start_bash_processes(self):
@@ -65,15 +65,19 @@ class LocalExec:
         if self.collect_output:
             self.stdout = self.stdout.decode("utf-8")
             self.stderr = self.stderr.decode("utf-8")
-        self.exit_code = self.proc.returncode
         self.proc.wait()
+        self.set_exit_code()
         return self.exit_code
+
+    def set_exit_code(self):
+        self.exit_code = self.proc.returncode
 
     def get_pid(self):
         if self.proc is not None:
             return self.proc.pid
         else:
             return None
+
 
 class LocalExecInfo(ExecInfo):
     def __init__(self, **kwargs):

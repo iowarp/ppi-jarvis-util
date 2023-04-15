@@ -2,10 +2,10 @@ from .local_exec import LocalExec
 from .pssh_exec import PsshExec
 from .pssh_exec import SshExec
 from .mpi_exec import MpiExec
-from .exec_info import ExecInfo, ExecType
+from .exec_info import ExecInfo, ExecType, Executable
 
 
-class Exec:
+class Exec(Executable):
     def __init__(self, cmd, exec_info=None):
         if exec_info is None:
             exec_info = ExecInfo()
