@@ -7,6 +7,7 @@ from .exec_info import ExecInfo, ExecType, Executable
 
 class Exec(Executable):
     def __init__(self, cmd, exec_info=None):
+        super().__init__()
         if exec_info is None:
             exec_info = ExecInfo()
         if exec_info.exec_type == ExecType.LOCAL:
@@ -20,4 +21,8 @@ class Exec(Executable):
 
     def wait(self):
         self.exec_.wait()
-        return self.exec_.exit_code
+        self.set_exit_code()
+        return self.exit_code
+
+    def set_exit_code(self):
+        self.exec_.set_exit_code()
