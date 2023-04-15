@@ -2,6 +2,7 @@
 from jarvis_util.shell.local_exec import LocalExec, LocalExecInfo
 
 ret = LocalExec("echo hello", LocalExecInfo(collect_output=False))
+assert(str(ret.stdout).strip() != "hello")
 ret = LocalExec("echo hello", LocalExecInfo(collect_output=True))
 ret = LocalExec("echo hello", LocalExecInfo(collect_output=True,
                                             hide_output=True))
