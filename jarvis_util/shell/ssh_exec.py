@@ -21,7 +21,10 @@ class SshExec(LocalExec):
             lines.append(f"-i {self.pkey}")
         if self.port is not None:
             lines.append(f"-p {self.port}")
-        lines.append(f"{self.user}@{self.addr}")
+        if self.user is not None:
+            lines.append(f"{self.user}@{self.addr}")
+        else:
+            lines.append(f"{self.addr}")
         if self.env is not None:
             for key, val in self.env.items():
                 lines.append(f"{key}={val}")
