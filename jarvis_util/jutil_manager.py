@@ -10,3 +10,4 @@ class JutilManager:
 
     def __init__(self):
         self.collect_output = True
+        self.hide_output = False
