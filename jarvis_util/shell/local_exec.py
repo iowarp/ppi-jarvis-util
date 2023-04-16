@@ -74,12 +74,14 @@ class LocalExec(Executable):
             self.file_output.write(text)
 
     def print_worker(self):
+        print("WORKER SPAWNED")
         while self.executing_:
             self.print_to_outputs(self.proc.stdout, sys.stdout)
             self.print_to_outputs(self.proc.stderr, sys.stderr)
             time.sleep(25 / 1000)
 
     def join_print_worker(self):
+        print("JOINING")
         if self.print_thread is None:
             return
         self.executing_ = False
