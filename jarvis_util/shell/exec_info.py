@@ -45,7 +45,7 @@ class ExecInfo:
                 raise Exception("Hostfile is neither string nor Hostfile")
         if hosts is not None:
             if isinstance(hosts, list):
-                self.hostfile = Hostfile(all_hosts=hostfile)
+                self.hostfile = Hostfile(all_hosts=hosts)
             elif isinstance(hosts, Hostfile):
                 self.hostfile = hosts
         if hosts is not None and hostfile is not None:
