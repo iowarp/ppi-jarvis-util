@@ -16,6 +16,7 @@ class PsshExec(Executable):
 
         if len(self.hosts):
             for host in self.hosts:
+                print(f"PSSH HOST: {host}")
                 self.execs_.append(
                     SshExec(cmd, exec_info.mod(hosts=[host], exec_async=True)))
         else:
