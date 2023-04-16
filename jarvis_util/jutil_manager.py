@@ -36,9 +36,7 @@ class JutilManager:
             self.print_thread.join()
 
     def print_worker(self):
-        print("SPAWNING WORKER")
         while self.continue_:
-            print("IN PRINT TASK?")
             for local_exec in self.print_tasks:
                 self.print_to_outputs(local_exec)
             # time.sleep(25 / 1000)
@@ -48,8 +46,9 @@ class JutilManager:
         self.print_to_output(local_exec, local_exec.proc.stderr, sys.stderr)
 
     def print_to_output(self, local_exec, out, sysout):
-        text = out.read(timeout=1/1000).decode('utf-8')
-        print(f"TEXT {local_exec.cmd}: {len(text)}")
+        if len(out.peek()) == 0:
+            return
+        text = out.read().decode('utf-8')
         if not local_exec.hide_output:
             sysout.write(text)
         if local_exec.collect_output:
