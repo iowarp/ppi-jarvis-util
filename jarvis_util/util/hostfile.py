@@ -2,29 +2,30 @@ import os
 import socket
 import re
 import itertools
+import copy
 
 
 class Hostfile:
-    def __init__(self, hostfile=None, hosts=None):
+    def __init__(self, hostfile=None, all_hosts=None):
         """
         Constructor. Parse hostfile or store existing host list.
 
         :param hostfile: The path to the hostfile
-        :param hosts: a list of strings representing hosts
+        :param all_hosts: a list of strings representing all hosts
         """
-        self.hosts_ip = None
-        self.hosts = hosts
-        self.all_hosts = hosts
+        self.hosts_ip = []
+        self.hosts = []
+        self.all_hosts = []
+        self.all_hosts_ip = []
         self.path = hostfile
 
-        if self.hosts is None:
-            self.hosts = []
-        if self.all_hosts is None:
-            self.all_hosts = []
-        if hostfile is not None:
+        # Direct constructor
+        if all_hosts is not None:
+            self._set_hosts(all_hosts)
+
+        # Hostfile constructor
+        elif hostfile is not None:
             self._load_hostfile(self.path)
-        else:
-            self._set_hosts(self.all_hosts)
 
     def parse(self, text, set_hosts=False):
         """
@@ -130,13 +131,21 @@ class Hostfile:
         """
         return [element for element in itertools.product(*num_set)]
 
-    def _set_hosts(self, hosts):
-        self.hosts = hosts
-        self.hosts_ip = [socket.gethostbyname(host) for host in hosts]
+    def _set_hosts(self, all_hosts):
+        self.all_hosts = hosts
+        self.all_hosts_ip = [socket.gethostbyname(host) for host in hosts]
+        self.hosts = self.all_hosts
+        self.hosts_ip = self.all_hosts_ip
         return self
 
     def subset(self, count):
-        return Hostfile(hosts=self.hosts[:count])
+        sub = copy.deepcopy(self)
+        sub.hosts = sub.hosts[:count]
+        sub.hosts_ip = sub.hosts_ip[:count]
+        return sub
+
+    def is_subset(self):
+        return len(self.hosts) != len(self.all_hosts)
 
     def path(self):
         return self.path

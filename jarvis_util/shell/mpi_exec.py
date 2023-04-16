@@ -7,8 +7,8 @@ class MpiExec(LocalExec):
         self.cmd = cmd
         self.nprocs = exec_info.nprocs
         self.ppn = exec_info.ppn
-        self.hostfile = exec_info.hostfile
-        self.hosts = exec_info.hosts
+        if exec_info.hostfile is not None:
+            self.hostfile = exec_info.hostfile
         self.env = exec_info.env
         if self.env is None:
             self.env = {}
@@ -18,7 +18,7 @@ class MpiExec(LocalExec):
         params = [f"mpirun -n {self.nprocs}"]
         if self.ppn is not None:
             params.append(f"-ppn {self.ppn}")
-        if self.hostfile is not None:
+        if not self.hostfile.is_subset():
             params.append(f"--hostfile {self.hostfile}")
         if self.hosts is not None:
             params.append(f"--host {','.join(self.hosts)}")

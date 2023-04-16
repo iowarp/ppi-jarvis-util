@@ -12,9 +12,7 @@ class PsshExec(Executable):
         self.hosts = []
         self.execs_ = []
         if exec_info.hostfile is not None:
-            self.hosts = Hostfile(exec_info.hostfile).hosts
-        if exec_info.hosts is not None:
-            self.hosts = exec_info.hosts
+            self.hosts = exec_info.hostfile.hosts
 
         if len(self.hosts):
             for host in self.hosts:

@@ -1,4 +1,5 @@
 from enum import Enum
+from jarvis_util.util.hostfile import Hostfile
 import copy
 from abc import ABC, abstractmethod
 
@@ -23,7 +24,20 @@ class ExecInfo:
         self.port = port
         self.ppn = ppn
         self.hostfile = hostfile
-        self.hosts = hosts
+        if hostfile is not None:
+            if isinstance(hostfile, str):
+                self.hostfile = Hostfile(hostfile=hostfile)
+            elif isinstance(hostfile, Hostfile):
+                self.hostfile = hostfile
+            else:
+                raise Exception("Hostfile is neither string nor Hostfile")
+        if hosts is not None:
+            if isinstance(hosts, list):
+                self.hostfile = Hostfile(hosts=hostfile)
+            elif isinstance(hosts, Hostfile):
+                self.hostfile = hosts
+        if hosts is not None and hostfile is not None:
+            raise Exception("Must choose either hosts or hostfile, not both")
         self.env = env
         self.cwd = cwd
         self.sudo = sudo
