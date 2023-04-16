@@ -21,7 +21,7 @@ class LocalExec(Executable):
         if self.file_output is not None:
             self.file_output = open(self.file_output, 'a')
         if self.hide_output is None:
-            self.collect_output = jutil.hide_output
+            self.hide_output = jutil.hide_output
         self.stdout = io.StringIO()
         self.stderr = io.StringIO()
         self.executing_ = True
