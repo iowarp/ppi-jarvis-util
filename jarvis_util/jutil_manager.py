@@ -48,7 +48,7 @@ class JutilManager:
         self.print_to_output(local_exec, local_exec.proc.stderr, sys.stderr)
 
     def print_to_output(self, local_exec, out, sysout):
-        text = out.read().decode('utf-8')
+        text = out.read(timeout=1/1000).decode('utf-8')
         print(f"TEXT {local_exec.cmd}: {len(text)}")
         if not local_exec.hide_output:
             sysout.write(text)
