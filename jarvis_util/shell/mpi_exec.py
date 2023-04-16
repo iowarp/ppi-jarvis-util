@@ -18,10 +18,10 @@ class MpiExec(LocalExec):
         params = [f"mpirun -n {self.nprocs}"]
         if self.ppn is not None:
             params.append(f"-ppn {self.ppn}")
-        if not self.hostfile.is_subset():
-            params.append(f"--host {','.join(self.hosts)}")
+        if self.hostfile.is_subset():
+            params.append(f"--host {','.join(self.hostfile.hosts)}")
         else:
-            params.append(f"--hostfile {self.hostfile}")
+            params.append(f"--hostfile {self.hostfile.path}")
         params += [f"-genv {key}={val}" for key, val in self.env.items()]
         params.append(self.cmd)
         cmd = " ".join(params)

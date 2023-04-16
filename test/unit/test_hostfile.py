@@ -40,6 +40,7 @@ def test5():
     host.parse('ares-comp-[01-02]-40g-[01-02]')
     host = host.subset(3)
     assert(len(host.hosts) == 3)
+    assert(host.is_subset())
     assert(host.hosts[0] == 'ares-comp-01-40g-01')
     assert(host.hosts[1] == 'ares-comp-01-40g-02')
     assert(host.hosts[2] == 'ares-comp-02-40g-01')
