@@ -76,7 +76,7 @@ class LocalExec(Executable):
     def print_worker(self):
         while self.executing_:
             self.print_to_outputs(self.proc.stdout, sys.stdout)
-            self.print_to_outputs(self.proc.stderr, sys.stderr)
+            self.print_to_outputs(self.proc.stderr, sys.stdout)
             time.sleep(25 / 1000)
 
     def join_print_worker(self):
