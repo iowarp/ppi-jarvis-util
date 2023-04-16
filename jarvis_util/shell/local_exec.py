@@ -10,18 +10,18 @@ from .exec_info import ExecInfo, ExecType, Executable
 class LocalExec(Executable):
     def __init__(self, cmd, exec_info):
         super().__init__()
-        jutil = JutilManager.get_instance()
+        self.jutil = JutilManager.get_instance()
 
         # Managing console output and collection
         self.collect_output = exec_info.collect_output
         self.hide_output = exec_info.hide_output
         self.file_output = exec_info.file_output
         if self.collect_output is None:
-            self.collect_output = jutil.collect_output
+            self.collect_output = self.jutil.collect_output
         if self.file_output is not None:
             self.file_output = open(self.file_output, 'a')
         if self.hide_output is None:
-            self.hide_output = jutil.hide_output
+            self.hide_output = self.jutil.hide_output
         self.stdout = io.StringIO()
         self.stderr = io.StringIO()
         self.executing_ = True
@@ -58,52 +58,20 @@ class LocalExec(Executable):
                                      cwd=self.cwd,
                                      env=self.env,
                                      shell=True)
-        self.print_thread = threading.Thread(target=self.print_worker)
-        self.print_thread.start()
+        self.jutil.monitor_print(self)
         if not self.exec_async:
             self.wait()
-
-    def print_to_outputs(self, out, sysout):
-        text = out.read().decode('utf-8')
-        print(f"TEXT: {len(text)}")
-        if not self.hide_output:
-            sysout.write(text)
-        if self.collect_output:
-            self.stdout.write(text)
-        if self.file_output is not None:
-            self.file_output.write(text)
-
-    def print_worker(self):
-        print("WORKER SPAWNED")
-        while self.executing_:
-            self.print_to_outputs(self.proc.stdout, sys.stdout)
-            self.print_to_outputs(self.proc.stderr, sys.stderr)
-            time.sleep(25 / 1000)
-        print("SHOULD PRINT AT LEAST ONCE")
-        self.print_to_outputs(self.proc.stdout, sys.stdout)
-        self.print_to_outputs(self.proc.stderr, sys.stderr)
-
-    def join_print_worker(self):
-        print("JOINING")
-        if self.print_thread is None:
-            return
-        self.executing_ = False
-        self.print_thread.join()
-        if self.file_output is not None:
-            self.file_output.close()
-        self.stdout = self.stdout.getvalue()
-        self.stderr = self.stderr.getvalue()
 
     def kill(self):
         if self.proc is not None:
             LocalExec(f"kill -9 {self.get_pid()}",
                       ExecInfo(collect_output=False))
             self.proc.kill()
-            self.join_print_worker()
+            self.jutil.unmonitor_print(self)
 
     def wait(self):
         self.proc.wait()
-        self.join_print_worker()
+        self.jutil.unmonitor_print(self)
         self.set_exit_code()
         return self.exit_code
 
