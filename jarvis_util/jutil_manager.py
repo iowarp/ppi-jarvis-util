@@ -36,6 +36,7 @@ class JutilManager:
             self.print_thread.join()
 
     def print_worker(self):
+        print("SPAWNING WORKER")
         while self.continue_:
             for local_exec in self.print_tasks:
                 self.print_to_outputs(local_exec)
