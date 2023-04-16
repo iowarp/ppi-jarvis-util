@@ -39,7 +39,7 @@ class JutilManager:
         while self.continue_:
             for local_exec in self.print_tasks:
                 self.print_to_outputs(local_exec)
-            time.sleep(25 / 1000)
+            # time.sleep(25 / 1000)
 
     def print_to_outputs(self, local_exec):
         self.print_to_output(local_exec, local_exec.proc.stdout, sys.stdout)
