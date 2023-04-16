@@ -58,6 +58,7 @@ class ExecInfo:
     def mod(self, **kwargs):
         cpy = copy.deepcopy(self)
         for key, val in kwargs.items():
+            print(f"KEY: {key}, VAL: {val}")
             if key == 'hostfile':
                 self._set_hostfile(hostfile=val)
             elif key == 'hosts':
