@@ -5,7 +5,6 @@ from .exec_info import ExecInfo, ExecType
 class SshExec(LocalExec):
     def __init__(self, cmd, exec_info):
         self.addr = exec_info.hostfile.hosts[0]
-        print(f"SSH HOST: {self.addr}")
         self.user = exec_info.user
         self.pkey = exec_info.pkey
         self.port = exec_info.port
