@@ -26,7 +26,7 @@ class LocalExec(Executable):
         self.stderr = io.StringIO()
         self.executing_ = True
         self.print_thread = None
-        print(f"HIDE OUTPUT: {self.hide_output}")
+        print(f"CMD: {cmd}")
 
         # Managing command execution
         self.cmd = cmd
@@ -68,7 +68,6 @@ class LocalExec(Executable):
             line = line.decode('utf-8')
             if not self.hide_output:
                 sysout.write(line)
-                print(f"HERE: {line}")
             if self.collect_output:
                 self.stdout.write(line)
             if self.file_output is not None:
