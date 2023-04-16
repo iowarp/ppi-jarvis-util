@@ -47,6 +47,7 @@ class JutilManager:
 
     def print_to_output(self, local_exec, out, sysout):
         text = out.read().decode('utf-8')
+        print(f"TEXT {local_exec.cmd}: {len(text)}")
         if not local_exec.hide_output:
             sysout.write(text)
         if local_exec.collect_output:
