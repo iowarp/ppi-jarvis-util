@@ -132,8 +132,8 @@ class Hostfile:
         return [element for element in itertools.product(*num_set)]
 
     def _set_hosts(self, all_hosts):
-        self.all_hosts = hosts
-        self.all_hosts_ip = [socket.gethostbyname(host) for host in hosts]
+        self.all_hosts = all_hosts
+        self.all_hosts_ip = [socket.gethostbyname(host) for host in all_hosts]
         self.hosts = self.all_hosts
         self.hosts_ip = self.all_hosts_ip
         return self
