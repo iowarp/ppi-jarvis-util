@@ -48,7 +48,6 @@ class ExecInfo:
                 self.hostfile = Hostfile(all_hosts=hosts)
             elif isinstance(hosts, str):
                 self.hostfile = Hostfile(all_hosts=[hosts])
-                print(f"NEW HOSTFILE: {self.hostfile.hosts}")
             elif isinstance(hosts, Hostfile):
                 self.hostfile = hosts
             else:
@@ -59,13 +58,10 @@ class ExecInfo:
     def mod(self, **kwargs):
         cpy = copy.deepcopy(self)
         for key, val in kwargs.items():
-            print(f"KEY: {key}, VAL: {val}")
             if key == 'hostfile':
-                print("SETTING HOSTFILE")
-                self._set_hostfile(hostfile=val)
+                cpy._set_hostfile(hostfile=val)
             elif key == 'hosts':
-                print("SETTING HOSTS")
-                self._set_hostfile(hosts=val)
+                cpy._set_hostfile(hosts=val)
             else:
                 setattr(cpy, key, val)
         return cpy
