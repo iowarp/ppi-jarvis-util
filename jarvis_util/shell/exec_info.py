@@ -24,6 +24,18 @@ class ExecInfo:
         self.port = port
         self.ppn = ppn
         self.hostfile = hostfile
+        self._set_hostfile(hostfile=hostfile, hosts=hosts)
+        self.env = env
+        self.cwd = cwd
+        self.sudo = sudo
+        self.sleep_ms = sleep_ms
+        self.collect_output = collect_output
+        self.file_output = file_output
+        self.hide_output = hide_output
+        self.exec_async = exec_async
+        self.stdin = stdin
+
+    def _set_hostfile(self, hostfile=None, hosts=None):
         if hostfile is not None:
             if isinstance(hostfile, str):
                 self.hostfile = Hostfile(hostfile=hostfile)
@@ -38,20 +50,16 @@ class ExecInfo:
                 self.hostfile = hosts
         if hosts is not None and hostfile is not None:
             raise Exception("Must choose either hosts or hostfile, not both")
-        self.env = env
-        self.cwd = cwd
-        self.sudo = sudo
-        self.sleep_ms = sleep_ms
-        self.collect_output = collect_output
-        self.file_output = file_output
-        self.hide_output = hide_output
-        self.exec_async = exec_async
-        self.stdin = stdin
 
     def mod(self, **kwargs):
         cpy = copy.deepcopy(self)
         for key, val in kwargs.items():
-            setattr(cpy, key, val)
+            if key == 'hostfile':
+                self._set_hostfile(hostfile=val)
+            elif key == 'hosts':
+                self._set_hostfile(hosts=val)
+            else:
+                setattr(cpy, key, val)
         return cpy
 
     def copy(self):
