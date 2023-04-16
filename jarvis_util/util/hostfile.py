@@ -139,9 +139,12 @@ class Hostfile:
         return self
 
     def subset(self, count):
-        sub = copy.deepcopy(self)
-        sub.hosts = sub.hosts[:count]
-        sub.hosts_ip = sub.hosts_ip[:count]
+        sub = Hostfile()
+        sub.path = self.path
+        sub.all_hosts = self.all_hosts
+        sub.all_hosts_ip = self.all_hosts_ip
+        sub.hosts = self.hosts[:count]
+        sub.hosts_ip = self.hosts_ip[:count]
         return sub
 
     def is_subset(self):
