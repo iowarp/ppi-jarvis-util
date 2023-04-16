@@ -38,6 +38,7 @@ class JutilManager:
     def print_worker(self):
         print("SPAWNING WORKER")
         while self.continue_:
+            print("IN PRINT TASK?")
             for local_exec in self.print_tasks:
                 self.print_to_outputs(local_exec)
             # time.sleep(25 / 1000)
