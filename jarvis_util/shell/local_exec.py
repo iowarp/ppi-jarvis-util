@@ -26,6 +26,7 @@ class LocalExec(Executable):
         self.stderr = io.StringIO()
         self.executing_ = True
         self.print_thread = None
+        print(f"PRINT: {self.hide_output}")
 
         # Managing command execution
         self.cmd = cmd
@@ -79,12 +80,14 @@ class LocalExec(Executable):
             time.sleep(25 / 1000)
 
     def join_print_worker(self):
-        if not self.print_thread:
+        if self.print_thread is None:
             return
         self.executing_ = False
         self.print_thread.join()
         if self.file_output is not None:
             self.file_output.close()
+        self.stdout = self.stdout.getvalue()
+        self.stderr = self.stderr.getvalue()
 
     def kill(self):
         if self.proc is not None:
@@ -96,8 +99,6 @@ class LocalExec(Executable):
     def wait(self):
         self.proc.wait()
         self.join_print_worker()
-        self.stdout = self.stdout.getvalue()
-        self.stderr = self.stderr.getvalue()
         self.set_exit_code()
         return self.exit_code
 
