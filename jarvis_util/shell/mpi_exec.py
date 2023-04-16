@@ -8,6 +8,7 @@ class MpiExec(LocalExec):
         self.nprocs = exec_info.nprocs
         self.ppn = exec_info.ppn
         self.hostfile = exec_info.hostfile
+        self.hosts = exec_info.hosts
         self.env = exec_info.env
         if self.env is None:
             self.env = {}
@@ -19,6 +20,8 @@ class MpiExec(LocalExec):
             params.append(f"-ppn {self.ppn}")
         if self.hostfile is not None:
             params.append(f"--hostfile {self.hostfile}")
+        if self.hosts is not None:
+            params.append(f"--host {','.join(self.hosts)}")
         params += [f"-genv {key}={val}" for key, val in self.env.items()]
         params.append(self.cmd)
         cmd = " ".join(params)

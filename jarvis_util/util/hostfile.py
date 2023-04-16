@@ -5,18 +5,36 @@ import itertools
 
 
 class Hostfile:
-    def __init__(self, hosts=None):
+    def __init__(self, hostfile=None, hosts=None):
+        """
+        Constructor. Parse hostfile or store existing host list.
+
+        :param hostfile: The path to the hostfile
+        :param hosts: a list of strings representing hosts
+        """
         self.hosts_ip = None
-        self.hosts = None
-        self.path = None
-        if hosts is None:
-            hosts = []
-        if isinstance(hosts, str):
-            self._load_hostfile(hosts)
+        self.hosts = hosts
+        self.all_hosts = hosts
+        self.path = hostfile
+
+        if self.hosts is None:
+            self.hosts = []
+        if self.all_hosts is None:
+            self.all_hosts = []
+        if hostfile is not None:
+            self._load_hostfile(self.path)
         else:
-            self._set_hosts(hosts)
+            self._set_hosts(self.all_hosts)
 
     def parse(self, text, set_hosts=False):
+        """
+        Parse a line of a hostfile. Used mainly for unit tests.
+
+        :param text: A line of the hostfile
+        :param set_hosts: Whether or not to set hosts
+        :return:
+        """
+
         hosts = []
         self._expand_line(hosts, text)
         if set_hosts:
@@ -116,6 +134,9 @@ class Hostfile:
         self.hosts = hosts
         self.hosts_ip = [socket.gethostbyname(host) for host in hosts]
         return self
+
+    def subset(self, count):
+        return Hostfile(hosts=self.hosts[:count])
 
     def path(self):
         return self.path
