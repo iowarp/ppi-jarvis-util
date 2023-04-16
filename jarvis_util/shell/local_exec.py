@@ -79,6 +79,8 @@ class LocalExec(Executable):
             self.print_to_outputs(self.proc.stdout, sys.stdout)
             self.print_to_outputs(self.proc.stderr, sys.stderr)
             time.sleep(25 / 1000)
+        self.print_to_outputs(self.proc.stdout, sys.stdout)
+        self.print_to_outputs(self.proc.stderr, sys.stderr)
 
     def join_print_worker(self):
         print("JOINING")
