@@ -15,7 +15,7 @@ class ExecInfo:
     def __init__(self,  exec_type=ExecType.LOCAL, nprocs=None, ppn=None,
                  user=None, pkey=None, port=None, hostfile=None, env=None,
                  sleep_ms=0, sudo=False, cwd=None, hosts=None,
-                 collect_output=False, hide_output=False, file_output=None,
+                 collect_output=None, hide_output=None, file_output=None,
                  exec_async=False, stdin=None):
         self.exec_type = exec_type
         self.nprocs = nprocs
