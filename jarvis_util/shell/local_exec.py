@@ -54,7 +54,7 @@ class LocalExec(Executable):
         self.proc = subprocess.Popen(self.cmd,
                                      stdin=self.stdin,
                                      stdout=subprocess.PIPE,
-                                     stderr=None,
+                                     stderr=subprocess.PIPE,
                                      cwd=self.cwd,
                                      env=self.env,
                                      shell=True)
@@ -64,19 +64,18 @@ class LocalExec(Executable):
             self.wait()
 
     def print_to_outputs(self, out, sysout):
-        for line in out:
-            line = line.decode('utf-8')
-            if not self.hide_output:
-                sysout.write(line)
-            if self.collect_output:
-                self.stdout.write(line)
-            if self.file_output is not None:
-                self.file_output.write(line)
+        text = out.read().decode('utf-8')
+        if not self.hide_output:
+            sysout.write(text)
+        if self.collect_output:
+            self.stdout.write(text)
+        if self.file_output is not None:
+            self.file_output.write(text)
 
     def print_worker(self):
         while self.executing_:
             self.print_to_outputs(self.proc.stdout, sys.stdout)
-            # self.print_to_outputs(self.proc.stderr, sys.stderr)
+            self.print_to_outputs(self.proc.stderr, sys.stderr)
             time.sleep(25 / 1000)
 
     def join_print_worker(self):
