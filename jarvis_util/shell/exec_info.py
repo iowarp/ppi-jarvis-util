@@ -48,6 +48,7 @@ class ExecInfo:
                 self.hostfile = Hostfile(all_hosts=hosts)
             elif isinstance(hosts, str):
                 self.hostfile = Hostfile(all_hosts=[hosts])
+                print(f"NEW HOSTFILE: {self.hostfile.hosts}")
             elif isinstance(hosts, Hostfile):
                 self.hostfile = hosts
             else:
