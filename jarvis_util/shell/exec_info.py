@@ -46,8 +46,12 @@ class ExecInfo:
         if hosts is not None:
             if isinstance(hosts, list):
                 self.hostfile = Hostfile(all_hosts=hosts)
+            elif isinstance(hosts, str):
+                self.hostfile = Hostfile(all_hosts=[hosts])
             elif isinstance(hosts, Hostfile):
                 self.hostfile = hosts
+            else:
+                raise Exception("Host set is neither str, list or Hostfile")
         if hosts is not None and hostfile is not None:
             raise Exception("Must choose either hosts or hostfile, not both")
 

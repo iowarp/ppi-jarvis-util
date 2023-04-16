@@ -17,8 +17,10 @@ class PsshExec(Executable):
         if len(self.hosts):
             for host in self.hosts:
                 print(f"PSSH HOST: {host}")
+                modded = exec_info.mod(hosts=host, exec_async=True)
+                print(f"PSSH SPAWN INFO: {modded.hostfile.hosts}")
                 self.execs_.append(
-                    SshExec(cmd, exec_info.mod(hosts=[host], exec_async=True)))
+                    SshExec(cmd, exec_info.mod(hosts=host, exec_async=True)))
         else:
             self.execs_.append(
                 LocalExec(cmd, exec_info))
