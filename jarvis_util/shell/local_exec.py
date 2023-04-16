@@ -65,6 +65,7 @@ class LocalExec(Executable):
 
     def print_to_outputs(self, out, sysout):
         text = out.read().decode('utf-8')
+        print(f"TEXT: {len(text)}")
         if not self.hide_output:
             sysout.write(text)
         if self.collect_output:
