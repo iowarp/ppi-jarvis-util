@@ -1,4 +1,5 @@
 from jarvis_util.util.hostfile import Hostfile
+import pathlib
 
 
 def test1():
@@ -46,8 +47,16 @@ def test5():
     assert(host.hosts[2] == 'ares-comp-02-40g-01')
 
 
+def test6():
+    HERE = str(pathlib.Path(__file__).parent.resolve())
+    # host = Hostfile(hostfile=f"{HERE}/test_hostfile.txt")
+    # print(host.hosts)
+    # assert(len(host.hosts) == 15)
+
+
 test1()
 test2()
 test3()
 test4()
 test5()
+test6()
