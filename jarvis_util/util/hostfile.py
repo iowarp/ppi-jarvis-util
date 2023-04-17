@@ -153,6 +153,13 @@ class Hostfile:
     def path(self):
         return self.path
 
+    def save(self, path):
+        self.all_hosts = self.hosts
+        self.all_hosts_ip = self.hosts_ip
+        self.path = path
+        with open(path, 'w') as fp:
+            fp.write("\n".join(self.all_hosts))
+
     def ip_list(self):
         return self.hosts_ip
 
