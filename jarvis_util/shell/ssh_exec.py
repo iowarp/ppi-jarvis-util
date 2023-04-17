@@ -27,7 +27,6 @@ class SshExec(LocalExec):
                 lines.append(f"{key}={val}")
         lines.append(f"\"{cmd}\"")
         real_cmd = " ".join(lines)
-        print(real_cmd)
         return real_cmd
 
 
