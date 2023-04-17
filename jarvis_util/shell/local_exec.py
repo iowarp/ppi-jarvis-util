@@ -51,6 +51,7 @@ class LocalExec(Executable):
         if self.sudo:
             self.cmd = f"sudo {self.cmd}"
         time.sleep(self.sleep_ms)
+        print(self.cmd)
         self.proc = subprocess.Popen(self.cmd,
                                      stdin=self.stdin,
                                      stdout=subprocess.PIPE,
