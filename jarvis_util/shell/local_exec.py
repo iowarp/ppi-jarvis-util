@@ -52,7 +52,6 @@ class LocalExec(Executable):
         if self.sudo:
             self.cmd = f"sudo {self.cmd}"
         time.sleep(self.sleep_ms)
-        print(self.cmd)
         self.proc = subprocess.Popen(self.cmd,
                                      stdin=self.stdin,
                                      stdout=subprocess.PIPE,
@@ -80,7 +79,6 @@ class LocalExec(Executable):
         self.proc.wait()
         self.join_print_worker()
         self.set_exit_code()
-        print(f"EXIT CODE {self.cmd}: {self.exit_code}")
         return self.exit_code
 
     def set_exit_code(self):
