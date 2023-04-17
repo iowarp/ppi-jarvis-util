@@ -115,6 +115,8 @@ class LocalExec(Executable):
                 file_sysout.write(text)
 
     def join_print_worker(self):
+        if not self.executing_:
+            return
         self.executing_ = False
         self.print_stdout_thread.join()
         self.print_stderr_thread.join()
