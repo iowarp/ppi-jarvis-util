@@ -26,7 +26,9 @@ class SshExec(LocalExec):
             for key, val in self.env.items():
                 lines.append(f"{key}={val}")
         lines.append(f"\"{cmd}\"")
-        return " ".join(lines)
+        real_cmd = " ".join(lines)
+        print(real_cmd)
+        return real_cmd
 
 
 class SshExecInfo(ExecInfo):

@@ -17,6 +17,7 @@ class PsshExec(Executable):
         if len(self.hosts):
             for host in self.hosts:
                 ssh_exec_info = exec_info.mod(hosts=host, exec_async=True)
+                print(f"ssh {host} \"{cmd}\"")
                 self.execs_.append(SshExec(cmd, ssh_exec_info))
         else:
             self.execs_.append(
