@@ -15,15 +15,24 @@ class PsshExec(Executable):
             self.hosts = exec_info.hostfile.hosts
 
         if len(self.hosts):
-            for host in self.hosts:
-                ssh_exec_info = exec_info.mod(hosts=host, exec_async=True)
-                self.execs_.append(SshExec(cmd, ssh_exec_info))
+            groups = self.chunks(self.hosts, 4)
+            for group in groups:
+                for host in group:
+                    ssh_exec_info = exec_info.mod(hosts=host, exec_async=True)
+                    self.execs_.append(SshExec(cmd, ssh_exec_info))
+                self.wait()
         else:
             self.execs_.append(
                 LocalExec(cmd, exec_info))
             return
         if not self.exec_async:
             self.wait()
+
+    @staticmethod
+    def chunks(lst, n):
+        """Yield successive n-sized chunks from lst."""
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
 
     def wait(self):
         for exe in self.execs_:
