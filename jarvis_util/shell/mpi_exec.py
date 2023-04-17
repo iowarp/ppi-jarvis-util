@@ -22,6 +22,7 @@ class MpiExec(LocalExec):
             params.append(f"--host {','.join(self.hostfile.hosts)}")
         else:
             params.append(f"--hostfile {self.hostfile.path}")
+        print(" ".join(params))
         params += [f"-genv {key}={val}" for key, val in self.env.items()]
         params.append(self.cmd)
         cmd = " ".join(params)
