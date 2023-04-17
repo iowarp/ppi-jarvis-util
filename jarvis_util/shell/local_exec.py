@@ -10,23 +10,23 @@ from .exec_info import ExecInfo, ExecType, Executable
 class LocalExec(Executable):
     def __init__(self, cmd, exec_info):
         super().__init__()
-        self.jutil = JutilManager.get_instance()
+        jutil = JutilManager.get_instance()
 
         # Managing console output and collection
         self.collect_output = exec_info.collect_output
         self.hide_output = exec_info.hide_output
         self.file_output = exec_info.file_output
         if self.collect_output is None:
-            self.collect_output = self.jutil.collect_output
+            self.collect_output = jutil.collect_output
         if self.file_output is not None:
             self.file_output = open(self.file_output, 'a')
         if self.hide_output is None:
-            self.hide_output = self.jutil.hide_output
+            self.hide_output = jutil.hide_output
         self.stdout = io.StringIO()
         self.stderr = io.StringIO()
         self.executing_ = True
-        self.print_thread = None
-        print(f"CMD: {cmd}")
+        self.print_stdout_thread = None
+        self.print_stderr_thread = None
 
         # Managing command execution
         self.cmd = cmd
@@ -58,7 +58,12 @@ class LocalExec(Executable):
                                      cwd=self.cwd,
                                      env=self.env,
                                      shell=True)
-        self.jutil.monitor_print(self)
+        self.print_stdout_thread = threading.Thread(
+            target=self.print_stdout_worker)
+        self.print_stderr_thread = threading.Thread(
+            target=self.print_stderr_worker)
+        self.print_stdout_thread.start()
+        self.print_stderr_thread.start()
         if not self.exec_async:
             self.wait()
 
@@ -67,11 +72,11 @@ class LocalExec(Executable):
             LocalExec(f"kill -9 {self.get_pid()}",
                       ExecInfo(collect_output=False))
             self.proc.kill()
-            self.jutil.unmonitor_print(self)
+            self.wait()
 
     def wait(self):
         self.proc.wait()
-        self.jutil.unmonitor_print(self)
+        self.join_print_worker()
         self.set_exit_code()
         return self.exit_code
 
@@ -83,6 +88,37 @@ class LocalExec(Executable):
             return self.proc.pid
         else:
             return None
+
+    def print_stdout_worker(self):
+        while self.executing_:
+            self.print_to_outputs(self.proc.stdout, self.stdout,
+                                  self.file_output, sys.stdout)
+            time.sleep(25 / 1000)
+
+    def print_stderr_worker(self):
+        while self.executing_:
+            self.print_to_outputs(self.proc.stderr, self.stderr,
+                                  self.file_output, sys.stderr)
+            time.sleep(25 / 1000)
+
+    def print_to_outputs(self, proc_sysout, self_sysout, file_sysout, sysout):
+        for text in proc_sysout:
+            text = text.decode('utf-8')
+            if not self.hide_output:
+                sysout.write(text)
+            if self.collect_output:
+                self_sysout.write(text)
+            if self.file_output is not None:
+                file_sysout.write(text)
+
+    def join_print_worker(self):
+        self.executing_ = False
+        self.print_stdout_thread.join()
+        self.print_stderr_thread.join()
+        if self.file_output is not None:
+            self.file_output.close()
+        self.stdout = self.stdout.getvalue()
+        self.stderr = self.stderr.getvalue()
 
 
 class LocalExecInfo(ExecInfo):
