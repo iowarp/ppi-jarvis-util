@@ -25,7 +25,7 @@ class SshExec(LocalExec):
         if self.env is not None:
             for key, val in self.env.items():
                 lines.append(f"{key}={val}")
-        lines.append(cmd)
+        lines.append(f"\"{cmd}\"")
         return " ".join(lines)
 
 
