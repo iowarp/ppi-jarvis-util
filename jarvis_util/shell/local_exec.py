@@ -27,6 +27,7 @@ class LocalExec(Executable):
         self.executing_ = True
         self.print_stdout_thread = None
         self.print_stderr_thread = None
+        self.exit_code = 0
 
         # Managing command execution
         self.cmd = cmd
@@ -79,7 +80,7 @@ class LocalExec(Executable):
         self.proc.wait()
         self.join_print_worker()
         self.set_exit_code()
-        print(f"EXIT CODE: {self.exit_code}")
+        print(f"EXIT CODE {self.cmd}: {self.exit_code}")
         return self.exit_code
 
     def set_exit_code(self):
