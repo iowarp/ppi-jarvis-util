@@ -22,11 +22,16 @@ class SshExec(LocalExec):
             lines.append(f"{self.user}@{self.addr}")
         else:
             lines.append(f"{self.addr}")
+        ssh_cmd = " ".join(lines)
+
+        cmd_lines = []
         if self.env is not None:
             for key, val in self.env.items():
-                lines.append(f"{key}={val}")
-        lines.append(f"\"{cmd}\"")
-        real_cmd = " ".join(lines)
+                cmd_lines.append(f"{key}={val}")
+        cmd_lines.append(cmd)
+        env_cmd = " ".join(cmd_lines)
+        real_cmd = f"{ssh_cmd} \"{env_cmd}\""
+        print(f"{ssh_cmd} \"{cmd}\"")
         return real_cmd
 
 
