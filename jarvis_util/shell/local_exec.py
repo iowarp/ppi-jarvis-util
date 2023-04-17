@@ -79,6 +79,7 @@ class LocalExec(Executable):
         self.proc.wait()
         self.join_print_worker()
         self.set_exit_code()
+        print(f"EXIT CODE: {self.exit_code}")
         return self.exit_code
 
     def set_exit_code(self):
