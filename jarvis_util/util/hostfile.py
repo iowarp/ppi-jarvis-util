@@ -159,6 +159,7 @@ class Hostfile:
         self.path = path
         with open(path, 'w') as fp:
             fp.write("\n".join(self.all_hosts))
+        return self
 
     def ip_list(self):
         return self.hosts_ip
