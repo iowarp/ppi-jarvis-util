@@ -32,13 +32,7 @@ class LocalExec(Executable):
         # Managing command execution
         self.cmd = cmd
         self.sudo = exec_info.sudo
-        env = exec_info.env
-        if env is None:
-            env = {}
-        for key, val in os.environ.items():
-            if key not in env:
-                env[key] = val
-        self.env = env
+        self.env = exec_info.env
         self.stdin = exec_info.stdin
         self.exec_async = exec_info.exec_async
         self.sleep_ms = exec_info.sleep_ms
