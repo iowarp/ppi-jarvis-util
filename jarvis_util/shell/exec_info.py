@@ -44,7 +44,7 @@ class ExecInfo:
         if remote_env is None:
             self.remote_env = {}
         for key, val in os.environ.items():
-            if key not in os.environ:
+            if key not in self.env:
                 self.env[key] = val
         for key, val in self.env.items():
             if key not in self.remote_env:
