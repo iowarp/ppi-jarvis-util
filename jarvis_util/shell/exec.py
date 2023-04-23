@@ -18,6 +18,7 @@ class Exec(Executable):
             self.exec_ = PsshExec(cmd, exec_info)
         elif exec_info.exec_type == ExecType.MPI:
             self.exec_ = MpiExec(cmd, exec_info)
+        self.set_exit_code()
 
     def wait(self):
         self.exec_.wait()
