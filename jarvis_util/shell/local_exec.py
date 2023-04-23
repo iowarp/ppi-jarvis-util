@@ -52,7 +52,7 @@ class LocalExec(Executable):
                                      stderr=subprocess.PIPE,
                                      cwd=self.cwd,
                                      env=self.env,
-                                     shell=True)
+                                     shell=True,)
         self.print_stdout_thread = threading.Thread(
             target=self.print_stdout_worker)
         self.print_stderr_thread = threading.Thread(
@@ -98,13 +98,16 @@ class LocalExec(Executable):
 
     def print_to_outputs(self, proc_sysout, self_sysout, file_sysout, sysout):
         for text in proc_sysout:
-            text = text.decode('utf-8')
-            if not self.hide_output:
-                sysout.write(text)
-            if self.collect_output:
-                self_sysout.write(text)
-            if self.file_output is not None:
-                file_sysout.write(text)
+            try:
+                text = text.decode('utf-8')
+                if not self.hide_output:
+                    sysout.write(text)
+                if self.collect_output:
+                    self_sysout.write(text)
+                if self.file_output is not None:
+                    file_sysout.write(text)
+            except:
+                pass
 
     def join_print_worker(self):
         if not self.executing_:
