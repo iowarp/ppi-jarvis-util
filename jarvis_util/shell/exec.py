@@ -26,3 +26,4 @@ class Exec(Executable):
 
     def set_exit_code(self):
         self.exec_.set_exit_code()
+        self.exit_code = self.exec_.exit_code
