@@ -48,6 +48,8 @@ class ExecInfo:
             'PYTHON_PATH', 'CPATH', 'INCLUDE'
         ]
         for key in basic_env:
+            if key not in os.environ:
+                continue
             if key not in self.env:
                 self.env[key] = os.getenv(key)
         for key, val in self.env.items():
