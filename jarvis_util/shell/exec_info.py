@@ -43,6 +43,10 @@ class ExecInfo:
             self.env = {}
         if remote_env is None:
             self.remote_env = {}
+        basic_env = [
+            'PATH', 'LD_LIBRARY_PATH', 'LIBRARY_PATH', 'CMAKE_PREFIX_PATH',
+            'PYTHON_PATH', 'CPATH', 'INCLUDE'
+        ]
         for key, val in os.environ.items():
             if key not in self.env:
                 self.env[key] = val
