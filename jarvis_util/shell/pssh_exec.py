@@ -9,11 +9,8 @@ class PsshExec(Executable):
         super().__init__()
         self.cmd = cmd
         self.exec_async = exec_info.exec_async
-        self.hosts = []
+        self.hosts = exec_info.hostfile.hosts
         self.execs_ = []
-        if exec_info.hostfile is not None:
-            self.hosts = exec_info.hostfile.hosts
-
         if len(self.hosts):
             for host in self.hosts:
                 ssh_exec_info = exec_info.mod(hosts=host, exec_async=True)

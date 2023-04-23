@@ -9,7 +9,7 @@ class SshExec(LocalExec):
         self.pkey = exec_info.pkey
         self.port = exec_info.port
         self.sudo = exec_info.sudo
-        self.env = exec_info.env
+        self.remote_env = exec_info.remote_env
         super().__init__(self.ssh_cmd(cmd), exec_info)
 
     def ssh_cmd(self, cmd):
@@ -25,8 +25,8 @@ class SshExec(LocalExec):
         ssh_cmd = " ".join(lines)
 
         cmd_lines = []
-        if self.env is not None:
-            for key, val in self.env.items():
+        if self.remote_env is not None:
+            for key, val in self.remote_env.items():
                 cmd_lines.append(f"{key}={val}")
         cmd_lines.append(cmd)
         env_cmd = " ".join(cmd_lines)
