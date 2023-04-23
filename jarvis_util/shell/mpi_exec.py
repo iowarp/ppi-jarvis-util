@@ -8,8 +8,9 @@ class MpiExec(LocalExec):
         self.nprocs = exec_info.nprocs
         self.ppn = exec_info.ppn
         self.hostfile = exec_info.hostfile
-        self.remote_env = exec_info.remote_env
-        super().__init__(self.mpicmd(), exec_info)
+        self.mpi_env = exec_info.env
+        super().__init__(self.mpicmd(),
+                         exec_info.mod(env=exec_info.basic_env))
 
     def mpicmd(self):
         params = [f"mpirun -n {self.nprocs}"]
@@ -20,7 +21,7 @@ class MpiExec(LocalExec):
                 params.append(f"--host {','.join(self.hostfile.hosts)}")
             else:
                 params.append(f"--hostfile {self.hostfile.path}")
-        params += [f"-genv {key}={val}" for key, val in self.remote_env.items()]
+        params += [f"-genv {key}={val}" for key, val in self.mpi_env.items()]
         params.append(self.cmd)
         cmd = " ".join(params)
         return cmd

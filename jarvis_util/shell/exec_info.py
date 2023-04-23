@@ -15,7 +15,7 @@ class ExecType(Enum):
 class ExecInfo:
     def __init__(self,  exec_type=ExecType.LOCAL, nprocs=None, ppn=None,
                  user=None, pkey=None, port=None, hostfile=None, env=None,
-                 remote_env=None, sleep_ms=0, sudo=False, cwd=None, hosts=None,
+                 sleep_ms=0, sudo=False, cwd=None, hosts=None,
                  collect_output=None, hide_output=None, file_output=None,
                  exec_async=False, stdin=None):
         self.exec_type = exec_type
@@ -24,11 +24,12 @@ class ExecInfo:
         self.pkey = pkey
         self.port = port
         self.ppn = ppn
+        self.hosts = hosts
         self.hostfile = hostfile
         self._set_hostfile(hostfile=hostfile, hosts=hosts)
         self.env = env
-        self.remote_env = remote_env
-        self._set_env(env, remote_env)
+        self.basic_env = {}
+        self._set_env(env)
         self.cwd = cwd
         self.sudo = sudo
         self.sleep_ms = sleep_ms
@@ -38,11 +39,9 @@ class ExecInfo:
         self.exec_async = exec_async
         self.stdin = stdin
 
-    def _set_env(self, env, remote_env):
+    def _set_env(self, env):
         if env is None:
             self.env = {}
-        if remote_env is None:
-            self.remote_env = {}
         basic_env = [
             'PATH', 'LD_LIBRARY_PATH', 'LIBRARY_PATH', 'CMAKE_PREFIX_PATH',
             'PYTHON_PATH', 'CPATH', 'INCLUDE'
@@ -50,11 +49,10 @@ class ExecInfo:
         for key in basic_env:
             if key not in os.environ:
                 continue
+            self.basic_env[key] = os.getenv(key)
+        for key, val in self.basic_env.items():
             if key not in self.env:
-                self.env[key] = os.getenv(key)
-        for key, val in self.env.items():
-            if key not in self.remote_env:
-                self.remote_env[key] = val
+                self.env[key] = val
 
     def _set_hostfile(self, hostfile=None, hosts=None):
         if hostfile is not None:
@@ -82,7 +80,7 @@ class ExecInfo:
 
     def mod(self, **kwargs):
         keys = ['exec_type', 'nprocs', 'ppn', 'user', 'pkey', 'port',
-                'hostfile', 'env', 'remote_env', 'sleep_ms', 'sudo',
+                'hostfile', 'env', 'sleep_ms', 'sudo',
                 'cwd', 'hosts', 'collect_output', 'hide_output',
                 'file_output', 'exec_async', 'stdin']
         for key in keys:
