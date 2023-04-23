@@ -28,7 +28,7 @@ class ExecInfo:
         self._set_hostfile(hostfile=hostfile, hosts=hosts)
         self.env = env
         self.remote_env = remote_env
-        self._set_env()
+        self._set_env(env, remote_env)
         self.cwd = cwd
         self.sudo = sudo
         self.sleep_ms = sleep_ms
