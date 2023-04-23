@@ -47,9 +47,9 @@ class ExecInfo:
             'PATH', 'LD_LIBRARY_PATH', 'LIBRARY_PATH', 'CMAKE_PREFIX_PATH',
             'PYTHON_PATH', 'CPATH', 'INCLUDE'
         ]
-        for key, val in os.environ.items():
+        for key in basic_env:
             if key not in self.env:
-                self.env[key] = val
+                self.env[key] = os.getenv(key)
         for key, val in self.env.items():
             if key not in self.remote_env:
                 self.remote_env[key] = val
