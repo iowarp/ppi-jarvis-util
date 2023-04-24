@@ -14,25 +14,43 @@ class LocalExec(Executable):
 
         # Managing console output and collection
         self.collect_output = exec_info.collect_output
+        self.pipe_stdout = exec_info.pipe_stdout
+        self.pipe_stderr = exec_info.pipe_stderr
+        self.pipe_stdout_fp = None
+        self.pipe_stderr_fp = None
         self.hide_output = exec_info.hide_output
-        self.file_output = exec_info.file_output
         if self.collect_output is None:
             self.collect_output = jutil.collect_output
-        if self.file_output is not None:
-            self.file_output = open(self.file_output, 'a')
+        if self.pipe_stdout is not None:
+            self.pipe_stdout_fp = open(self.pipe_stdout, 'wb')
+            self.pipe_stderr_fp = open(self.pipe_stdout, 'wb')
+        if self.pipe_stderr is not None:
+            self.pipe_stderr_fp = open(self.pipe_stderr, 'wb')
+            self.pipe_stderr_read_fp = open(self.pipe_stderr, 'rb')
         if self.hide_output is None:
             self.hide_output = jutil.hide_output
-        self.stdout = io.StringIO()
-        self.stderr = io.StringIO()
+        if self.hide_output and self.pipe_stdout_fp is None:
+            self.pipe_stdout_fp = subprocess.DEVNULL
+        if self.hide_output and self.pipe_stderr_fp is None:
+            self.pipe_stderr_fp = subprocess.DEVNULL
+        self.stdout = ""
+        self.stderr = ""
+        self.last_stdout_size = 0
+        self.last_stderr_size = 0
         self.executing_ = True
         self.print_stdout_thread = None
         self.print_stderr_thread = None
         self.exit_code = 0
 
+        # Copy ENV
+        self.env = exec_info.env.copy()
+        for key, val in os.environ.items():
+            if key not in self.env:
+                self.env[key] = val
+
         # Managing command execution
         self.cmd = cmd
         self.sudo = exec_info.sudo
-        self.env = exec_info.env
         self.stdin = exec_info.stdin
         self.exec_async = exec_info.exec_async
         self.sleep_ms = exec_info.sleep_ms
@@ -48,11 +66,11 @@ class LocalExec(Executable):
         time.sleep(self.sleep_ms)
         self.proc = subprocess.Popen(self.cmd,
                                      stdin=self.stdin,
-                                     stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE,
+                                     stdout=self.pipe_stdout_fp,
+                                     stderr=self.pipe_stderr_fp,
                                      cwd=self.cwd,
                                      env=self.env,
-                                     shell=True,)
+                                     shell=True)
         self.print_stdout_thread = threading.Thread(
             target=self.print_stdout_worker)
         self.print_stderr_thread = threading.Thread(
@@ -65,7 +83,7 @@ class LocalExec(Executable):
     def kill(self):
         if self.proc is not None:
             LocalExec(f"kill -9 {self.get_pid()}",
-                      ExecInfo(collect_output=False))
+                      ExecInfo(pipe_stdout=False))
             self.proc.kill()
             self.wait()
 
@@ -85,29 +103,25 @@ class LocalExec(Executable):
             return None
 
     def print_stdout_worker(self):
+        if self.pipe_stdout is None or self.pipe_stdout_fp is None:
+            return
         while self.executing_:
             self.print_to_outputs(self.proc.stdout, self.stdout,
-                                  self.file_output, sys.stdout)
+                                  self.pipe_stdout_fp, sys.stdout)
             time.sleep(25 / 1000)
 
     def print_stderr_worker(self):
+        if self.pipe_stderr is None or self.pipe_stderr_fp is None:
+            return
         while self.executing_:
             self.print_to_outputs(self.proc.stderr, self.stderr,
-                                  self.file_output, sys.stderr)
+                                  self.pipe_stderr_fp, sys.stderr)
             time.sleep(25 / 1000)
 
     def print_to_outputs(self, proc_sysout, self_sysout, file_sysout, sysout):
-        for text in proc_sysout:
-            try:
-                text = text.decode('utf-8')
-                if not self.hide_output:
-                    sysout.write(text)
-                if self.collect_output:
-                    self_sysout.write(text)
-                if self.file_output is not None:
-                    file_sysout.write(text)
-            except:
-                pass
+        if not self.hide_output:
+            text_bytes = file_sysout.read()
+            sysout.write(text_bytes.decode('utf-8'))
 
     def join_print_worker(self):
         if not self.executing_:
@@ -115,10 +129,17 @@ class LocalExec(Executable):
         self.executing_ = False
         self.print_stdout_thread.join()
         self.print_stderr_thread.join()
-        if self.file_output is not None:
-            self.file_output.close()
-        self.stdout = self.stdout.getvalue()
-        self.stderr = self.stderr.getvalue()
+        if self.collect_output:
+            self.stdout = self.collect(self.pipe_stdout)
+            self.stderr = self.collect(self.pipe_stderr)
+
+    def collect(self, pipe_path):
+        if pipe_path is subprocess.DEVNULL:
+            return
+        if pipe_path is None:
+            return
+        with open(pipe_path) as fp:
+            return fp.read()
 
 
 class LocalExecInfo(ExecInfo):

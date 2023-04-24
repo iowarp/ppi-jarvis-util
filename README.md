@@ -15,7 +15,7 @@ The output will be printed to the terminal as it occurs.
 from jarvis_util.shell.exec import Exec
 from jarvis_util.shell.local_exec import LocalExecInfo 
 
-node = Exec('echo hello', LocalExecInfo(collect_output=False))
+node = Exec('echo hello', LocalExecInfo(pipe_stdout=False))
 ```
 
 Programs can also be executed asynchronously:
@@ -23,7 +23,7 @@ Programs can also be executed asynchronously:
 from jarvis_util.shell.exec import Exec
 from jarvis_util.shell.local_exec import LocalExecInfo 
 
-node = Exec('echo hello', LocalExecInfo(collect_output=False,
+node = Exec('echo hello', LocalExecInfo(pipe_stdout=False,
                                         exec_async=True))
 node.wait()
 ```
@@ -42,7 +42,7 @@ from jarvis_util.shell.mpi_exec import MpiExecInfo
 node = Exec('hostname', MpiExecInfo(hostfile=None,
                                     nprocs=24,
                                     ppn=None,
-                                    collect_output=False))
+                                    pipe_stdout=False))
 ```
 
 ## Executing an SSH program
@@ -55,7 +55,7 @@ from jarvis_util.shell.exec import Exec
 from jarvis_util.shell.pssh_exec import PsshExecInfo 
 
 node = Exec('hostname', PsshExecInfo(hostfile="/tmp/hostfile.txt",
-                                     collect_output=False))
+                                     pipe_stdout=False))
 ```
 
 ## The contents of a hostfile

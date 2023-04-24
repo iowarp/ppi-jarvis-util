@@ -13,7 +13,7 @@ class JutilManager:
         return JutilManager.instance_
 
     def __init__(self):
-        self.collect_output = True
+        self.collect_output = False
         self.hide_output = False
         self.print_thread = None
         self.continue_ = True
@@ -51,7 +51,7 @@ class JutilManager:
         text = out.read().decode('utf-8')
         if not local_exec.hide_output:
             sysout.write(text)
-        if local_exec.collect_output:
+        if local_exec.pipe_stdout:
             local_exec.stdout.write(text)
         if local_exec.file_output is not None:
             local_exec.file_output.write(text)

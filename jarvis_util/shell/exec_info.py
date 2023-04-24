@@ -16,8 +16,8 @@ class ExecInfo:
     def __init__(self,  exec_type=ExecType.LOCAL, nprocs=None, ppn=None,
                  user=None, pkey=None, port=None, hostfile=None, env=None,
                  sleep_ms=0, sudo=False, cwd=None, hosts=None,
-                 collect_output=None, hide_output=None, file_output=None,
-                 exec_async=False, stdin=None):
+                 collect_output=None, pipe_stdout=None, pipe_stderr=None,
+                 hide_output=None, exec_async=False, stdin=None):
         self.exec_type = exec_type
         self.nprocs = nprocs
         self.user = user
@@ -34,7 +34,8 @@ class ExecInfo:
         self.sudo = sudo
         self.sleep_ms = sleep_ms
         self.collect_output = collect_output
-        self.file_output = file_output
+        self.pipe_stdout = pipe_stdout
+        self.pipe_stderr = pipe_stderr
         self.hide_output = hide_output
         self.exec_async = exec_async
         self.stdin = stdin
@@ -81,8 +82,9 @@ class ExecInfo:
     def mod(self, **kwargs):
         keys = ['exec_type', 'nprocs', 'ppn', 'user', 'pkey', 'port',
                 'hostfile', 'env', 'sleep_ms', 'sudo',
-                'cwd', 'hosts', 'collect_output', 'hide_output',
-                'file_output', 'exec_async', 'stdin']
+                'cwd', 'hosts', 'collect_output',
+                'pipe_stdout', 'pipe_stderr', 'hide_output',
+                'exec_async', 'stdin']
         for key in keys:
             if key not in kwargs:
                 kwargs[key] = getattr(self, key)
