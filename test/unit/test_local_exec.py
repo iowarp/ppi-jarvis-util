@@ -15,4 +15,8 @@ assert(str(ret.stdout).strip() == "hello")
 
 HERE = str(pathlib.Path(__file__).parent.resolve())
 PRINT10s = os.path.join(HERE, 'print10s.py')
-ret = LocalExec(f"python3 {PRINT10s}", LocalExecInfo())
+ret = LocalExec(f"python3 {PRINT10s}",
+                LocalExecInfo(collect_output=True,
+                              pipe_stderr='/tmp/stderr.txt',
+                              pipe_stdout='/tmp/stdout.txt'))
+
