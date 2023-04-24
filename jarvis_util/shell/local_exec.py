@@ -120,6 +120,7 @@ class LocalExec(Executable):
 
     def print_to_outputs(self, proc_sysout, self_sysout, file_sysout, sysout):
         if not self.hide_output:
+            print("PRINT??????")
             text_bytes = file_sysout.read()
             sysout.write(text_bytes.decode('utf-8'))
 
@@ -130,6 +131,7 @@ class LocalExec(Executable):
         self.print_stdout_thread.join()
         self.print_stderr_thread.join()
         if self.collect_output:
+            print("COLLECT????")
             self.stdout = self.collect(self.pipe_stdout)
             self.stderr = self.collect(self.pipe_stderr)
 
