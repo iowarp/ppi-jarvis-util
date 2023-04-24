@@ -11,6 +11,8 @@ class PsshExec(Executable):
         self.exec_async = exec_info.exec_async
         self.hosts = exec_info.hostfile.hosts
         self.execs_ = []
+        self.stdout = {}
+        self.stderr = {}
         if len(self.hosts):
             for host in self.hosts:
                 ssh_exec_info = exec_info.mod(hosts=host, exec_async=True)
@@ -25,6 +27,12 @@ class PsshExec(Executable):
     def wait(self):
         for exe in self.execs_:
             exe.wait()
+            if hasattr(exe, 'addr'):
+                addr = exe.addr
+            else:
+                addr = 'localhost'
+            self.stdout[addr] = exe.stdout
+            self.stdout[addr] = exe.stderr
         self.set_exit_code()
 
     def set_exit_code(self):

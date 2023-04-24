@@ -97,6 +97,8 @@ class ExecInfo:
 class Executable:
     def __init__(self):
         self.exit_code = None
+        self.stdout = ""
+        self.stderr = ""
 
     @abstractmethod
     def set_exit_code(self):

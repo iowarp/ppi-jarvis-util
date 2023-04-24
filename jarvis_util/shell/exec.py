@@ -19,11 +19,17 @@ class Exec(Executable):
         elif exec_info.exec_type == ExecType.MPI:
             self.exec_ = MpiExec(cmd, exec_info)
         self.set_exit_code()
+        self.set_output()
 
     def wait(self):
         self.exec_.wait()
+        self.set_output()
         self.set_exit_code()
         return self.exit_code
+
+    def set_output(self):
+        self.stdout = self.exec_.stdout
+        self.stderr = self.exec_.stderr
 
     def set_exit_code(self):
         self.exec_.set_exit_code()
