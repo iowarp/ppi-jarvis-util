@@ -38,7 +38,7 @@ jobs:
         run: bash ci/install_jarvis.sh
 
       - name: Run pylint
-        run: pip install pylint==2.15.0 && bash ci/lint.sh
+        run: bash ci/lint.sh
 
       - name: Cache Spack packages
         uses: actions/cache@v3
@@ -60,10 +60,10 @@ jobs:
 
       - name: Build And Install Dependencies
         if: steps.spack-cache.outputs.cache-hit != 'true'
-        run: ci/install_deps.sh
+        run: bash ci/install_deps.sh
 
       - name: Test
-        run: pip install coverage && bash ci/run_tests.sh
+        run: bash ci/run_tests.sh
 
 #      - name: Multi-node Test
 #        run: pushd ci/cluster && ./multi_node_ci_test.sh
