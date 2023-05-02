@@ -1,6 +1,12 @@
+"""
+Provides methods for executing a program or workflow locally. This class
+is intended to be called from Exec, not by general users.
+"""
+
 import time
 import subprocess
-import os, sys
+import os
+import sys
 import io
 import threading
 from jarvis_util.jutil_manager import JutilManager
@@ -8,9 +14,21 @@ from .exec_info import ExecInfo, ExecType, Executable
 
 
 class LocalExec(Executable):
+    """
+    Provides methods for executing a program or workflow locally.
+    """
+
     def __init__(self, cmd, exec_info):
+        """
+        Execute a program or workflow
+
+        :param cmd: list of commands or a single command string
+        :param exec_info: Info needed to execute processes locally
+        """
+
         super().__init__()
         jutil = JutilManager.get_instance()
+        cmd = self.smash_cmd(cmd)
 
         # Managing console output and collection
         self.collect_output = exec_info.collect_output
@@ -19,6 +37,7 @@ class LocalExec(Executable):
         self.pipe_stdout_fp = None
         self.pipe_stderr_fp = None
         self.hide_output = exec_info.hide_output
+        # pylint: disable=R1732
         if self.collect_output is None:
             self.collect_output = jutil.collect_output
         if self.pipe_stdout is not None:
@@ -27,6 +46,7 @@ class LocalExec(Executable):
             self.pipe_stderr_fp = open(self.pipe_stderr, 'wb')
         if self.hide_output is None:
             self.hide_output = jutil.hide_output
+        # pylint: enable=R1732
         self.stdout = io.StringIO()
         self.stderr = io.StringIO()
         self.last_stdout_size = 0
@@ -56,8 +76,9 @@ class LocalExec(Executable):
 
     def _start_bash_processes(self):
         if self.sudo:
-            self.cmd = f"sudo {self.cmd}"
+            self.cmd = f'sudo {self.cmd}'
         time.sleep(self.sleep_ms)
+        # pylint: disable=R1732
         self.proc = subprocess.Popen(self.cmd,
                                      stdin=self.stdin,
                                      stdout=subprocess.PIPE,
@@ -65,6 +86,7 @@ class LocalExec(Executable):
                                      cwd=self.cwd,
                                      env=self.env,
                                      shell=True)
+        # pylint: enable=R1732
         self.print_stdout_thread = threading.Thread(
             target=self.print_stdout_worker)
         self.print_stderr_thread = threading.Thread(
@@ -76,7 +98,7 @@ class LocalExec(Executable):
 
     def kill(self):
         if self.proc is not None:
-            LocalExec(f"kill -9 {self.get_pid()}",
+            LocalExec(f'kill -9 {self.get_pid()}',
                       ExecInfo(pipe_stdout=False))
             self.proc.kill()
             self.wait()
@@ -109,6 +131,7 @@ class LocalExec(Executable):
             time.sleep(25 / 1000)
 
     def print_to_outputs(self, proc_sysout, self_sysout, file_sysout, sysout):
+        # pylint: disable=W0702
         for line in proc_sysout:
             try:
                 text = line.decode('utf-8')
@@ -120,6 +143,7 @@ class LocalExec(Executable):
                     file_sysout.write(line)
             except:
                 pass
+        # pylint: enable=W0702
 
     def join_print_worker(self):
         if not self.executing_:
@@ -139,7 +163,7 @@ class LocalExec(Executable):
             return
         if pipe_path is None:
             return
-        with open(pipe_path) as fp:
+        with open(pipe_path, 'r', encoding='utf-8') as fp:
             return fp.read()
 
 

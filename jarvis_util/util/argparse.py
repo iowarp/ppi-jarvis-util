@@ -1,3 +1,7 @@
+"""
+This module contains an argument parser which defines
+"""
+
 import sys
 import os
 from abc import ABC, abstractmethod
@@ -6,12 +10,16 @@ from tabulate import tabulate
 
 
 class ArgParse(ABC):
+    """
+    A class for parsing command line arguments.
+    """
+
     def __init__(self, args=None, exit_on_fail=True):
         if args is None:
             args = sys.argv[1:]
         elif isinstance(args, str):
             args = shlex.split(args)
-        args = " ".join(args)
+        args = ' '.join(args)
         self.binary_name = os.path.basename(sys.argv[0])
         self.orig_args = shlex.split(args)
         self.args = self.orig_args
@@ -37,7 +45,7 @@ class ArgParse(ABC):
         if name is not None:
             toks = name.split()
         self.menus.append({
-            'name_str': " ".join(toks),
+            'name_str': ' '.join(toks),
             'name': toks,
             'msg': msg,
             'num_required': 0,
@@ -116,9 +124,9 @@ class ArgParse(ABC):
             'has_input': not is_other
         }
         if not is_other:
-            self.add_bool_kw_arg("--with-" + name.strip('-'),
+            self.add_bool_kw_arg('--with-' + name.strip('-'),
                                  True, msg, True, dict_name)
-            self.add_bool_kw_arg("--no-" + name.strip('-'),
+            self.add_bool_kw_arg('--no-' + name.strip('-'),
                                  False, msg, True, dict_name)
         self.pos_required = False
         menu['kw_opts'][name] = arg
@@ -196,7 +204,7 @@ class ArgParse(ABC):
             opt_name = args[i]
             if opt_name not in menu['kw_opts']:
                 if self.use_remainder:
-                    self.remainder = " ".join(args[i:])
+                    self.remainder = ' '.join(args[i:])
                     return
                 else:
                     self._invalid_kwarg(opt_name)
@@ -234,6 +242,7 @@ class ArgParse(ABC):
 
     def _convert_opt(self, opt_name, opt_type, opt_choices, arg):
         if opt_type is not None:
+            # pylint: disable=W0702
             try:
                 arg = opt_type(arg)
                 if opt_choices is not None:
@@ -241,6 +250,7 @@ class ArgParse(ABC):
                         self._invalid_choice(opt_name, arg)
             except:
                 self._invalid_type(opt_name, opt_type)
+            # pylint: enable=W0702
         return arg
 
     def _next_is_kw_value(self, i):
@@ -257,31 +267,32 @@ class ArgParse(ABC):
                 strip('-').replace('-', '_')
 
     def _invalid_menu(self):
-        self._print_error(f"Could not find a menu")
+        self._print_error('Could not find a menu')
 
     def _invalid_choice(self, opt_name, arg):
-        self._print_menu_error(f"{opt_name}={arg} is not a valid choice")
+        self._print_menu_error(f'{opt_name}={arg} is not a valid choice')
 
     def _missing_positional(self, opt_name):
-        self._print_menu_error(f"{opt_name} was required, but not defined")
+        self._print_menu_error(f'{opt_name} was required, but not defined')
 
     def _invalid_kwarg(self, opt_name):
-        self._print_menu_error(f"{opt_name} is not a valid key-word argument")
+        self._print_menu_error(f'{opt_name} is not a valid key-word argument')
 
     def _invalid_kwarg_default(self, opt_name):
-        self._print_menu_error(f"{opt_name} was not given a value, but requires one")
+        self._print_menu_error(
+            f'{opt_name} was not given a value, but requires one')
 
     def _invalid_type(self, opt_name, opt_type):
-        self._print_menu_error(f"{opt_name} was not of type {opt_type}")
+        self._print_menu_error(f'{opt_name} was not of type {opt_type}')
 
     def _print_menu_error(self, msg):
-        self._print_error(f"{self.menu['name_str']} {msg}")
+        self._print_error(f'{self.menu["name_str"]} {msg}')
 
     def _print_error(self, msg):
-        print(f"{msg}")
+        print(f'{msg}')
         self._print_help()
         if self.exit_on_fail:
-            exit(1)
+            sys.exit(1)
         else:
             raise Exception(msg)
 
@@ -303,12 +314,12 @@ class ArgParse(ABC):
         pos_args = []
         for arg in self.menu['pos_opts']:
             if arg['required']:
-                pos_args.append(f"[{arg['name']}]")
+                pos_args.append(f'[{arg["name"]}]')
             else:
-                pos_args.append(f"[{arg['name']} (opt)]")
-        pos_args = " ".join(pos_args)
+                pos_args.append(f'[{arg["name"]} (opt)]')
+        pos_args = ' '.join(pos_args)
         menu_str = self.menu['name_str']
-        print(f"USAGE: {self.binary_name} {menu_str} {pos_args} ...")
+        print(f'USAGE: {self.binary_name} {menu_str} {pos_args} ...')
         if only_usage:
             return
 

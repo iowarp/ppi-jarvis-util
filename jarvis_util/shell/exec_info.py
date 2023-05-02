@@ -1,11 +1,20 @@
+"""
+This module contains data structures for determining how to execute
+a subcommand. This includes information such as storing SSH keys,
+passwords, working directory, etc.
+"""
+
 from enum import Enum
 from jarvis_util.util.hostfile import Hostfile
-import copy
 import os
 from abc import ABC, abstractmethod
 
 
 class ExecType(Enum):
+    """
+    Different program execution methods.
+    """
+
     LOCAL = 'LOCAL'
     SSH = 'SSH'
     PSSH = 'PSSH'
@@ -13,11 +22,39 @@ class ExecType(Enum):
 
 
 class ExecInfo:
+    """
+    Contains all information needed to execute a program. This includes
+    parameters such as the path to key-pairs, the hosts to run the program
+    on, number of processes, etc.
+    """
     def __init__(self,  exec_type=ExecType.LOCAL, nprocs=None, ppn=None,
-                 user=None, pkey=None, port=None, hostfile=None, env=None,
-                 sleep_ms=0, sudo=False, cwd=None, hosts=None,
+                 user=None, pkey=None, port=None,
+                 hostfile=None, hosts=None, env=None,
+                 sleep_ms=0, sudo=False, cwd=None,
                  collect_output=None, pipe_stdout=None, pipe_stderr=None,
                  hide_output=None, exec_async=False, stdin=None):
+        """
+
+        :param exec_type: How to execute a program. SSH, MPI, Local, etc.
+        :param nprocs: Number of processes to spawn. E.g., MPI uses this
+        :param ppn: Number of processes per node. E.g., MPI uses this
+        :param user: The user to execute command under. E.g., SSH, PSSH
+        :param pkey: The path to the private key. E.g., SSH, PSSH
+        :param port: The port to use for connection. E.g., SSH, PSSH
+        :param hostfile: The hosts to launch command on. E.g., PSSH, MPI
+        :param hosts: A list (or single string) of host names to run command on.
+        :param env: The environment variables to use for command.
+        :param sleep_ms: Sleep for a period of time AFTER executing
+        :param sudo: Execute command with root privilege. E.g., SSH, PSSH
+        :param cwd: Set current working directory. E.g., SSH, PSSH
+        :param collect_output: Collect program output in python buffer
+        :param pipe_stdout: Pipe STDOUT into a file. (path string)
+        :param pipe_stderr: Pipe STDERR into a file. (path string)
+        :param hide_output: Whether to print output to console
+        :param exec_async: Whether to execute program asynchronously
+        :param stdin: Any input needed by the program. Only local
+        """
+
         self.exec_type = exec_type
         self.nprocs = nprocs
         self.user = user
@@ -62,7 +99,7 @@ class ExecInfo:
             elif isinstance(hostfile, Hostfile):
                 self.hostfile = hostfile
             else:
-                raise Exception("Hostfile is neither string nor Hostfile")
+                raise Exception('Hostfile is neither string nor Hostfile')
         if hosts is not None:
             if isinstance(hosts, list):
                 self.hostfile = Hostfile(all_hosts=hosts)
@@ -71,10 +108,10 @@ class ExecInfo:
             elif isinstance(hosts, Hostfile):
                 self.hostfile = hosts
             else:
-                raise Exception("Host set is neither str, list or Hostfile")
+                raise Exception('Host set is neither str, list or Hostfile')
 
         if hosts is not None and hostfile is not None:
-            raise Exception("Must choose either hosts or hostfile, not both")
+            raise Exception('Must choose either hosts or hostfile, not both')
 
         if self.hostfile is None:
             self.hostfile = Hostfile()
@@ -94,11 +131,19 @@ class ExecInfo:
         return self.mod()
 
 
-class Executable:
+class Executable(ABC):
+    """
+    An abstract class representing a class which is intended to run
+    shell commands. This includes SSH, MPI, etc.
+    """
+
     def __init__(self):
         self.exit_code = None
-        self.stdout = ""
-        self.stderr = ""
+        self.stdout = ''
+        self.stderr = ''
+
+    def failed(self):
+        return self.exit_code != 0
 
     @abstractmethod
     def set_exit_code(self):
@@ -108,3 +153,17 @@ class Executable:
     def wait(self):
         pass
 
+    def smash_cmd(self, cmds):
+        """
+        Convert a list of commands into a single command for the shell
+        to execute.
+
+        :param cmds: A list of commands or a single command string
+        :return:
+        """
+        if isinstance(cmds, list):
+            return ' && '.join(cmds)
+        elif isinstance(cmds, str):
+            return cmds
+        else:
+            raise Exception('Command must be either list or string')

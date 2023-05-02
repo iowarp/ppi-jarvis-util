@@ -1,9 +1,28 @@
+"""
+This module provides methods to execute a process in parallel using the
+Message Passing Interface (MPI). This module assumes MPI is installed
+on the system. This class is intended to be called from Exec,
+not by general users.
+"""
+
 from jarvis_util.shell.local_exec import LocalExec
 from .exec_info import ExecInfo, ExecType
 
 
 class MpiExec(LocalExec):
+    """
+    This class contains methods for executing a command in parallel
+    using MPI.
+    """
+
     def __init__(self, cmd, exec_info):
+        """
+        Execute a command using MPI
+
+        :param cmd: A command (string) to execute
+        :param exec_info: Information needed by MPI
+        """
+
         self.cmd = cmd
         self.nprocs = exec_info.nprocs
         self.ppn = exec_info.ppn

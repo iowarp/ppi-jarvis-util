@@ -1,7 +1,18 @@
-import re, platform
+"""
+This module provides methods for querying the information of the host
+system. This can be used to make scripts more portable.
+"""
+
+import re
+import platform
 
 
 class SystemInfo:
+    """
+    This class queries information about the host machine, such as OS,
+    CPU, and kernel
+    """
+
     instance_ = None
 
     @staticmethod
@@ -9,9 +20,9 @@ class SystemInfo:
         if SystemInfo.instance_ is None:
             SystemInfo.instance_ = SystemInfo()
         return SystemInfo.instance_
-    
+
     def __init__(self):
-        with open('/etc/os-release') as fp:
+        with open('/etc/os-release', 'r', encoding='utf-8') as fp:
             lines = fp.read().splitlines()
             self.os = self._detect_os_type(lines)
             self.os_like = self._detect_os_like_type(lines)
@@ -24,7 +35,7 @@ class SystemInfo:
 
     def _detect_os_type(self, lines):
         for line in lines:
-            if "ID=" in line:
+            if 'ID=' in line:
                 if 'ubuntu' in line:
                     return 'ubuntu'
                 elif 'centos' in line:
@@ -34,7 +45,7 @@ class SystemInfo:
 
     def _detect_os_like_type(self, lines):
         for line in lines:
-            if "ID_LIKE=" in line:
+            if 'ID_LIKE=' in line:
                 if 'ubuntu' in line:
                     return 'ubuntu'
                 elif 'centos' in line:

@@ -86,3 +86,7 @@ ares-comp-[05-09,11,12-14]-40g
 ```
 
 These will be expanded internally by PSSH and MPI.
+
+# Contributing
+
+We use the Google Python Style guide (pylintrc).

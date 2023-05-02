@@ -1,23 +1,32 @@
+"""
+This module contains methods for parsing hostfiles and storing hosts
+"""
+
 import os
 import socket
 import re
 import itertools
-import copy
 
 
 class Hostfile:
-    def __init__(self, hostfile=None, all_hosts=None):
+    """
+    Parse a hostfile or store a set of hosts passed in manually.
+    """
+
+    def __init__(self, hostfile=None, all_hosts=None, find_ips=True):
         """
         Constructor. Parse hostfile or store existing host list.
 
         :param hostfile: The path to the hostfile
         :param all_hosts: a list of strings representing all hosts
+        :param find_ips: Whether to construct host_ip and all_host_ip fields
         """
         self.hosts_ip = []
         self.hosts = []
         self.all_hosts = []
         self.all_hosts_ip = []
         self.path = hostfile
+        self.find_ips = find_ips
 
         # Direct constructor
         if all_hosts is not None:
@@ -51,9 +60,9 @@ class Hostfile:
         :return:
         """
         if not os.path.exists(path):
-            raise Exception("hostfile not found")
+            raise Exception('hostfile not found')
         hosts = []
-        with open(path, 'r') as fp:
+        with open(path, 'r', encoding='utf-8') as fp:
             lines = fp.read().splitlines()
             for line in lines:
                 self._expand_line(hosts, line)
@@ -70,7 +79,7 @@ class Hostfile:
         :param line: the line to parse
         :return: None
         """
-        toks = re.split('[\[\]]', line)
+        toks = re.split(r'[\[\]]', line)
         brkts = [tok for i, tok in enumerate(toks) if i % 2 == 1]
         num_set = []
 
@@ -88,7 +97,7 @@ class Hostfile:
                     host.append(host_num[int(i/2)])
                 else:
                     host.append(tok)
-            hosts.append("".join(host))
+            hosts.append(''.join(host))
 
     def _expand_set(self, num_set, brkt):
         """
@@ -129,13 +138,16 @@ class Hostfile:
         :param num_set: The numbers to product
         :return:
         """
-        return [element for element in itertools.product(*num_set)]
+        return list(itertools.product(*num_set))
 
     def _set_hosts(self, all_hosts):
         self.all_hosts = all_hosts
-        self.all_hosts_ip = [socket.gethostbyname(host) for host in all_hosts]
+        if self.find_ips:
+            self.all_hosts_ip = [socket.gethostbyname(host)
+                                 for host in all_hosts]
         self.hosts = self.all_hosts
-        self.hosts_ip = self.all_hosts_ip
+        if self.find_ips:
+            self.hosts_ip = self.all_hosts_ip
         return self
 
     def subset(self, count):
@@ -150,15 +162,12 @@ class Hostfile:
     def is_subset(self):
         return len(self.hosts) != len(self.all_hosts)
 
-    def path(self):
-        return self.path
-
     def save(self, path):
         self.all_hosts = self.hosts
         self.all_hosts_ip = self.hosts_ip
         self.path = path
-        with open(path, 'w') as fp:
-            fp.write("\n".join(self.all_hosts))
+        with open(path, 'w', encoding='utf-8') as fp:
+            fp.write('\n'.join(self.all_hosts))
         return self
 
     def ip_list(self):

@@ -1,13 +1,28 @@
+"""
+This module provides methods to distribute a command among multiple
+nodes using SSH. This class is intended to be called from Exec,
+not by general users.
+"""
+
 from .ssh_exec import SshExec
 from .local_exec import LocalExec
-from jarvis_util.util.hostfile import Hostfile
 from .exec_info import ExecInfo, ExecType, Executable
 
 
 class PsshExec(Executable):
+    """
+    Execute commands on multiple hosts using SSH.
+    """
+
     def __init__(self, cmd, exec_info):
+        """
+        Execute commands on multiple hosts.
+
+        :param cmd: A list of commands or a single command string
+        :param exec_info: Info needed to execute command with SSH
+        """
         super().__init__()
-        self.cmd = cmd
+        self.cmd = self.smash_cmd(cmd)
         self.exec_async = exec_info.exec_async
         self.hosts = exec_info.hostfile.hosts
         self.execs_ = []

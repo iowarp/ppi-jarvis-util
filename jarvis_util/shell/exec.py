@@ -1,3 +1,8 @@
+"""
+This module provides mechanisms to execute binaries either locally or
+remotely.
+"""
+
 from .local_exec import LocalExec
 from .pssh_exec import PsshExec
 from .pssh_exec import SshExec
@@ -6,6 +11,11 @@ from .exec_info import ExecInfo, ExecType, Executable
 
 
 class Exec(Executable):
+    """
+    This class is a factory which wraps around various shell command
+    execution stragies, such as MPI and SSH.
+    """
+
     def __init__(self, cmd, exec_info=None):
         super().__init__()
         if exec_info is None:
