@@ -1,2 +1,2 @@
 #!/bin/bash
-pylint "${PATH}"/jarvis_util
+pylint "${PWD}"/jarvis_util
