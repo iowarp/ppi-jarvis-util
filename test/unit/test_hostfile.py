@@ -46,6 +46,6 @@ class TestHostfile(TestCase):
 
     def test_read_hostfile(self):
         HERE = str(pathlib.Path(__file__).parent.resolve())
-        host = Hostfile(hostfile=f"{HERE}/test_hostfile.txt")
+        host = Hostfile(hostfile=f'{HERE}/test_hostfile.txt', find_ips=False)
         print(host.hosts)
         self.assertTrue(len(host.hosts) == 15)
