@@ -196,3 +196,8 @@ class Hostfile:
 
     def __repr__(self):
         return str(self)
+
+    def __eq__(self, other):
+        return (self.hosts == other.hosts and
+                self.all_hosts == other.all_hosts)
+

@@ -46,6 +46,17 @@ class TestHostfile(TestCase):
 
     def test_read_hostfile(self):
         HERE = str(pathlib.Path(__file__).parent.resolve())
-        host = Hostfile(hostfile=f'{HERE}/test_hostfile.txt', find_ips=False)
-        print(host.hosts)
-        self.assertTrue(len(host.hosts) == 15)
+        hf = Hostfile(hostfile=f'{HERE}/test_hostfile.txt', find_ips=False)
+        print(hf.hosts)
+        self.assertEqual(len(hf), 15)
+
+    def test_save_hostfile(self):
+        HERE = str(pathlib.Path(__file__).parent.resolve())
+        hf = Hostfile(hostfile=f'{HERE}/test_hostfile.txt', find_ips=False)
+        hf_sub = hf.subset(4)
+        self.assertEqual(len(hf_sub), 4)
+        hf_sub.save('/tmp/test_hostfile.txt')
+        hf_sub_reload = Hostfile(hostfile=f'/tmp/test_hostfile.txt',
+                                 find_ips=False)
+        self.assertEqual(len(hf_sub_reload), 4)
+        self.assertEqual(hf_sub, hf_sub_reload)

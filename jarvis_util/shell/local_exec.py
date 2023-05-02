@@ -96,13 +96,6 @@ class LocalExec(Executable):
         if not self.exec_async:
             self.wait()
 
-    def kill(self):
-        if self.proc is not None:
-            LocalExec(f'kill -9 {self.get_pid()}',
-                      ExecInfo(pipe_stdout=False))
-            self.proc.kill()
-            self.wait()
-
     def wait(self):
         self.proc.wait()
         self.join_print_worker()
@@ -157,14 +150,6 @@ class LocalExec(Executable):
             self.pipe_stdout_fp.close()
         if self.pipe_stderr_fp is not None:
             self.pipe_stderr_fp.close()
-
-    def collect(self, pipe_path):
-        if pipe_path is subprocess.DEVNULL:
-            return
-        if pipe_path is None:
-            return
-        with open(pipe_path, 'r', encoding='utf-8') as fp:
-            return fp.read()
 
 
 class LocalExecInfo(ExecInfo):

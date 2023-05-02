@@ -1,3 +1,2 @@
-PATH=$1
-
+#!/bin/bash
 pylint "${PATH}"/jarvis_util
