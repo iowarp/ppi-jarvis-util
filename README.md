@@ -87,6 +87,19 @@ ares-comp-[05-09,11,12-14]-40g
 
 These will be expanded internally by PSSH and MPI.
 
+# Unit tests
+
+We run our unit tests in a docker container, which is located underneath
+the CI directory. This is because we need to test multi-node functionality,
+without having multiple nodes. To setup unit testing, perform the following:
+
+1. Install Docker
+2. Setup our "ci" container
+3. Run the unit tests
+
+```
+```
+
 # Contributing
 
 We use the Google Python Style guide (pylintrc).
