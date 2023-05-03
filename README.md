@@ -5,6 +5,8 @@ creating shell scripts within Python. This library contains wrappers
 for executing shell commands locally, SSH, SCP, MPI, argument parsing, 
 and various other random utilities.
 
+![Build](https://github.com/lukemartinlogan/jarvis-util/workflows/GitHub%20Actions/badge.svg)
+
 [![Coverage Status](https://coveralls.io/repos/github/lukemartinlogan/jarvis-util/badge.svg?branch=master)](https://coveralls.io/github/lukemartinlogan/jarvis-util?branch=master)
 
 ## Installation
