@@ -1,7 +1,5 @@
-psutil
 pyyaml
 pylint==2.15.0
-coverage
-coverage-lcov
-toml
-pytest
+coverage==5.5
+coverage-lcov==0.2.4
+pytest==6.2.5
