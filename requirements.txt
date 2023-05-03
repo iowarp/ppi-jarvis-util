@@ -3,4 +3,5 @@ pyyaml
 pylint==2.15.0
 coverage
 coverage-lcov
+toml
 pytest
