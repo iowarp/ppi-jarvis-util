@@ -5,6 +5,17 @@ creating shell scripts within Python. This library contains wrappers
 for executing shell commands locally, SSH, SCP, MPI, argument parsing, 
 and various other random utilities.
 
+
+
+## Installation
+
+For now, we only consider manual installation
+```bash
+cd jarvis-util
+python3 -m pip install -r requirements.txt
+python3 -m pip install -e .
+```
+
 ## Executing a program
 
 The following code will execute a command on the local machine.
