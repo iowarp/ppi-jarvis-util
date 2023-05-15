@@ -61,7 +61,6 @@ class ExecInfo:
         self.pkey = pkey
         self.port = port
         self.ppn = ppn
-        self.hosts = hosts
         self.hostfile = hostfile
         self._set_hostfile(hostfile=hostfile, hosts=hosts)
         self.env = env
@@ -123,7 +122,7 @@ class ExecInfo:
                 'pipe_stdout', 'pipe_stderr', 'hide_output',
                 'exec_async', 'stdin']
         for key in keys:
-            if key not in kwargs:
+            if key not in kwargs and hasattr(self, key):
                 kwargs[key] = getattr(self, key)
         return ExecInfo(**kwargs)
 
