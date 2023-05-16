@@ -72,6 +72,8 @@ class LocalExec(Executable):
             self.cwd = os.getcwd()
         else:
             self.cwd = exec_info.cwd
+        if JutilManager.debug_local_exec:
+            print(cmd)
         self._start_bash_processes()
 
     def _start_bash_processes(self):

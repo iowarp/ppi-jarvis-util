@@ -5,6 +5,7 @@ on the system. This class is intended to be called from Exec,
 not by general users.
 """
 
+from jarvis_util.jutil_manager import JutilManager
 from jarvis_util.shell.local_exec import LocalExec
 from .exec_info import ExecInfo, ExecType
 
@@ -43,7 +44,8 @@ class MpiExec(LocalExec):
         params += [f"-genv {key}={val}" for key, val in self.mpi_env.items()]
         params.append(self.cmd)
         cmd = " ".join(params)
-        print(cmd)
+        if JutilManager.debug_mpi_exec:
+            print(cmd)
         return cmd
 
 
