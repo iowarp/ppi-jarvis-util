@@ -43,6 +43,7 @@ class MpiExec(LocalExec):
         params += [f"-genv {key}={val}" for key, val in self.mpi_env.items()]
         params.append(self.cmd)
         cmd = " ".join(params)
+        print(cmd)
         return cmd
 
 
