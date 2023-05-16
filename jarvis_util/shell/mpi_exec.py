@@ -44,7 +44,8 @@ class MpiExec(LocalExec):
         params += [f"-genv {key}={val}" for key, val in self.mpi_env.items()]
         params.append(self.cmd)
         cmd = " ".join(params)
-        if JutilManager.debug_mpi_exec:
+        jutil = JutilManager.get_instance()
+        if jutil.debug_mpi_exec:
             print(cmd)
         return cmd
 
