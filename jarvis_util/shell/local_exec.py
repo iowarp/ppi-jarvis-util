@@ -134,6 +134,7 @@ class LocalExec(Executable):
                     sysout.write(text)
                 if self.collect_output:
                     self_sysout.write(text)
+                    self_sysout.flush()
                 if file_sysout is not None:
                     file_sysout.write(line)
             except:
