@@ -42,20 +42,12 @@ class PsshExec(Executable):
             self.wait()
 
     def wait(self):
-        for exe in self.execs_:
-            exe.wait()
-            if hasattr(exe, 'addr'):
-                addr = exe.addr
-            else:
-                addr = 'localhost'
-            self.stdout[addr] = exe.stdout
-            self.stdout[addr] = exe.stderr
+        self.wait_list(self.execs_)
+        self.per_host_outputs(self.execs_)
         self.set_exit_code()
 
     def set_exit_code(self):
-        for exe in self.execs_:
-            if exe.exit_code:
-                self.exit_code = exe.exit_code
+        self.set_exit_code_list(self.execs_)
 
 
 class PsshExecInfo(ExecInfo):

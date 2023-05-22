@@ -166,3 +166,28 @@ class Executable(ABC):
             return cmds
         else:
             raise Exception('Command must be either list or string')
+
+    def wait_list(self, nodes):
+        for node in nodes:
+            node.wait()
+
+    def smash_list_outputs(self, nodes):
+        self.stdout = "\n".join([node.stdout for node in nodes])
+        self.stderr = "\n".join([node.stderr for node in nodes])
+
+    def per_host_outputs(self, nodes):
+        self.stdout = {}
+        self.stderr = {}
+        self.stdout = {node.addr: node.stdout for node in nodes}
+        self.stderr = {node.addr: node.stderr for node in nodes}
+
+    def set_exit_code_list(self, nodes):
+        """
+        Set the exit code from a set of nodes.
+
+        :param nodes: The set of execution nodes that have been executed
+        :return:
+        """
+        for node in nodes:
+            if node.exit_code:
+                self.exit_code = node.exit_code
