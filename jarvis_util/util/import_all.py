@@ -37,7 +37,7 @@ def import_all(root_path, root):
     """
     stmts = []
     _import_recurse(root_path, root, stmts)
-    return "\n".join(stmts)
+    return "\n".join(stmts) + "\n"
 
 
 def build_global_import_file(root_path, pkg_name):
@@ -63,5 +63,5 @@ def build_global_import_from_bin(pkg_name):
     :param pkg_name: The name of the python package being built
     :return:
     """
-    root_path = str(pathlib.Path(__file__).parent.parent.resolve())
+    root_path = str(pathlib.Path(__file__).parent.parent.parent.resolve())
     build_global_import_file(root_path, pkg_name)
