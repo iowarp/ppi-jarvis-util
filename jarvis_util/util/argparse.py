@@ -166,6 +166,7 @@ class ArgParse(ABC):
             if self.pos_required:
                 menu['num_required'] += 1
             menu['pos_opts'].append(arg)
+        self.kwargs[arg['dict_name']] = default
 
     def _add_bool_kw_arg(self,
                          name,
