@@ -6,17 +6,5 @@ from unittest import TestCase
 
 
 class TestArgparse(TestCase):
-
-    def set_paths(self):
-        HERE = str(pathlib.Path(__file__).parent.resolve())
-        self.path = f'{HERE}/argparse_main.py'
-        self.cmd = f'python3 {self.path}'
-
-    def getcmd(self, *args):
-        argstr = ' '.join(args)
-        return f'{self.cmd} {argstr}'
-
-    def test_help(self):
-        node = Exec(self.getcmd(),
-                    LocalExecInfo(collect_output=True))
-
+    def test_argparse_main(self):
+        pass

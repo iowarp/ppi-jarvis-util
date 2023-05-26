@@ -104,7 +104,7 @@ class ArgParse(ABC):
     def end_required(self):
         """
         Finish the set of required positional arguments.
-        
+
         :return: None
         """
         self.pos_required = False
@@ -176,13 +176,13 @@ class ArgParse(ABC):
         """
         Boolean arguments can be indicated using a +-.
         + indicates true, - indicates false.
-        
+
         :param name: The name of the boolean arg
         :param default: Default value of the boolean arg
         :param msg: Help message
         :param is_other: Indicates this is an alias of the +- syntax.
-        :param dict_name: 
-        :return: 
+        :param dict_name: Name to make the argument in final kwargs
+        :return: None
         """
         menu = self.menu
         if dict_name is None:

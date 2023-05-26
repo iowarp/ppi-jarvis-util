@@ -5,7 +5,7 @@ not by general users.
 """
 
 from .scp import Scp
-from .exec_info import ExecInfo, ExecType, Executable
+from .exec_info import Executable
 
 
 class Pscp(Executable):

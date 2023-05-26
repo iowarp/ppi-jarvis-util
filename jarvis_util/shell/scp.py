@@ -3,7 +3,7 @@ This module provides methods to execute a single command remotely using SSH.
 This class is intended to be called from Exec, not by general users.
 """
 from .local_exec import LocalExec
-from .exec_info import ExecInfo, ExecType, Executable
+from .exec_info import Executable
 
 
 class _Scp(LocalExec):
@@ -51,6 +51,10 @@ class _Scp(LocalExec):
 
 
 class Scp(Executable):
+    """
+    Secure copy data between two hosts.
+    """
+
     def __init__(self, paths, exec_info):
         """
         Copy files via rsync.

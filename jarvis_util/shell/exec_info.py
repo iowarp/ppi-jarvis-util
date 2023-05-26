@@ -172,8 +172,8 @@ class Executable(ABC):
             node.wait()
 
     def smash_list_outputs(self, nodes):
-        self.stdout = "\n".join([node.stdout for node in nodes])
-        self.stderr = "\n".join([node.stderr for node in nodes])
+        self.stdout = '\n'.join([node.stdout for node in nodes])
+        self.stderr = '\n'.join([node.stderr for node in nodes])
 
     def per_host_outputs(self, nodes):
         self.stdout = {}

@@ -1,3 +1,7 @@
+"""
+This file contains methods to automate large import __init__.py files
+"""
+
 import pathlib
 import os
 
@@ -20,8 +24,8 @@ def _import_recurse(root_path, root, stmts):
                 toks = ext[0].split('/')
                 if toks[-1] == '__init__':
                     continue
-                import_stmt = ".".join(toks)
-                stmts.append(f"from {import_stmt} import *")
+                import_stmt = '.'.join(toks)
+                stmts.append(f'from {import_stmt} import *')
         elif os.path.isdir(file):
             _import_recurse(root_path, file, stmts)
     return stmts
@@ -37,7 +41,7 @@ def import_all(root_path, root):
     """
     stmts = []
     _import_recurse(root_path, root, stmts)
-    return "\n".join(stmts) + "\n"
+    return '\"\"\"Import all modules\"\"\"\n' + '\n'.join(stmts) + '\n'
 
 
 def build_global_import_file(root_path, pkg_name):
@@ -50,7 +54,8 @@ def build_global_import_file(root_path, pkg_name):
     """
     path = os.path.join(root_path, pkg_name)
     imports = import_all(root_path, path)
-    with open(os.path.join(path, '__init__.py'), 'w') as fp:
+    with open(os.path.join(path, '__init__.py'), 'w',
+              encoding='utf-8') as fp:
         fp.write(imports)
 
 

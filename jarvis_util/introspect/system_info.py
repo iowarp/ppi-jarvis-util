@@ -99,6 +99,10 @@ class Lsblk(Exec):
 
 
 class ListFses(Exec):
+    """
+    List all mounted filesystems
+    """
+
     def __init__(self, exec_info):
         cmd = 'du -h'
         super().__init__(cmd, exec_info.mod(collect_output=True))
@@ -109,7 +113,7 @@ class ListFses(Exec):
 
     def wait(self):
         super().wait()
-        lines = self.stdout.strip().split()
+        # lines = self.stdout.strip().split()
         # TODO(llogan): Finish this thought
         pass
 
