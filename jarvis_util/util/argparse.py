@@ -31,7 +31,7 @@ class ArgParse(ABC):
         self.menus = []
         self.vars = {}
         self.remainder = None
-        self.pos_required = True
+        self.pos_required = False
         self.use_remainder = False
 
         self.menu = None
@@ -90,7 +90,7 @@ class ArgParse(ABC):
             'kw_opts': {},
             'use_remainder': use_remainder
         })
-        self.pos_required = True
+        self.pos_required = False
         self.menu = self.menus[-1]
 
     def start_required(self):
