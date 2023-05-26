@@ -5,6 +5,8 @@ system. This can be used to make scripts more portable.
 
 import re
 import platform
+from jarvis_util.shell.exec import Exec
+import json
 
 
 class SystemInfo:
@@ -75,3 +77,39 @@ class SystemInfo:
             (self.cpu == other.cpu) and
             (self.cpu_family == other.cpu_family)
         )
+
+
+class Lsblk(Exec):
+    """
+    List all block devices in the system per-node. Lsblk will return
+    a JSON output
+    """
+
+    def __init__(self, exec_info):
+        cmd = 'lsblk -o NAME,SIZE,MODEL,TRAN,MOUNTPOINT -J -s'
+        super().__init__(cmd, exec_info.mod(collect_output=True))
+        self.exec_async = exec_info.exec_async
+        self.graph = {}
+        if not self.exec_async:
+            self.wait()
+
+    def wait(self):
+        super().wait()
+        self.graph = json.loads(self.stdout)
+
+
+class ListFses(Exec):
+    def __init__(self, exec_info):
+        cmd = 'du -h'
+        super().__init__(cmd, exec_info.mod(collect_output=True))
+        self.exec_async = exec_info.exec_async
+        self.graph = {}
+        if not self.exec_async:
+            self.wait()
+
+    def wait(self):
+        super().wait()
+        lines = self.stdout.strip().split()
+        # TODO(llogan): Finish this thought
+        pass
+

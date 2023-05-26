@@ -81,7 +81,7 @@ class ExecInfo:
             self.env = {}
         basic_env = [
             'PATH', 'LD_LIBRARY_PATH', 'LIBRARY_PATH', 'CMAKE_PREFIX_PATH',
-            'PYTHON_PATH', 'CPATH', 'INCLUDE'
+            'PYTHON_PATH', 'CPATH', 'INCLUDE', 'JAVA_HOME'
         ]
         for key in basic_env:
             if key not in os.environ:
