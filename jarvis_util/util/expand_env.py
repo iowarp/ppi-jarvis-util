@@ -10,3 +10,4 @@ def expand_env(data):
     if isinstance(data, list) or isinstance(data, tuple):
         for i, val in enumerate(data):
             data[i] = expand_env(data)
+    return data
