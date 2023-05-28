@@ -7,7 +7,6 @@ import re
 import platform
 from jarvis_util.shell.exec import Exec
 from jarvis_util.util.size_conv import SizeConv
-from jarvis_util.util.hostfile import Hostfile
 from jarvis_util.serialize.yaml_file import YamlFile
 import json
 import pandas as pd
@@ -15,6 +14,7 @@ import numpy as np
 from enum import Enum
 import shlex
 
+# pylint: disable=C0121
 
 class SystemInfo:
     """
@@ -113,7 +113,7 @@ class Lsblk(Exec):
     def wait(self):
         super().wait()
         for host, stdout in self.stdout.items():
-            lsblk_data = json.loads(self.stdout['localhost'])['blockdevices']
+            lsblk_data = json.loads(stdout)['blockdevices']
             partitions = []
             devs = {}
             for partition in lsblk_data:
@@ -216,12 +216,14 @@ class ListFses(Exec):
                        'avail', 'use%', 'fs_mount', 'host']
             rows = [line.split() + [host] for line in lines[1:]]
             df = pd.DataFrame(rows, columns=columns)
+            # pylint: disable=W0108
             df.loc[:, 'fs_size'] = df['fs_size'].apply(
                 lambda x : SizeConv.to_int(x))
             df.loc[:, 'used'] = df['used'].apply(
                 lambda x: SizeConv.to_int(x))
             df.loc[:, 'avail'] = df['avail'].apply(
                 lambda x : SizeConv.to_int(x))
+            # pylint: enable=W0108
             self.df = df
 
 
@@ -513,12 +515,10 @@ class ResourceGraph:
             mount_suffix = fs_set['mount_suffix']
             tran = fs_set['tran']
             with_mount = df[df.mount.str.contains(mount_re)]
-            mount = list(with_mount['mount'])
             if mount_suffix is not None:
                 with_mount['mount'] += mount_suffix
             if tran is not None:
                 with_mount['tran'] = tran
-            mount = list(with_mount['mount'])
             self.fs = pd.concat([self.fs, with_mount])
         admin_df = pd.DataFrame(self.fs_settings['register'],
                                 columns=self.fs_columns)
@@ -631,3 +631,5 @@ class ResourceGraph:
                 providers = [providers]
             df = df[df.provider.isin(providers)]
         return df
+
+# pylint: enable=C0121
