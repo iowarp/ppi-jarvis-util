@@ -13,12 +13,14 @@ class Hostfile:
     Parse a hostfile or store a set of hosts passed in manually.
     """
 
-    def __init__(self, hostfile=None, all_hosts=None, text=None, find_ips=True):
+    def __init__(self, hostfile=None, all_hosts=None, all_hosts_ip=None,
+                 text=None, find_ips=True):
         """
         Constructor. Parse hostfile or store existing host list.
 
         :param hostfile: The path to the hostfile
-        :param all_hosts: a list of strings representing all hosts
+        :param all_hosts: a list of strings representing all hostnames
+        :param all_hosts_ip: a list of strings representing all host IPs
         :param text: Text of a hostfile
         :param find_ips: Whether to construct host_ip and all_host_ip fields
         """
@@ -28,6 +30,12 @@ class Hostfile:
         self.all_hosts_ip = []
         self.path = hostfile
         self.find_ips = find_ips
+
+        # Set the host ips directly
+        if all_hosts_ip is not None:
+            self.all_hosts_ip = all_hosts_ip
+            self.hosts_ip = all_hosts_ip
+            self.find_ips = False
 
         # Direct constructor
         if all_hosts is not None:

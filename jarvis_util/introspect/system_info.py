@@ -12,6 +12,7 @@ from jarvis_util.serialize.yaml_file import YamlFile
 import json
 import pandas as pd
 import numpy as np
+from enum import Enum
 import shlex
 
 
@@ -97,11 +98,12 @@ class Lsblk(Exec):
         mount: where the partition is mounted (if anywhere)
         model: the exact model of the device
         tran: the transport of the device (e.g., /dev/nvme)
+        rota: whether or not the device is rotational
         host: the host this record corresponds to
     """
 
     def __init__(self, exec_info):
-        cmd = 'lsblk -o NAME,SIZE,MODEL,TRAN,MOUNTPOINT -J -s'
+        cmd = 'lsblk -o NAME,SIZE,MODEL,TRAN,MOUNTPOINT,ROTA -J -s'
         super().__init__(cmd, exec_info.mod(collect_output=True))
         self.exec_async = exec_info.exec_async
         self.graph = {}
@@ -127,8 +129,9 @@ class Lsblk(Exec):
                     'parent': f'/dev/{dev["name"]}',
                     'size': SizeConv.to_int(dev['size']),
                     'model': dev['model'],
-                    'tran': dev['tran'],
+                    'tran': dev['tran'].lower(),
                     'mount': dev['mountpoint'],
+                    'rota': dev['rota'],
                     'host': host
                 }
             devs = list(devs.values())
@@ -261,6 +264,13 @@ class FiInfo(Exec):
         self.df = pd.DataFrame(providers)
 
 
+class StorageDeviceType(Enum):
+    PMEM='pmem'
+    NVME='nvme'
+    SSD='ssd'
+    HDD='hdd'
+
+
 class ResourceGraph:
     """
     Stores helpful information about storage and networking info for machines.
@@ -272,12 +282,12 @@ class ResourceGraph:
         size: total size of the device (bytes)
         mount: where the device is mounted (if anywhere)
         model: the exact model of the device
+        rota: whether the device is rotational or not
         tran: the transport of the device (e.g., /dev/nvme)
         fs_type: the type of filesystem (e.g., ext4)
         uuid: filesystem-levle uuid from the FS metadata
         fs_size: total size of the filesystem
         avail: total number of bytes remaining
-        fs_mount: where the filesystem is mounted
         shared: whether the this is a shared service or not
         host: the host this record corresponds to
     net:
@@ -296,25 +306,46 @@ class ResourceGraph:
         self.blkid = None
         self.list_fs = None
         self.fi_info = None
-        self.all_fs = {}
-        self.all_net = {}
+        self.fs_columns = [
+            'parent', 'device', 'size', 'mount', 'model', 'rota',
+            'tran', 'fs_type', 'uuid', 'fs_size',
+            'avail', 'shared', 'host'
+        ]
+        self.net_columns = [
+            'provider', 'fabric', 'domain', 'host'
+        ]
+        self.all_fs = pd.DataFrame(columns=self.fs_columns)
+        self.all_net = pd.DataFrame(columns=self.net_columns)
         self.fs_settings = {
-            'register': {},
-            'track_mounts': {}
+            'register': [],
+            'filter_mounts': {}
         }
         self.net_settings = {
+            'register': [],
             'track_ips': {}
         }
         self.hosts = None
 
-    def build(self, exec_info):
+    def build(self, exec_info, introspect=True):
         """
         Build a resource graph.
-            dev:
 
-
-        :param exec_info: Where to collect resuorce information
+        :param exec_info: Where to collect resource information
+        :param introspect: Whether to introspect system info, or rely solely
+        on admin-defined settings
         :return: self
+        """
+        if introspect:
+            self._introspect(exec_info)
+        self.apply()
+        return self
+
+    def _introspect(self, exec_info):
+        """
+        Introspect the cluster for resources.
+
+        :param exec_info: Where to collect resource information
+        :return: None
         """
         self.lsblk = Lsblk(exec_info)
         self.blkid = Blkid(exec_info)
@@ -339,7 +370,6 @@ class ResourceGraph:
         net_df.drop(['version', 'type', 'protocol'],
                     axis=1, inplace=True)
         self.all_net = net_df
-        return self
 
     def save(self, path):
         """
@@ -349,6 +379,7 @@ class ResourceGraph:
         :return: None
         """
         graph = {
+            'hosts': self.hosts,
             'fs': self.all_fs.to_dict('records'),
             'net': self.all_net.to_dict('records'),
             'fs_settings': self.fs_settings,
@@ -364,13 +395,51 @@ class ResourceGraph:
         :return: self
         """
         graph = YamlFile(path).load()
+        self.hosts = graph['hosts']
         self.all_fs = pd.DataFrame(graph['fs'])
         self.all_net = pd.DataFrame(graph['net'])
         self.fs = None
         self.net = None
         self.fs_settings = graph['fs_settings']
         self.net_settings = graph['net_settings']
+        self.apply()
         return self
+
+    def set_hosts(self, hosts):
+        """
+        Set the set of hosts this resource graph covers
+
+        :param hosts: Hostfile()
+        :return: None
+        """
+        self.hosts = hosts.hosts_ip
+
+    def add_storage(self, hosts, **kwargs):
+        """
+        Register a storage device record
+
+        :param hosts: Hostfile() indicating set of hosts to make record for
+        :param kwargs: storage record
+        :return: None
+        """
+        for host in hosts.hosts:
+            record = kwargs.copy()
+            record['host'] = host
+            self.fs_settings['register'].append(record)
+
+    def add_net(self, hosts, **kwargs):
+        """
+        Register a network record
+
+        :param hosts: Hostfile() indicating set of hosts to make record for
+        :param kwargs: net record
+        :return: None
+        """
+        for host, ip in zip(hosts.hosts, hosts.hosts_ip):
+            record = kwargs.copy()
+            record['fabric'] = ip
+            record['host'] = host
+            self.net_settings['register'].append(record)
 
     def filter_fs(self, mount_re,
                   mount_suffix=None, tran=None):
@@ -384,14 +453,14 @@ class ResourceGraph:
         per-user where they can access data.
         :param shared: Whether this mount point is shared
         :param tran: The transport of this device
-        :return: None
+        :return: self
         """
-        self.fs_settings['track_mounts']['mount_re'] = {
+        self.fs_settings['filter_mounts']['mount_re'] = {
             'mount_re': mount_re,
             'mount_suffix': mount_suffix,
             'tran': tran
         }
-        self._apply_fs_settings()
+        return self
 
     def filter_ip(self, ip_re, speed=None):
         """
@@ -400,13 +469,13 @@ class ResourceGraph:
 
         :param ip_re: The regex to match
         :param speed: The speed of the fabric
-        :return:
+        :return: self
         """
         self.net_settings['track_ips'][ip_re] = {
             'ip_re': ip_re,
             'speed': SizeConv.to_int(speed) if speed is not None else speed
         }
-        self._apply_net_settings()
+        return self
 
     def filter_hosts(self, hosts, speed=None):
         """
@@ -414,10 +483,24 @@ class ResourceGraph:
 
         :param hosts: Hostfile() of the hosts to filter for
         :param speed: Speed of the interconnect (e.g., 1gbps)
-        :return: None
+        :return: self
         """
         for host in hosts.hosts_ip:
             self.filter_ip(host, speed)
+        return self
+
+    def apply(self):
+        """
+        Apply fs and net settings to the resource graph
+
+        :return: self
+        """
+        self._apply_fs_settings()
+        self._apply_net_settings()
+        # self.fs.size = self.fs.size.fillna(0)
+        # self.fs.avail = self.fs.avail.fillna(0)
+        # self.fs.fs_size = self.fs.fs_size.fillna(0)
+        return self
 
     def _apply_fs_settings(self):
         if len(self.fs_settings) == 0:
@@ -425,7 +508,7 @@ class ResourceGraph:
             return
         df = self.all_fs
         self.fs = pd.DataFrame(columns=self.all_net.columns)
-        for fs_set in self.fs_settings['track_mounts'].values():
+        for fs_set in self.fs_settings['filter_mounts'].values():
             mount_re = fs_set['mount_re']
             mount_suffix = fs_set['mount_suffix']
             tran = fs_set['tran']
@@ -437,6 +520,9 @@ class ResourceGraph:
                 with_mount['tran'] = tran
             mount = list(with_mount['mount'])
             self.fs = pd.concat([self.fs, with_mount])
+        admin_df = pd.DataFrame(self.fs_settings['register'],
+                                columns=self.fs_columns)
+        self.fs = pd.concat([self.fs, admin_df])
 
     def _apply_net_settings(self):
         if len(self.net_settings) == 0:
@@ -450,48 +536,98 @@ class ResourceGraph:
             with_ip = df[df['fabric'].str.contains(ip_re)]
             with_ip['speed'] = speed
             self.net = pd.concat([self.net, with_ip])
+        admin_df = pd.DataFrame(self.net_settings['register'],
+                                columns=self.net_columns)
+        self.net = pd.concat([self.net, admin_df])
 
-    def find_storage(self, tran=None,
-                     is_mounted=False,
+    def find_shared_storage(self):
+        """
+        Find the set of shared storage services
+
+        :return: Dataframe
+        """
+        df = self.fs
+        return df[df.shared == True]
+
+    def find_storage(self,
+                     dev_types=None,
+                     is_mounted=True,
                      common=False,
-                     count_per_node=None,):
+                     count_per_node=None,
+                     count_per_dev=None,
+                     min_cap=None,
+                     min_avail=None):
         """
         Find a set of storage devices.
 
-        :param tran: A specific transport to search for (e.g., NVME)
+        :param dev_types: Search for devices of type in order. Either a list
+        or a string.
         :param is_mounted: Search only for mounted devices
-        :param common: Remove mount points that are not common across hosts
+        :param common: Remove mount points that are not common across all hosts
         :param count_per_node: Choose only a subset of devices matching query
-        :return: None
+        :param count_per_dev: Choose only a subset of devices matching query
+        :param min_cap: Remove devices with too little overall capacity
+        :param min_avail: Remove devices with too little available space
+        :return: Dataframe
         """
         df = self.fs
-        result = pd.DataFrame(columns=df.columns)
-        # Filter devices by transport
-        if tran is not None:
-            res = [df[df.tran == transport]
-                   for transport in tran]
-            result = pd.concat(res + result)
-        else:
-            result = df
+        # Remove pfs
+        df = df[df.shared == False]
         # Filter devices by whether or not a mount is needed
         if is_mounted:
             df = df[df.mount.notna()]
+        # Find devices of a particular type
+        if dev_types is not None:
+            matching_devs = pd.DataFrame(columns=df.columns)
+            if isinstance(dev_types, str):
+                dev_types = [dev_types]
+            for dev_type in dev_types:
+                if dev_type == StorageDeviceType.HDD:
+                    devs = df[(df.tran == 'sata') & (df.rota == True)]
+                elif dev_type == StorageDeviceType.SSD:
+                    devs = df[(df.tran == 'sata') & (df.rota == False)]
+                elif dev_type == StorageDeviceType.NVME:
+                    devs = df[(df.tran == 'nvme')]
+                matching_devs = pd.concat([matching_devs, devs])
+            df = matching_devs
         # Get the set of mounts common between all hosts
         if common:
             df = df.groupby(['mount']).filter(
-                lambda x: len(x) == len(self.hosts)).reset_index()
+                lambda x: len(x) == len(self.hosts)).reset_index(drop=True)
+        # Remove storage with too little capacity
+        if min_cap is not None:
+            df = df[df.size >= min_cap]
+        # Remove storage with too little available space
+        if min_avail is not None:
+            df = df[df.avail >= min_avail]
+        # Take a certain number of each device per-host
+        if count_per_dev is not None:
+            df = df.groupby(['tran', 'rota', 'host']).\
+                head(count_per_dev).reset_index(drop=True)
         # Take a certain number of matched devices per-host
         if count_per_node is not None:
-            df = df.groupby('host').head(count_per_node).reset_index()
-        return df.to_dict('record')
+            df = df.groupby('host').head(count_per_node).reset_index(drop=True)
+        return df
 
-    def find_net_info(self, hosts, provider=None):
+    def find_net_info(self, hosts,
+                      providers=None):
         """
         Find the set of networks common between each host.
 
         :param hosts: A Hostfile() data structure containing the set of
         all hosts to find network information for
-        :param provider: The network protocol to search for
-        :return:
+        :param providers: The network protocols to search for.
+        :return: Dataframe
         """
-        pass
+        df = self.net
+        # Get the set of fabrics corresponding to these hosts
+        df = df[df.fabric.isin(hosts.hosts_ip)]
+        # Filter out protocols which are not common between these hosts
+        df = df.groupby('provider').filter(
+           lambda x: len(x) == len(hosts)).reset_index(drop=True)
+        # Choose only a subset of providers
+        if providers is not None:
+            if isinstance(providers, str):
+                providers = [providers]
+            df = df[df.provider.isin(providers)]
+        return df
