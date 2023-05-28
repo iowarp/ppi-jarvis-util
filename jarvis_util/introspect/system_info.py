@@ -7,6 +7,7 @@ import re
 import platform
 from jarvis_util.shell.exec import Exec
 from jarvis_util.util.size_conv import SizeConv
+from jarvis_util.util.hostfile import Hostfile
 from jarvis_util.serialize.yaml_file import YamlFile
 import json
 import pandas as pd
@@ -210,8 +211,7 @@ class ListFses(Exec):
             lines = stdout.strip().splitlines()
             columns = ['device', 'fs_size', 'used',
                        'avail', 'use%', 'fs_mount', 'host']
-            rows = [line.split() for line in lines[1:]]
-            rows.append(host)
+            rows = [line.split() + [host] for line in lines[1:]]
             df = pd.DataFrame(rows, columns=columns)
             df.loc[:, 'fs_size'] = df['fs_size'].apply(
                 lambda x : SizeConv.to_int(x))
@@ -266,20 +266,17 @@ class ResourceGraph:
     Stores helpful information about storage and networking info for machines.
 
     Two tables are stored to make decisions on application deployment.
-    dev:
+    fs:
         parent: the parent device of the partition (e.g., /dev/sda or NaN)
-        device: the name of the partition (e.g., /dev/sda1)
-        size: total size of the partition (bytes)
-        mount: where the partition is mounted (if anywhere)
+        device: the name of the device (e.g., /dev/sda1 or /dev/sda)
+        size: total size of the device (bytes)
+        mount: where the device is mounted (if anywhere)
         model: the exact model of the device
         tran: the transport of the device (e.g., /dev/nvme)
         fs_type: the type of filesystem (e.g., ext4)
         uuid: filesystem-levle uuid from the FS metadata
-        partuuid: the partition-lable UUID for the partition
         fs_size: total size of the filesystem
-        used: total nubmer of bytes used
         avail: total number of bytes remaining
-        use%: the percent of capacity used
         fs_mount: where the filesystem is mounted
         shared: whether the this is a shared service or not
         host: the host this record corresponds to
@@ -287,9 +284,6 @@ class ResourceGraph:
         provider: network protocol (e.g., sockets, tcp, ib)
         fabric: IP address
         domain: network domain
-        version: network version
-        type: packet type (e.g., DGRAM)
-        protocol: protocol constant
         host: the host this network corresponds to
 
     TODO: Need to verify on more than ubuntu20.04
@@ -304,7 +298,8 @@ class ResourceGraph:
         self.fi_info = None
         self.all_fs = {}
         self.all_net = {}
-        self.all_fs_settings = {
+        self.fs_settings = {
+            'register': {},
             'track_mounts': {}
         }
         self.net_settings = {
@@ -336,8 +331,13 @@ class ResourceGraph:
                                on=['device', 'host'],
                                how='outer')
         self.all_fs['shared'].fillna(True, inplace=True)
+        self.all_fs.drop(['used', 'use%', 'fs_mount', 'partuuid'],
+                         axis=1, inplace=True)
+        self.all_fs['mount'].fillna(value='', inplace=True)
         net_df = self.fi_info.df
         net_df['speed'] = np.nan
+        net_df.drop(['version', 'type', 'protocol'],
+                    axis=1, inplace=True)
         self.all_net = net_df
         return self
 
@@ -351,8 +351,8 @@ class ResourceGraph:
         graph = {
             'fs': self.all_fs.to_dict('records'),
             'net': self.all_net.to_dict('records'),
-            'fs_settings': self.all_fs_settings,
-            'net_settings': self.all_net_settings
+            'fs_settings': self.fs_settings,
+            'net_settings': self.net_settings
         }
         YamlFile(path).save(graph)
 
@@ -375,7 +375,7 @@ class ResourceGraph:
     def filter_fs(self, mount_re,
                   mount_suffix=None, tran=None):
         """
-        Track all storage filesystems + devices matching the mount regex
+        Track all filesystems + devices matching the mount regex.
 
         :param mount_re: The regex to match a set of mountpoints
         :param mount_suffix: After the mount_re is matched, append this path
@@ -386,10 +386,9 @@ class ResourceGraph:
         :param tran: The transport of this device
         :return: None
         """
-        self.all_fs_settings['track_mounts']['mount_re'] = {
+        self.fs_settings['track_mounts']['mount_re'] = {
             'mount_re': mount_re,
             'mount_suffix': mount_suffix,
-            'shared': shared,
             'tran': tran
         }
         self._apply_fs_settings()
@@ -405,21 +404,20 @@ class ResourceGraph:
         """
         self.net_settings['track_ips'][ip_re] = {
             'ip_re': ip_re,
-            'speed': SizeConv.to_int(speed)
+            'speed': SizeConv.to_int(speed) if speed is not None else speed
         }
         self._apply_net_settings()
 
-    def track_hosts(self, host_text, speed=None):
+    def filter_hosts(self, hosts, speed=None):
         """
         Track all ips matching the hostnames.
 
-        :param host_text: Hostfile text (e.g., ares-comp-[01-32]-40g)
+        :param hosts: Hostfile() of the hosts to filter for
         :param speed: Speed of the interconnect (e.g., 1gbps)
         :return: None
         """
-        hosts = Hostfile(text=host_text).hosts_ip
-        for host in hosts:
-            self.track_ip(host, speed)
+        for host in hosts.hosts_ip:
+            self.filter_ip(host, speed)
 
     def _apply_fs_settings(self):
         if len(self.fs_settings) == 0:
@@ -430,15 +428,14 @@ class ResourceGraph:
         for fs_set in self.fs_settings['track_mounts'].values():
             mount_re = fs_set['mount_re']
             mount_suffix = fs_set['mount_suffix']
-            shared = fs_set['shared']
             tran = fs_set['tran']
-            with_mount = df[df['mount'].str.contains(mount_re)]
+            with_mount = df[df.mount.str.contains(mount_re)]
+            mount = list(with_mount['mount'])
             if mount_suffix is not None:
                 with_mount['mount'] += mount_suffix
-            if shared is not None:
-                with_mount['shared'] = shared
             if tran is not None:
                 with_mount['tran'] = tran
+            mount = list(with_mount['mount'])
             self.fs = pd.concat([self.fs, with_mount])
 
     def _apply_net_settings(self):
@@ -492,8 +489,9 @@ class ResourceGraph:
         """
         Find the set of networks common between each host.
 
-        :param hosts:
-        :param provider: The provider
+        :param hosts: A Hostfile() data structure containing the set of
+        all hosts to find network information for
+        :param provider: The network protocol to search for
         :return:
         """
         pass

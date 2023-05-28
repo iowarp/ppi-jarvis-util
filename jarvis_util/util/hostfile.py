@@ -58,7 +58,7 @@ class Hostfile:
         hosts = []
         with open(path, 'r', encoding='utf-8') as fp:
             text = fp.read()
-            self.pares(text)
+            self.parse(text)
         return self
 
     def parse(self, text):

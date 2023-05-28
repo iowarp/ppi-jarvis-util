@@ -1,6 +1,7 @@
 from jarvis_util.util.argparse import ArgParse
 from jarvis_util.shell.exec import Exec
 from jarvis_util.shell.local_exec import LocalExecInfo
+from jarvis_util.util.hostfile import Hostfile
 from jarvis_util.introspect.system_info import Lsblk, \
     ListFses, FiInfo, Blkid, ResourceGraph
 import pathlib
@@ -25,3 +26,6 @@ class TestSystemInfo(TestCase):
         rg.build(LocalExecInfo(hide_output=True))
         rg.save('/tmp/resource_graph.yaml')
         rg.load('/tmp/resource_graph.yaml')
+        rg.filter_fs(r'/$', '/${USER}', 'NVME')
+        rg.filter_hosts(Hostfile(), '1gbps')
+        rg.save('/tmp/resource_graph.yaml')
