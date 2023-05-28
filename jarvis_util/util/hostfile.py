@@ -13,12 +13,13 @@ class Hostfile:
     Parse a hostfile or store a set of hosts passed in manually.
     """
 
-    def __init__(self, hostfile=None, all_hosts=None, find_ips=True):
+    def __init__(self, hostfile=None, all_hosts=None, text=None, find_ips=True):
         """
         Constructor. Parse hostfile or store existing host list.
 
         :param hostfile: The path to the hostfile
         :param all_hosts: a list of strings representing all hosts
+        :param text: Text of a hostfile
         :param find_ips: Whether to construct host_ip and all_host_ip fields
         """
         self.hosts_ip = []
@@ -32,25 +33,17 @@ class Hostfile:
         if all_hosts is not None:
             self._set_hosts(all_hosts)
 
-        # Hostfile constructor
+        # From hostfile path
         elif hostfile is not None:
             self._load_hostfile(self.path)
 
-    def parse(self, text, set_hosts=False):
-        """
-        Parse a line of a hostfile. Used mainly for unit tests.
+        # From hostfile text
+        elif text is not None:
+            self.parse(text)
 
-        :param text: A line of the hostfile
-        :param set_hosts: Whether or not to set hosts
-        :return:
-        """
-
-        hosts = []
-        self._expand_line(hosts, text)
-        if set_hosts:
-            self._set_hosts(hosts)
+        # Both hostfile and hosts are None
         else:
-            self.hosts = hosts
+            self._set_hosts(['localhost'])
 
     def _load_hostfile(self, path):
         """
@@ -61,14 +54,27 @@ class Hostfile:
         """
         if not os.path.exists(path):
             raise Exception('hostfile not found')
+        self.path = path
         hosts = []
         with open(path, 'r', encoding='utf-8') as fp:
-            lines = fp.read().splitlines()
-            for line in lines:
-                self._expand_line(hosts, line)
-        self.path = path
-        self._set_hosts(hosts)
+            text = fp.read()
+            self.pares(text)
         return self
+
+    def parse(self, text):
+        """
+        Parse a hostfile text.
+
+        :param text: Hostfile text
+        :param set_hosts: Whether or not to set hosts
+        :return: None
+        """
+
+        lines = text.strip().splitlines()
+        hosts = []
+        for line in lines:
+            self._expand_line(hosts, line)
+        self._set_hosts(hosts)
 
     def _expand_line(self, hosts, line):
         """

@@ -173,10 +173,24 @@ class Executable(ABC):
             node.wait()
 
     def smash_list_outputs(self, nodes):
+        """
+        Combine the outputs of a set of nodes into a single output.
+        For example, used if executing multiple commands in sequence.
+
+        :param nodes:
+        :return:
+        """
         self.stdout = '\n'.join([node.stdout for node in nodes])
         self.stderr = '\n'.join([node.stderr for node in nodes])
 
     def per_host_outputs(self, nodes):
+        """
+        Convert the outputs of a set of nodes to a per-host dictionary.
+        Used if sending commands to multiple hosts
+
+        :param nodes:
+        :return:
+        """
         self.stdout = {}
         self.stderr = {}
         self.stdout = {node.addr: node.stdout for node in nodes}

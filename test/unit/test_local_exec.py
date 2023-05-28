@@ -21,7 +21,7 @@ class TestLocalExec(TestCase):
     def test_default(self):
         ret = Exec("echo hello")
         self.assertEqual(ret.exit_code, 0)
-        self.assertEqual(len(ret.stdout), 0)
+        self.assertEqual(len(ret.stdout['localhost']), 0)
 
     def test_pipe_stdout(self):
         self._setup_files()
@@ -29,8 +29,8 @@ class TestLocalExec(TestCase):
                                    pipe_stderr=self.stderr,
                                    collect_output=True)
         ret = Exec("echo hello", spawn_info)
-        self.assertEqual(ret.stdout.strip(), "hello")
-        self.assertEqual(ret.stderr.strip(), "")
+        self.assertEqual(ret.stdout['localhost'].strip(), "hello")
+        self.assertEqual(ret.stderr['localhost'].strip(), "")
         self.assertFile(self.stdout, "hello")
         self.assertFile(self.stderr, "")
 
@@ -39,16 +39,16 @@ class TestLocalExec(TestCase):
         PRINTNONE = os.path.join(HERE, 'printNone.py')
         spawn_info = LocalExecInfo(collect_output=True)
         ret = Exec(f"python3 {PRINTNONE}", spawn_info)
-        self.assertEqual(ret.stdout.strip(), "")
-        self.assertEqual(ret.stderr.strip(), "")
+        self.assertEqual(ret.stdout['localhost'].strip(), "")
+        self.assertEqual(ret.stderr['localhost'].strip(), "")
 
     def test_periodic_print(self):
         self._setup_files()
         HERE = str(pathlib.Path(__file__).parent.resolve())
         PRINT5s = os.path.join(HERE, 'print5s.py')
-        ret = LocalExec(f"python3 {PRINT5s}",
-                        LocalExecInfo(pipe_stdout=self.stdout,
-                                      pipe_stderr=self.stderr))
+        ret = Exec(f"python3 {PRINT5s}",
+                   LocalExecInfo(pipe_stdout=self.stdout,
+                                 pipe_stderr=self.stderr))
         stdout_data = "\n".join([f"COUT: {i}" for i in range(5)])
         stderr_data = "\n".join([f"CERR: {i}" for i in range(5)])
         self.assertFile(self.stdout, stdout_data)
