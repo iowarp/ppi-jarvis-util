@@ -122,10 +122,13 @@ class ExecInfo:
             self.hostfile = Hostfile()
 
     def mod(self, **kwargs):
+        self._mod_kwargs(kwargs)
+        return ExecInfo(**kwargs)
+
+    def _mod_kwargs(self, kwargs):
         for key in self.keys:
             if key not in kwargs and hasattr(self, key):
                 kwargs[key] = getattr(self, key)
-        return ExecInfo(**kwargs)
 
     def copy(self):
         return self.mod()
