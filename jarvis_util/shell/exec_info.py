@@ -89,6 +89,7 @@ class ExecInfo:
             'PYTHON_PATH', 'CPATH', 'INCLUDE', 'JAVA_HOME'
         ]
         self.basic_env = {}
+        self.env = {}
         for key in basic_env:
             if key not in os.environ:
                 continue
@@ -96,7 +97,7 @@ class ExecInfo:
         for key, val in self.basic_env.items():
             if key not in self.env:
                 self.env[key] = val
-        self.basic_env.update(env)
+        self.basic_env.update(self.env)
         if 'LD_PRELOAD' in self.basic_env:
             del self.basic_env['LD_PRELOAD']
 
