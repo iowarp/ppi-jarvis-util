@@ -8,7 +8,6 @@ from enum import Enum
 from jarvis_util.util.hostfile import Hostfile
 import os
 from abc import ABC, abstractmethod
-import copy
 
 
 class ExecType(Enum):
@@ -76,6 +75,11 @@ class ExecInfo:
         self.hide_output = hide_output
         self.exec_async = exec_async
         self.stdin = stdin
+        self.keys = ['exec_type', 'nprocs', 'ppn', 'user', 'pkey', 'port',
+                     'hostfile', 'env', 'sleep_ms', 'sudo',
+                     'cwd', 'hosts', 'collect_output',
+                     'pipe_stdout', 'pipe_stderr', 'hide_output',
+                     'exec_async', 'stdin']
 
     def _set_env(self, env):
         if env is None:
@@ -118,26 +122,10 @@ class ExecInfo:
             self.hostfile = Hostfile()
 
     def mod(self, **kwargs):
-        cpy = copy.deepcopy(self)
-        nontrivial = [
-            'hostfile', 'hosts', 'env'
-        ]
-        for key, val in kwargs.items():
-            if key not in nontrivial:
-                setattr(cpy, key, val)
-        if 'env' in kwargs:
-            cpy._set_env(kwargs['env'])
-
-        hostfile = None
-        hosts = None
-        if 'hostfile' in kwargs:
-            hostfile = kwargs['hostfile']
-        if 'hosts' in kwargs:
-            hosts = kwargs['hosts']
-        if hostfile is not None or hosts is not None:
-            cpy._set_hostfile(hostfile=kwargs['hostfile'],
-                              hosts=kwargs['hosts'])
-        return cpy
+        for key in self.keys:
+            if key not in kwargs and hasattr(self, key):
+                kwargs[key] = getattr(self, key)
+        return self.__class__(**kwargs)
 
     def copy(self):
         return self.mod()
