@@ -86,8 +86,7 @@ class ExecInfo:
             self.env = {}
         basic_env = [
             'PATH', 'LD_LIBRARY_PATH', 'LIBRARY_PATH', 'CMAKE_PREFIX_PATH',
-            'PYTHON_PATH', 'CPATH', 'INCLUDE', 'JAVA_HOME',
-            'COVERAGE_PROCESS_START'
+            'PYTHON_PATH', 'CPATH', 'INCLUDE', 'JAVA_HOME'
         ]
         for key in basic_env:
             if key not in os.environ:
@@ -96,6 +95,9 @@ class ExecInfo:
         for key, val in self.basic_env.items():
             if key not in self.env:
                 self.env[key] = val
+        self.basic_env.update(env)
+        if 'LD_PRELOAD' in self.basic_env:
+            del self.basic_env['LD_PRELOAD']
 
     def _set_hostfile(self, hostfile=None, hosts=None):
         if hostfile is not None:
