@@ -8,6 +8,7 @@ from enum import Enum
 from jarvis_util.util.hostfile import Hostfile
 import os
 from abc import ABC, abstractmethod
+import copy
 
 
 class ExecType(Enum):
@@ -117,15 +118,17 @@ class ExecInfo:
             self.hostfile = Hostfile()
 
     def mod(self, **kwargs):
-        keys = ['exec_type', 'nprocs', 'ppn', 'user', 'pkey', 'port',
-                'hostfile', 'env', 'sleep_ms', 'sudo',
-                'cwd', 'hosts', 'collect_output',
-                'pipe_stdout', 'pipe_stderr', 'hide_output',
-                'exec_async', 'stdin']
-        for key in keys:
-            if key not in kwargs and hasattr(self, key):
-                kwargs[key] = getattr(self, key)
-        return ExecInfo(**kwargs)
+        cpy = copy.deepcopy(self)
+        for key, val in kwargs.items():
+            # if key not in kwargs and hasattr(self, key):
+            #     kwargs[key] = getattr(self, key)
+            if key == 'hostfile':
+                cpy._set_hostfile(val)
+            elif key == 'env':
+                cpy._set_env(val)
+            else:
+                setattr(cpy, key, val)
+        return cpy  # ExecInfo(**kwargs)
 
     def copy(self):
         return self.mod()

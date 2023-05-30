@@ -31,7 +31,6 @@ class TestSystemInfo(TestCase):
         rg.filter_fs(r'/$', '/${USER}', 'NVME')
         rg.filter_hosts(Hostfile(), '1gbps')
         rg.save('/tmp/resource_graph.yaml')
-        storages = rg.find_storage()
 
     def test_custom_resource_graph(self):
         rg = ResourceGraph()
