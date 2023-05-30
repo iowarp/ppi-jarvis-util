@@ -37,7 +37,7 @@ class MpiExec(LocalExec):
         if self.ppn is not None:
             params.append(f"-ppn {self.ppn}")
         if len(self.hostfile):
-            if self.hostfile.is_subset():
+            if self.hostfile.is_subset() or self.hostfile.path is None:
                 params.append(f"--host {','.join(self.hostfile.hosts)}")
             else:
                 params.append(f"--hostfile {self.hostfile.path}")
