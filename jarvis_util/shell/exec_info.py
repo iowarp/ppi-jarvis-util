@@ -123,7 +123,9 @@ class ExecInfo:
             # if key not in kwargs and hasattr(self, key):
             #     kwargs[key] = getattr(self, key)
             if key == 'hostfile':
-                cpy._set_hostfile(val)
+                cpy._set_hostfile(hostfile=val)
+            elif key == 'hosts':
+                cpy._set_hostfile(hosts=val)
             elif key == 'env':
                 cpy._set_env(val)
             else:
