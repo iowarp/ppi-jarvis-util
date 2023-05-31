@@ -175,6 +175,14 @@ class Hostfile:
     def is_subset(self):
         return len(self.hosts) != len(self.all_hosts)
 
+    def is_local(self):
+        """
+        Whether this file contains only 'localhost'
+
+        :return: True or false
+        """
+        return len(self) == 1 and self.hosts[0] == 'localhost'
+
     def save(self, path):
         self.all_hosts = self.hosts
         self.all_hosts_ip = self.hosts_ip
