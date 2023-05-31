@@ -297,6 +297,7 @@ class ResourceGraph:
         fabric: IP address
         domain: network domain
         host: the host this network corresponds to
+        speed: the network speed of the interconnect
 
     TODO: Need to verify on more than ubuntu20.04
     TODO: Can we make this work for windows?
@@ -314,7 +315,7 @@ class ResourceGraph:
             'avail', 'shared', 'host'
         ]
         self.net_columns = [
-            'provider', 'fabric', 'domain', 'host'
+            'provider', 'fabric', 'domain', 'host', 'speed'
         ]
         self.all_fs = pd.DataFrame(columns=self.fs_columns)
         self.all_net = pd.DataFrame(columns=self.net_columns)
@@ -490,6 +491,12 @@ class ResourceGraph:
         for host in hosts.hosts_ip:
             self.filter_ip(host, speed)
         return self
+
+    def filter_net(self, ip_re=None, hosts=None, speed=None):
+        if ip_re is not None:
+            self.filter_ip(ip_re, speed=speed)
+        if hosts is not None:
+            self.filter_hosts(hosts, speed=speed)
 
     def apply(self):
         """

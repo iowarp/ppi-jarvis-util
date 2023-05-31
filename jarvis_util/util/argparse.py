@@ -30,7 +30,7 @@ class ArgParse(ABC):
         self.exit_on_fail = exit_on_fail
         self.menus = []
         self.vars = {}
-        self.remainder = None
+        self.remainder = []
         self.pos_required = False
         self.use_remainder = False
 
@@ -308,7 +308,7 @@ class ArgParse(ABC):
             opt_name = args[i]
             if opt_name not in menu['kw_opts']:
                 if self.use_remainder:
-                    self.remainder = ' '.join(args[i:])
+                    self.remainder = args[i:]
                     return
                 else:
                     self._invalid_kwarg(opt_name)
