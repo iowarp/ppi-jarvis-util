@@ -81,10 +81,10 @@ class ArgParse(ABC):
 
         :return: None
         """
-
         func_name = self.menu_name.replace(' ', '_')
+        func_name = func_name.replace('-', '_')
         func = getattr(self, func_name)
-        func(self)
+        func()
 
     def add_menu(self, name=None, msg=None,
                  keep_remainder=False):
@@ -97,8 +97,8 @@ class ArgParse(ABC):
         in the argument list.
         :param msg: The message to print if the user selects an improper menu
         in the CLI.
-        :param keep_remainder: Whether or not the menu should store all remaining
-        arguments for further use later.
+        :param keep_remainder: Whether or not the menu should store all
+        remaining arguments for further use later.
         :return:
         """
 
@@ -190,7 +190,6 @@ class ArgParse(ABC):
             if self.pos_required:
                 menu['num_required'] += 1
             menu['pos_opts'].append(arg)
-        self.kwargs[arg['dict_name']] = default
 
     def _add_bool_kw_arg(self,
                          name,
@@ -241,6 +240,12 @@ class ArgParse(ABC):
         """
         self.menus.sort(key=lambda x: len(x['name']), reverse=True)
         self._parse_menu()
+        for arg in self.menu['kw_opts'].values():
+            if arg['dict_name'] not in self.kwargs:
+                self.kwargs[arg['dict_name']] = arg['default']
+        for arg in self.menu['pos_opts']:
+            if arg['dict_name'] not in self.kwargs:
+                self.kwargs[arg['dict_name']] = arg['default']
 
     def _parse_menu(self):
         """

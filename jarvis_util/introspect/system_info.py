@@ -350,10 +350,10 @@ class ResourceGraph:
         :param exec_info: Where to collect resource information
         :return: None
         """
-        self.lsblk = Lsblk(exec_info)
-        self.blkid = Blkid(exec_info)
-        self.list_fs = ListFses(exec_info)
-        self.fi_info = FiInfo(exec_info)
+        self.lsblk = Lsblk(exec_info.mod(hide_output=True))
+        self.blkid = Blkid(exec_info.mod(hide_output=True))
+        self.list_fs = ListFses(exec_info.mod(hide_output=True))
+        self.fi_info = FiInfo(exec_info.mod(hide_output=True))
         self.hosts = exec_info.hostfile.hosts
         self.all_fs = pd.merge(self.lsblk.df,
                                self.blkid.df,
