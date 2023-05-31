@@ -181,6 +181,8 @@ class Hostfile:
 
         :return: True or false
         """
+        if len(self) == 0:
+            return True
         return len(self) == 1 and self.hosts[0] == 'localhost'
 
     def save(self, path):
