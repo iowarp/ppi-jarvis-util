@@ -32,7 +32,7 @@ class ArgParse(ABC):
         self.vars = {}
         self.remainder = []
         self.pos_required = False
-        self.use_remainder = False
+        self.keep_remainder = False
 
         self.menu = None
         self.menu_name = None
@@ -49,13 +49,37 @@ class ArgParse(ABC):
         """
         pass
 
+    def autoparse_remainder(self):
+        i = 0
+        self.end_required()
+        while i < len(self.remainder):
+            entry = self.remainder[i]
+            if self.remainder[i + 1] == '=':
+                self.add_arg(entry)
+                i += 2
+            elif entry.startswith('+'):
+                self.add_arg(entry, argtype=bool)
+                i += 1
+            elif entry.startswith('-'):
+                self.add_arg(entry, argtype=bool)
+                i += 1
+            elif '--with-' in entry[i]:
+                self.add_arg(entry, argtype=bool)
+                i += 1
+            elif '--no-' in entry[i]:
+                self.add_arg(entry, argtype=bool)
+                i += 1
+            else:
+                raise Exception(f'Could not infer key: {entry}')
+        self._parse()
+
     def process_args(self):
         """
         After args have been parsed, can call this function to process
         the arguments. Assumes that derived ArgParse class has a function
         for each menu option.
 
-        :return:
+        :return: None
         """
 
         func_name = self.menu_name.replace(' ', '_')
@@ -63,7 +87,7 @@ class ArgParse(ABC):
         func(self)
 
     def add_menu(self, name=None, msg=None,
-                 use_remainder=False):
+                 keep_remainder=False):
         """
         A menu is a container of arguments.
 
@@ -73,7 +97,7 @@ class ArgParse(ABC):
         in the argument list.
         :param msg: The message to print if the user selects an improper menu
         in the CLI.
-        :param use_remainder: Whether or not the menu should store all remaining
+        :param keep_remainder: Whether or not the menu should store all remaining
         arguments for further use later.
         :return:
         """
@@ -88,7 +112,7 @@ class ArgParse(ABC):
             'num_required': 0,
             'pos_opts': [],
             'kw_opts': {},
-            'use_remainder': use_remainder
+            'keep_remainder': keep_remainder
         })
         self.pos_required = False
         self.menu = self.menus[-1]
@@ -142,7 +166,7 @@ class ArgParse(ABC):
                 else:
                     raise f"Can't have a non-keyword alias: {alias}"
         # Handle the specific boolean argument case
-        is_kwarg = '-' in name
+        is_kwarg = name.startswith('-') or name.startswith('+')
         if is_kwarg and argtype == bool:
             self._add_bool_kw_arg(name, default, msg)
             return
@@ -242,7 +266,7 @@ class ArgParse(ABC):
                      action=self._print_help,
                      aliases=['--help'])
         menu_name = self.menu['name']
-        self.use_remainder = self.menu['use_remainder']
+        self.keep_remainder = self.menu['keep_remainder']
         self.args = self.args[len(menu_name):]
         self._parse_args()
 
@@ -307,7 +331,7 @@ class ArgParse(ABC):
             # Get argument name
             opt_name = args[i]
             if opt_name not in menu['kw_opts']:
-                if self.use_remainder:
+                if self.keep_remainder:
                     self.remainder = args[i:]
                     return
                 else:
