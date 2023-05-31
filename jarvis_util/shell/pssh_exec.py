@@ -28,7 +28,7 @@ class PsshExec(Executable):
         self.execs_ = []
         self.stdout = {}
         self.stderr = {}
-        if exec_info.hostfile.is_local():
+        if not exec_info.hostfile.is_local():
             for host in self.hosts:
                 ssh_exec_info = exec_info.mod(hostfile=None,
                                               hosts=host,
