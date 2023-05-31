@@ -28,7 +28,8 @@ class PsshExec(Executable):
         self.execs_ = []
         self.stdout = {}
         self.stderr = {}
-        if not exec_info.hostfile.is_local():
+        self.is_local = exec_info.hostfile.is_local()
+        if not self.is_local:
             for host in self.hosts:
                 ssh_exec_info = exec_info.mod(hostfile=None,
                                               hosts=host,
@@ -37,13 +38,16 @@ class PsshExec(Executable):
         else:
             self.execs_.append(
                 LocalExec(cmd, exec_info))
-            return
         if not self.exec_async:
             self.wait()
 
     def wait(self):
         self.wait_list(self.execs_)
-        self.per_host_outputs(self.execs_)
+        if not self.is_local:
+            self.per_host_outputs(self.execs_)
+        else:
+            self.stdout = {'localhost': self.execs_[0].stdout}
+            self.stderr = {'localhost': self.execs_[0].stderr}
         self.set_exit_code()
 
     def set_exit_code(self):
