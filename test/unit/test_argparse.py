@@ -1,10 +1,128 @@
 from jarvis_util.util.argparse import ArgParse
-from jarvis_util.shell.exec import Exec
-from jarvis_util.shell.local_exec import LocalExecInfo
-import pathlib
 from unittest import TestCase
+import shlex
+
+
+class MyArgParse(ArgParse):
+    def define_options(self):
+        self.add_menu(keep_remainder=True)
+        self.add_args([
+            {
+                'name': 'hi',
+                'msg': 'hello',
+                'type': str,
+                'default': None
+            }
+        ])
+
+        self.add_menu('vpic run',
+                      keep_remainder=False)
+        self.add_args([
+            {
+                'name': 'steps',
+                'msg': 'Number of checkpoints',
+                'type': int,
+                'required': True,
+                'pos': True,
+            },
+            {
+                'name': 'x',
+                'msg': 'The length of the x-axis',
+                'type': int,
+                'required': False,
+                'default': 256,
+                'pos': True,
+            },
+            {
+                'name': 'do_io',
+                'msg': 'Whether to perform I/O or not',
+                'type': bool,
+                'required': False,
+                'default': False,
+                'pos': True,
+            },
+            {
+                'name': 'make_figures',
+                'msg': 'Whether to make a figure',
+                'type': bool,
+                'default': False,
+            },
+            {
+                'name': 'data_size',
+                'msg': 'Total amount of data to produce',
+                'type': int,
+                'default': 1024,
+            },
+            {
+                'name': 'hosts',
+                'msg': 'A list of hosts',
+                'type': list,
+                'args': [
+                    {
+                        'name': 'host',
+                        'msg': 'A string representing a host',
+                        'type': str,
+                    }
+                ]
+            },
+            {
+                'name': 'devices',
+                'msg': 'A list of devices and counts',
+                'type': list,
+                'args': [
+                    {
+                        'name': 'path',
+                        'msg': 'The mount point of device',
+                        'type': str,
+                    },
+                    {
+                        'name': 'count',
+                        'msg': 'The number of devices to search for',
+                        'type': int,
+                    }
+                ]
+            }
+        ])
 
 
 class TestArgparse(TestCase):
-    def test_argparse_main(self):
-        pass
+    def test_default_argparse(self):
+        args = MyArgParse(args='hi=\"23528 asfda\"')
+        self.assertEqual(args.kwargs['hi'], '23528 asfda')
+
+    def test_help(self):
+        MyArgParse(args='vpic run -h')
+
+    def test_bool_kwargs(self):
+        args = MyArgParse(args='vpic run 20 512 True +make_figures')
+        self.assertEqual(args.kwargs['steps'], 20)
+        self.assertEqual(args.kwargs['x'], 512)
+        self.assertEqual(args.kwargs['do_io'], True)
+        self.assertEqual(args.kwargs['make_figures'], True)
+        self.assertEqual(args.kwargs['hosts'], None)
+        self.assertEqual(args.kwargs['devices'], None)
+
+    def test_bool_kwargs2(self):
+        args = MyArgParse(args='vpic run 20 512 True -make_figures')
+        self.assertEqual(args.kwargs['steps'], 20)
+        self.assertEqual(args.kwargs['x'], 512)
+        self.assertEqual(args.kwargs['do_io'], True)
+        self.assertEqual(args.kwargs['make_figures'], False)
+        self.assertEqual(args.kwargs['hosts'], None)
+        self.assertEqual(args.kwargs['devices'], None)
+
+    def test_list_arg(self):
+        args = MyArgParse(args='vpic run 15 --hosts=\"[129.15, 1294.124]\"')
+        self.assertEqual(15, args.kwargs['steps'])
+        self.assertEqual(['129.15', '1294.124'], args.kwargs['hosts'])
+
+    def test_list_arg2(self):
+        args = MyArgParse(args='vpic run 15 --hosts=[]')
+        self.assertEqual(15, args.kwargs['steps'])
+        self.assertEqual([], args.kwargs['hosts'])
+
+    def test_list_list_arg(self):
+        args = MyArgParse(args='vpic run 15 '
+                               '--devices=\"[[nvme, 5], [sata, 25]]\"')
+        self.assertEqual(15, args.kwargs['steps'])
+        self.assertEqual([['nvme', 5], ['sata', 25]], args.kwargs['devices'])

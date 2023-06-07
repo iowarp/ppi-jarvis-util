@@ -6,6 +6,7 @@ import sys
 import os
 from abc import ABC, abstractmethod
 import shlex
+import yaml
 from tabulate import tabulate
 
 
@@ -22,10 +23,8 @@ class ArgParse(ABC):
             args = sys.argv[1:]
         elif isinstance(args, str):
             args = shlex.split(args)
-        args = ' '.join(args)
         self.binary_name = os.path.basename(sys.argv[0])
-        self.orig_args = shlex.split(args)
-        self.args = self.orig_args
+        self.args = args
         self.error = None
         self.exit_on_fail = exit_on_fail
         self.menus = []
@@ -52,7 +51,6 @@ class ArgParse(ABC):
 
     def autoparse_remainder(self):
         i = 0
-        self.end_required()
         while i < len(self.remainder):
             entry = self.remainder[i]
             if self.remainder[i + 1] == '=':
@@ -104,7 +102,6 @@ class ArgParse(ABC):
         remaining arguments for further use later.
         :return:
         """
-
         toks = []
         if name is not None:
             toks = name.split()
@@ -117,121 +114,46 @@ class ArgParse(ABC):
             'kw_opts': {},
             'keep_remainder': keep_remainder
         })
-        self.pos_required = False
         self.menu = self.menus[-1]
 
-    def start_required(self):
+    def add_args(self, args):
         """
-        Define a set of required positional arguments.
+        Add arguments to the current menu
 
-        :return: None
-        """
-        self.pos_required = True
+        menu arguments have the following parameters:
+            name: The name of the argument
+            type: The arg type (e.g., str, int, bool, list). Default str.
+            choices: Available choices for the menu option. Default None.
+            pos: Whether the argument is positional. Default false.
+            required: Whether a positional argument is required. Default false.
+            default: The default value of the argument. Default None.
+            args: For arguments of the 'list' types, represents the
+            meaning of entries in the list
 
-    def end_required(self):
-        """
-        Finish the set of required positional arguments.
-
-        :return: None
-        """
-        self.pos_required = False
-
-    def add_arg(self,
-                name,
-                argtype=str,
-                choices=None,
-                default=None,
-                msg=None,
-                action=None,
-                aliases=None):
-        """
-        Append an argument to a menu.
-        Arguments can either be positional or key-value.
-            Positional arguments do NOT start with a dash
-            Key-value arguments are separated by dashes
-
-        :param name: The name of the argument. If name starts with a dash,
-        it will be interpreted as a positional arg
-        :param argtype: The type of the argument being stored.
-        :param choices: The set of acceptable inputs as a list
-        :param default: The default value to store
-        :param msg: The help message to print if there is a problem
-        :param action: An action to execute if the argument exists
-        :param aliases: Other names for the same thing (list)
+        :param args: A list of argument dicts
         :return:
         """
-
-        # Add all aliases
-        if aliases is not None:
-            for alias in aliases:
-                if '-' in alias:
-                    self.add_arg(alias, argtype, choices, default, msg, action)
-                else:
-                    raise f"Can't have a non-keyword alias: {alias}"
-        # Handle the specific boolean argument case
-        is_kwarg = name.startswith('-') or name.startswith('+')
-        if is_kwarg and argtype == bool:
-            self._add_bool_kw_arg(name, default, msg)
-            return
-        # Add general argument
-        menu = self.menu
-        arg = {
-            'name': name,
-            'dict_name': self._get_opt_name(name),
-            'type': argtype,
-            'choices': choices,
-            'default': default,
-            'action': action,
-            'msg': msg,
-            'required': self.pos_required,
-            'has_input': True
-        }
-        if is_kwarg:
-            self.pos_required = False
-            menu['kw_opts'][name] = arg
-        else:
-            if self.pos_required:
-                menu['num_required'] += 1
-            menu['pos_opts'].append(arg)
-
-    def _add_bool_kw_arg(self,
-                         name,
-                         default,
-                         msg=None,
-                         is_other=False,
-                         dict_name=None):
-        """
-        Boolean arguments can be indicated using a +-.
-        + indicates true, - indicates false.
-
-        :param name: The name of the boolean arg
-        :param default: Default value of the boolean arg
-        :param msg: Help message
-        :param is_other: Indicates this is an alias of the +- syntax.
-        :param dict_name: Name to make the argument in final kwargs
-        :return: None
-        """
-        menu = self.menu
-        if dict_name is None:
-            dict_name = self._get_opt_name(name, True)
-        arg = {
-            'name': name,
-            'dict_name': dict_name,
+        self.menu['pos_opts'] += [arg for arg in args
+                                  if 'pos' in arg and
+                                  arg['pos'] is True]
+        self.menu['kw_opts'].update({arg['name']: arg for arg in args
+                                     if 'pos' not in arg or
+                                     arg['pos'] is False})
+        for arg in self.menu['pos_opts']:
+            if 'required' in arg and arg['required']:
+                self.menu['num_required'] += 1
+        self.menu['kw_opts'].update({'help': {
+            'name': 'help',
             'type': bool,
-            'choices': None,
-            'default': default,
-            'action': None,
-            'msg': msg,
-            'required': False,
-            'has_input': not is_other
-        }
-        if not is_other:
-            self._add_bool_kw_arg('--with-' + name.strip('-'),
-                                 True, msg, True, dict_name)
-            self._add_bool_kw_arg('--no-' + name.strip('-'),
-                                 False, msg, True, dict_name)
-        self.pos_required = False
-        menu['kw_opts'][name] = arg
+            'msg': 'Print help menu',
+            'default': False
+        }})
+        self.menu['kw_opts'].update({'h': {
+            'name': 'h',
+            'type': bool,
+            'msg': 'Print help menu',
+            'default': False
+        }})
 
     def _parse(self):
         """
@@ -241,18 +163,21 @@ class ArgParse(ABC):
 
         :return: None.
         """
+        # Sort by longest menu length
         self.menus.sort(key=lambda x: len(x['name']), reverse=True)
+        # Parse the menu options
         self._parse_menu()
-        for arg in self.menu['kw_opts'].values():
-            if arg['dict_name'] == 'help':
+        # Set the default values for arguments we don't have
+        for arg in list(self.menu['kw_opts'].values()) + self.menu['pos_opts']:
+            if arg['name'] == 'help':
                 continue
-            if arg['dict_name'] == 'h':
+            if arg['name'] == 'h':
                 continue
-            if arg['dict_name'] not in self.kwargs:
-                self.kwargs[arg['dict_name']] = arg['default']
-        for arg in self.menu['pos_opts']:
-            if arg['dict_name'] not in self.kwargs:
-                self.kwargs[arg['dict_name']] = arg['default']
+            if arg['name'] not in self.kwargs:
+                if 'default' in arg:
+                    self.kwargs[arg['name']] = arg['default']
+                else:
+                    self.kwargs[arg['name']] = None
 
     def _parse_menu(self):
         """
@@ -261,6 +186,7 @@ class ArgParse(ABC):
         :return: Modify self.menu. No return value.
         """
 
+        # Identify the menu we are currently under
         self.menu = None
         for menu in self.menus:
             menu_name = menu['name']
@@ -272,27 +198,16 @@ class ArgParse(ABC):
         if self.menu is None:
             self._invalid_menu()
         self.menu_name = self.menu['name_str']
-        self.add_arg('-h',
-                     default=None,
-                     msg='print help message',
-                     action=self._print_help,
-                     aliases=['--help'])
         menu_name = self.menu['name']
         self.keep_remainder = self.menu['keep_remainder']
         self.args = self.args[len(menu_name):]
         self._parse_args()
 
     def _parse_args(self):
-        self._set_defaults()
         i = self._parse_pos_args()
         self._parse_kw_args(i)
-
-    def _set_defaults(self):
-        all_opts = self.menu['pos_opts'] + list(self.menu['kw_opts'].values())
-        for opt_info in all_opts:
-            if opt_info['default'] is None:
-                continue
-            self.__dict__[opt_info['dict_name']] = opt_info['default']
+        if 'h' in self.kwargs or 'help' in self.kwargs:
+            self._print_help()
 
     def _parse_pos_args(self):
         """
@@ -308,9 +223,6 @@ class ArgParse(ABC):
         while i < len(menu['pos_opts']):
             # Get the positional arg info
             opt_name = menu['pos_opts'][i]['name']
-            opt_dict_name = menu['pos_opts'][i]['dict_name']
-            opt_type = menu['pos_opts'][i]['type']
-            opt_choices = menu['pos_opts'][i]['choices']
             if i >= len(args):
                 if i >= menu['num_required']:
                     break
@@ -318,13 +230,13 @@ class ArgParse(ABC):
                     self._missing_positional(opt_name)
 
             # Get the arg value
-            arg = args[i]
-            if arg in menu['kw_opts']:
+            opt_val = args[i]
+            if self._is_kw_value(i):
                 break
-            arg = self._convert_opt(opt_name, opt_type, opt_choices, arg)
+            opt_val = self._convert_opt(menu['pos_opts'][i], opt_val)
 
             # Set the argument
-            self.kwargs[opt_dict_name] = arg
+            self.kwargs[opt_name] = opt_val
             i += 1
         return i
 
@@ -340,8 +252,25 @@ class ArgParse(ABC):
         menu = self.menu
         args = self.args
         while i < len(args):
-            # Get argument name
             opt_name = args[i]
+            opt_val = True
+            if '=' in opt_name:
+                opt_name, opt_val = opt_name.split('=')
+            elif opt_name == '-h':
+                opt_name = 'h'
+                opt_val = True
+            elif opt_name == '--help':
+                opt_name = 'help'
+                opt_val = True
+            elif opt_name.startswith('+'):
+                opt_val = True
+            elif opt_name.startswith('-') and not opt_name.startswith('--'):
+                opt_val = False
+
+            # Normalize opt name
+            opt_name = self._get_opt_name(opt_name)
+
+            # Verify argument is apart of the menu
             if opt_name not in menu['kw_opts']:
                 if self.keep_remainder:
                     self.remainder = args[i:]
@@ -351,40 +280,39 @@ class ArgParse(ABC):
 
             # Get argument type
             opt = menu['kw_opts'][opt_name]
-            opt_has_input = opt['has_input']
-            opt_dict_name = opt['dict_name']
-            opt_type = opt['type']
-            opt_default = opt['default']
-            opt_action = opt['action']
-            opt_choices = opt['choices']
-            if not opt_has_input:
-                arg = opt_default
-                i += 1
-            elif opt_action is not None:
-                opt_action()
-                arg = None
-                i += 1
-            elif self._next_is_kw_value(i):
-                arg = args[i + 1]
-                i += 2
-            elif opt_default is not None:
-                arg = opt_default
-                i += 1
-            else:
-                arg = None
-                self._invalid_kwarg_default(opt_name)
 
             # Convert argument to type
-            arg = self._convert_opt(opt_name, opt_type, opt_choices, arg)
+            opt_val = self._convert_opt(opt, opt_val)
 
             # Set the argument
-            self.kwargs[opt_dict_name] = arg
+            self.kwargs[opt_name] = opt_val
+            i += 1
 
-    def _convert_opt(self, opt_name, opt_type, opt_choices, arg):
+    def _convert_opt(self, opt, arg):
+        opt_name = opt['name']
+        opt_type = opt['type']
+        opt_choices = opt['choices'] if 'choices' in opt else None
+        opt_args = opt['args'] if 'args' in opt else None
         if opt_type is not None:
             # pylint: disable=W0702
             try:
-                arg = opt_type(arg)
+                if opt_type is list:
+                    if isinstance(arg, str):
+                        arg = yaml.safe_load(arg)
+                if isinstance(arg, list):
+                    # Parse a list
+                    # Verify each entry in the list matches opt_args
+                    for i, entry in enumerate(arg):
+                        if isinstance(entry, list):
+                            for j, sub_entry in enumerate(entry):
+                                entry[j] = self._convert_opt(opt_args[j],
+                                                             sub_entry)
+                        else:
+                            arg[i] = self._convert_opt(opt_args[0], entry)
+                else:
+                    # Parse a simple type
+                    arg = opt_type(arg)
+                # Verify the opt matches the available choices
                 if opt_choices is not None:
                     if arg not in opt_choices:
                         self._invalid_choice(opt_name, arg)
@@ -393,29 +321,34 @@ class ArgParse(ABC):
             # pylint: enable=W0702
         return arg
 
-    def _next_is_kw_value(self, i):
-        if i + 1 >= len(self.args):
-            return False
-        return self.args[i + 1] not in self.menu['kw_opts']
+    def _is_kw_value(self, i):
+        """
+        Check if the argument at position i is a kwopt
 
-    def _get_opt_name(self, opt_name, is_bool_arg=False):
+        :param i:
+        :return:
+        """
+        if i >= len(self.args):
+            return False
+        opt_name = self.args[i]
+        opt_name = opt_name.split('=')[0]
+        return self._get_opt_name(opt_name) in self.menu['kw_opts']
+
+    def _get_opt_name(self, opt_name):
         """
         Normalize option names
-            '-' are converted into '_'
             '--with-' and '--no-' are removed
-            '+' and '-' for boolean args are removed
+            '+' and '-' are removed
 
         :param opt_name: The menu option name
         :param is_bool_arg: Whether the arg is a boolean arg
         :return:
         """
-
-        if not is_bool_arg:
-            return opt_name.strip('-').replace('-', '_')
-        else:
-            return opt_name.replace('--with-', '', 1)\
-                .replace('--no-', '', 1).\
-                strip('-').replace('-', '_')
+        opt_name = opt_name.replace('--with-', '')
+        opt_name = opt_name.replace('--no-', '')
+        opt_name = opt_name.replace('+', '')
+        opt_name = opt_name.replace('-', '')
+        return opt_name
 
     def _invalid_menu(self):
         self._print_error('Could not find a menu')
@@ -437,7 +370,7 @@ class ArgParse(ABC):
         self._print_menu_error(f'{opt_name} was not of type {opt_type}')
 
     def _print_menu_error(self, msg):
-        self._print_error(f'{self.menu["name_str"]} {msg}')
+        self._print_error(f'In the menu {self.menu["name_str"]}, {msg}')
 
     def _print_error(self, msg):
         print(f'{msg}')
@@ -468,7 +401,10 @@ class ArgParse(ABC):
                 pos_args.append(f'[{arg["name"]} (opt)]')
         pos_args = ' '.join(pos_args)
         menu_str = self.menu['name_str']
-        print(f'USAGE: {self.binary_name} {menu_str} {pos_args} ...')
+        if len(self.menu['kw_opts']):
+            print(f'USAGE: {self.binary_name} {menu_str} {pos_args} ...')
+        else:
+            print(f'USAGE: {self.binary_name} {menu_str} {pos_args}')
         if self.menu['msg'] is not None:
             print(self.menu['msg'])
         print()
@@ -479,13 +415,13 @@ class ArgParse(ABC):
         table = []
         all_opts = self.menu['pos_opts'] + list(self.menu['kw_opts'].values())
         for arg in all_opts:
-            default = arg['default']
-            if self._is_bool_arg(arg):
-                default = None
+            default = arg['default'] if 'default' in arg else None
             table.append(
-                [arg['name'], default, arg['type'], arg['msg']])
+                [arg['name'], default, self._get_type(arg), arg['msg']])
         print(tabulate(table, headers=headers))
 
-    def _is_bool_arg(self, arg):
-        return arg['type'] == bool and (arg['name'].startswith('--with-') or
-                                        arg['name'].startswith('--no-'))
+    def _get_type(self, arg):
+        if arg['type'] == list:
+            return str([self._get_type(subarg) for subarg in arg['args']])
+        else:
+            return str(arg['type']).split("'")[1]
