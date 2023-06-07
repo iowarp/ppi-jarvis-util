@@ -34,6 +34,7 @@ class ArgParse(ABC):
         self.pos_required = False
         self.keep_remainder = False
 
+        self.needed_help = False
         self.menu = None
         self.menu_name = None
         self.kwargs = {}
@@ -81,6 +82,8 @@ class ArgParse(ABC):
 
         :return: None
         """
+        if self.needed_help:
+            return
         func_name = self.menu_name.replace(' ', '_')
         func_name = func_name.replace('-', '_')
         func = getattr(self, func_name)
@@ -241,6 +244,10 @@ class ArgParse(ABC):
         self.menus.sort(key=lambda x: len(x['name']), reverse=True)
         self._parse_menu()
         for arg in self.menu['kw_opts'].values():
+            if arg['dict_name'] == 'help':
+                continue
+            if arg['dict_name'] == 'h':
+                continue
             if arg['dict_name'] not in self.kwargs:
                 self.kwargs[arg['dict_name']] = arg['default']
         for arg in self.menu['pos_opts']:
@@ -441,6 +448,7 @@ class ArgParse(ABC):
             raise Exception(msg)
 
     def _print_help(self):
+        self.needed_help = True
         if self.menu is not None:
             self._print_menu_help()
         else:

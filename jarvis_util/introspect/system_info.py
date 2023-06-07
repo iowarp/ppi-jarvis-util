@@ -13,8 +13,9 @@ import pandas as pd
 import numpy as np
 from enum import Enum
 import shlex
-
+pd.options.mode.chained_assignment = None
 # pylint: disable=C0121
+
 
 class SystemInfo:
     """
@@ -106,16 +107,16 @@ class Lsblk(Exec):
         cmd = 'lsblk -o NAME,SIZE,MODEL,TRAN,MOUNTPOINT,ROTA -J -s'
         super().__init__(cmd, exec_info.mod(collect_output=True))
         self.exec_async = exec_info.exec_async
-        self.graph = {}
+        self.df = None
         if not self.exec_async:
             self.wait()
 
     def wait(self):
         super().wait()
+        partitions = []
+        devs = {}
         for host, stdout in self.stdout.items():
             lsblk_data = json.loads(stdout)['blockdevices']
-            partitions = []
-            devs = {}
             for partition in lsblk_data:
                 dev = partition['children'][0]
                 partitions.append({
@@ -160,15 +161,15 @@ class Blkid(Exec):
         cmd = 'blkid'
         super().__init__(cmd, exec_info.mod(collect_output=True))
         self.exec_async = exec_info.exec_async
-        self.graph = {}
+        self.df = None
         if not self.exec_async:
             self.wait()
 
     def wait(self):
         super().wait()
+        dev_list = []
         for host, stdout in self.stdout.items():
             devices = stdout.splitlines()
-            dev_list = []
             for dev in devices:
                 dev_dict = {}
                 toks = shlex.split(dev)
@@ -204,27 +205,28 @@ class ListFses(Exec):
         cmd = 'df -h'
         super().__init__(cmd, exec_info.mod(collect_output=True))
         self.exec_async = exec_info.exec_async
-        self.graph = {}
+        self.df = None
         if not self.exec_async:
             self.wait()
 
     def wait(self):
         super().wait()
+        columns = ['device', 'fs_size', 'used',
+                   'avail', 'use%', 'fs_mount', 'host']
+        rows = []
         for host, stdout in self.stdout.items():
             lines = stdout.strip().splitlines()
-            columns = ['device', 'fs_size', 'used',
-                       'avail', 'use%', 'fs_mount', 'host']
-            rows = [line.split() + [host] for line in lines[1:]]
-            df = pd.DataFrame(rows, columns=columns)
-            # pylint: disable=W0108
-            df.loc[:, 'fs_size'] = df['fs_size'].apply(
-                lambda x : SizeConv.to_int(x))
-            df.loc[:, 'used'] = df['used'].apply(
-                lambda x: SizeConv.to_int(x))
-            df.loc[:, 'avail'] = df['avail'].apply(
-                lambda x : SizeConv.to_int(x))
-            # pylint: enable=W0108
-            self.df = df
+            rows += [line.split() + [host] for line in lines[1:]]
+        df = pd.DataFrame(rows, columns=columns)
+        # pylint: disable=W0108
+        df.loc[:, 'fs_size'] = df['fs_size'].apply(
+            lambda x: SizeConv.to_int(x))
+        df.loc[:, 'used'] = df['used'].apply(
+            lambda x: SizeConv.to_int(x))
+        df.loc[:, 'avail'] = df['avail'].apply(
+            lambda x: SizeConv.to_int(x))
+        # pylint: enable=W0108
+        self.df = df
 
 
 class FiInfo(Exec):
@@ -267,10 +269,10 @@ class FiInfo(Exec):
 
 
 class StorageDeviceType(Enum):
-    PMEM='pmem'
-    NVME='nvme'
-    SSD='ssd'
-    HDD='hdd'
+    PMEM = 'pmem'
+    NVME = 'nvme'
+    SSD = 'ssd'
+    HDD = 'hdd'
 
 
 class ResourceGraph:
@@ -319,6 +321,8 @@ class ResourceGraph:
         ]
         self.all_fs = pd.DataFrame(columns=self.fs_columns)
         self.all_net = pd.DataFrame(columns=self.net_columns)
+        self.fs = None
+        self.net = None
         self.fs_settings = {
             'register': [],
             'filter_mounts': {}
@@ -359,7 +363,7 @@ class ResourceGraph:
                                self.blkid.df,
                                on=['device', 'host'],
                                how='outer')
-        self.all_fs['shared'] = False
+        self.all_fs.loc[:, 'shared'] = False
         self.all_fs = pd.merge(self.all_fs,
                                self.list_fs.df,
                                on=['device', 'host'],
@@ -369,7 +373,7 @@ class ResourceGraph:
                          axis=1, inplace=True)
         self.all_fs['mount'].fillna(value='', inplace=True)
         net_df = self.fi_info.df
-        net_df['speed'] = np.nan
+        net_df.loc[:, 'speed'] = np.nan
         net_df.drop(['version', 'type', 'protocol'],
                     axis=1, inplace=True)
         self.all_net = net_df
@@ -523,9 +527,9 @@ class ResourceGraph:
             tran = fs_set['tran']
             with_mount = df[df.mount.str.contains(mount_re)]
             if mount_suffix is not None:
-                with_mount['mount'] += mount_suffix
+                with_mount.loc[:, 'mount'] += mount_suffix
             if tran is not None:
-                with_mount['tran'] = tran
+                with_mount.loc[:, 'tran'] = tran
             self.fs = pd.concat([self.fs, with_mount])
         admin_df = pd.DataFrame(self.fs_settings['register'],
                                 columns=self.fs_columns)
@@ -541,7 +545,7 @@ class ResourceGraph:
             ip_re = net_set['ip_re']
             speed = net_set['speed']
             with_ip = df[df['fabric'].str.contains(ip_re)]
-            with_ip['speed'] = speed
+            with_ip.loc[:, 'speed'] = speed
             self.net = pd.concat([self.net, with_ip])
         admin_df = pd.DataFrame(self.net_settings['register'],
                                 columns=self.net_columns)
@@ -560,6 +564,7 @@ class ResourceGraph:
                      dev_types=None,
                      is_mounted=True,
                      common=False,
+                     condense=False,
                      count_per_node=None,
                      count_per_dev=None,
                      min_cap=None,
@@ -571,6 +576,8 @@ class ResourceGraph:
         or a string.
         :param is_mounted: Search only for mounted devices
         :param common: Remove mount points that are not common across all hosts
+        :param condense: Used in conjunction with common. Will remove the 'host'
+        column and will only contain one entry per mount point.
         :param count_per_node: Choose only a subset of devices matching query
         :param count_per_dev: Choose only a subset of devices matching query
         :param min_cap: Remove devices with too little overall capacity
@@ -601,6 +608,8 @@ class ResourceGraph:
         if common:
             df = df.groupby(['mount']).filter(
                 lambda x: len(x) == len(self.hosts)).reset_index(drop=True)
+            if condense:
+                df = df.groupby(['mount']).first().reset_index(drop=True)
         # Remove storage with too little capacity
         if min_cap is not None:
             df = df[df.size >= min_cap]
@@ -614,6 +623,8 @@ class ResourceGraph:
         # Take a certain number of matched devices per-host
         if count_per_node is not None:
             df = df.groupby('host').head(count_per_node).reset_index(drop=True)
+        if common and condense:
+            df = df.drop('host', axis=1)
         return df
 
     def find_net_info(self, hosts,
@@ -638,5 +649,15 @@ class ResourceGraph:
                 providers = [providers]
             df = df[df.provider.isin(providers)]
         return df
+
+    def print_df(self, df):
+        if 'device' in df.columns:
+            if 'host' in df.columns:
+                print(df.sort_values('host').to_string())
+            else:
+                print(df.to_string())
+        else:
+            print(df.sort_values('provider').to_string())
+
 
 # pylint: enable=C0121

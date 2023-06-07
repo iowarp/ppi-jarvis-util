@@ -128,6 +128,17 @@ class TestSystemInfo(TestCase):
         self.assertTrue(len(df[df.tran == 'sata']) == 3)
         self.assertTrue(len(df) == 6)
 
+        # Get condensed output
+        df = rg.find_storage([StorageDeviceType.NVME,
+                              StorageDeviceType.SSD],
+                             common=True,
+                             condense=True,
+                             count_per_dev=1)
+        self.assertTrue(len(df[df.tran == 'nvme']) == 1)
+        self.assertTrue(len(df[df.tran == 'sata']) == 1)
+        self.assertTrue(len(df) == 2)
+        rg.print_df(df)
+
         # Find common networks between hosts
         df = rg.find_net_info(hosts)
         self.assertTrue(len(df) == 9)
@@ -135,3 +146,5 @@ class TestSystemInfo(TestCase):
         # Find common tcp networks
         df = rg.find_net_info(hosts, providers='tcp')
         self.assertTrue(len(df) == 3)
+
+        rg.print_df(df)
