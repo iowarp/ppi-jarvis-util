@@ -111,6 +111,24 @@ class TestArgparse(TestCase):
         self.assertEqual(args.kwargs['hosts'], None)
         self.assertEqual(args.kwargs['devices'], None)
 
+    def test_bool_kwargs3(self):
+        args = MyArgParse(args='vpic run 20 512 True --make_figures=true')
+        self.assertEqual(args.kwargs['steps'], 20)
+        self.assertEqual(args.kwargs['x'], 512)
+        self.assertEqual(args.kwargs['do_io'], True)
+        self.assertEqual(args.kwargs['make_figures'], True)
+        self.assertEqual(args.kwargs['hosts'], None)
+        self.assertEqual(args.kwargs['devices'], None)
+
+    def test_bool_kwargs4(self):
+        args = MyArgParse(args='vpic run 20 512 True --make_figures=false')
+        self.assertEqual(args.kwargs['steps'], 20)
+        self.assertEqual(args.kwargs['x'], 512)
+        self.assertEqual(args.kwargs['do_io'], True)
+        self.assertEqual(args.kwargs['make_figures'], False)
+        self.assertEqual(args.kwargs['hosts'], None)
+        self.assertEqual(args.kwargs['devices'], None)
+
     def test_list_arg(self):
         args = MyArgParse(args='vpic run 15 --hosts=\"[129.15, 1294.124]\"')
         self.assertEqual(15, args.kwargs['steps'])

@@ -84,6 +84,8 @@ class ArgParse(ABC):
             return
         func_name = self.menu_name.replace(' ', '_')
         func_name = func_name.replace('-', '_')
+        if func_name == '':
+            func_name = 'main_menu'
         func = getattr(self, func_name)
         func()
 
@@ -309,6 +311,8 @@ class ArgParse(ABC):
                                                              sub_entry)
                         else:
                             arg[i] = self._convert_opt(opt_args[0], entry)
+                elif opt_type is bool:
+                    arg = yaml.safe_load(arg)
                 else:
                     # Parse a simple type
                     arg = opt_type(arg)
