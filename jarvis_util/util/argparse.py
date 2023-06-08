@@ -18,7 +18,12 @@ class ArgParse(ABC):
         Parsed remaining arguments stored in self.remainder
     """
 
-    def __init__(self, args=None, exit_on_fail=True):
+    def __init__(self, args=None, exit_on_fail=True, **custom_info):
+        """
+        :param args: Unparsed CLI arguments. Either a string or a list.
+        :param exit_on_fail: Whether to exit the program if parsing the
+        menu fails.
+        """
         if args is None:
             args = sys.argv[1:]
         elif isinstance(args, str):
@@ -27,6 +32,7 @@ class ArgParse(ABC):
         self.args = args
         self.error = None
         self.exit_on_fail = exit_on_fail
+        self.custom_info = custom_info
         self.menus = []
         self.vars = {}
         self.remainder = []
@@ -118,6 +124,29 @@ class ArgParse(ABC):
         })
         self.menu = self.menus[-1]
 
+    @staticmethod
+    def _default_arg_list_params(args):
+        """
+        Make the menu argument list contain all needed parameters.
+
+        :param args: The set of arguments being modified
+        :return:
+        """
+        for arg in args:
+            if 'name' not in arg:
+                raise Exception('Name is a required argument')
+            if 'type' not in arg:
+                arg['type'] = str
+            if 'choices' not in arg:
+                arg['choices'] = []
+            if 'default' not in arg:
+                arg['default'] = None
+            if 'args' not in arg:
+                arg['args'] = None
+            if arg['args'] is not None:
+                for list_args in arg['args']:
+                    ArgParse._default_arg_list_params([list_args])
+
     def add_args(self, args):
         """
         Add arguments to the current menu
@@ -156,6 +185,8 @@ class ArgParse(ABC):
             'msg': 'Print help menu',
             'default': False
         }})
+        self._default_arg_list_params(self.menu['pos_opts'])
+        self._default_arg_list_params(list(self.menu['kw_opts'].values()))
 
     def _parse(self):
         """
@@ -169,17 +200,32 @@ class ArgParse(ABC):
         self.menus.sort(key=lambda x: len(x['name']), reverse=True)
         # Parse the menu options
         self._parse_menu()
+        self.make_kwargs(self.kwargs,
+                         list(self.menu['kw_opts'].values()) +
+                         self.menu['pos_opts'])
+
+    @staticmethod
+    def make_kwargs(kwargs, menu_args):
+        """
+        Pack the kwargs dictionary with default values for missing entries.
+
+        :param self:
+        :param kwargs:
+        :param menu_args:
+        :return:
+        """
+        ArgParse._default_arg_list_params(menu_args)
         # Set the default values for arguments we don't have
-        for arg in list(self.menu['kw_opts'].values()) + self.menu['pos_opts']:
+        for arg in menu_args:
             if arg['name'] == 'help':
                 continue
             if arg['name'] == 'h':
                 continue
-            if arg['name'] not in self.kwargs:
+            if arg['name'] not in kwargs:
                 if 'default' in arg:
-                    self.kwargs[arg['name']] = arg['default']
+                    kwargs[arg['name']] = arg['default']
                 else:
-                    self.kwargs[arg['name']] = None
+                    kwargs[arg['name']] = None
 
     def _parse_menu(self):
         """
@@ -293,8 +339,8 @@ class ArgParse(ABC):
     def _convert_opt(self, opt, arg):
         opt_name = opt['name']
         opt_type = opt['type']
-        opt_choices = opt['choices'] if 'choices' in opt else None
-        opt_args = opt['args'] if 'args' in opt else None
+        opt_choices = opt['choices']
+        opt_args = opt['args']
         if opt_type is not None:
             # pylint: disable=W0702
             try:
@@ -317,7 +363,7 @@ class ArgParse(ABC):
                     # Parse a simple type
                     arg = opt_type(arg)
                 # Verify the opt matches the available choices
-                if opt_choices is not None:
+                if opt_choices is not None and len(opt_choices):
                     if arg not in opt_choices:
                         self._invalid_choice(opt_name, arg)
             except:
@@ -335,7 +381,12 @@ class ArgParse(ABC):
         if i >= len(self.args):
             return False
         opt_name = self.args[i]
-        opt_name = opt_name.split('=')[0]
+        if '=' in opt_name:
+            return True
+        if opt_name.startswith('+'):
+            return True
+        if opt_name.startswith('-'):
+            return True
         return self._get_opt_name(opt_name) in self.menu['kw_opts']
 
     def _get_opt_name(self, opt_name):
