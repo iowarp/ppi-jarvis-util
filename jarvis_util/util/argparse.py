@@ -311,7 +311,7 @@ class ArgParse(ABC):
                                                              sub_entry)
                         else:
                             arg[i] = self._convert_opt(opt_args[0], entry)
-                elif opt_type is bool:
+                elif opt_type is bool and isinstance(arg, str):
                     arg = yaml.safe_load(arg)
                 else:
                     # Parse a simple type
