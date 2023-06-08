@@ -23,4 +23,6 @@ class JutilManager:
     def __init__(self):
         self.collect_output = False
         self.hide_output = False
+        self.debug_mpi_exec = False
+        self.debug_local_exec = False
 

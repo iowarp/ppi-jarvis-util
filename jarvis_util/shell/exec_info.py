@@ -75,14 +75,22 @@ class ExecInfo:
         self.hide_output = hide_output
         self.exec_async = exec_async
         self.stdin = stdin
+        self.keys = ['exec_type', 'nprocs', 'ppn', 'user', 'pkey', 'port',
+                     'hostfile', 'env', 'sleep_ms', 'sudo',
+                     'cwd', 'hosts', 'collect_output',
+                     'pipe_stdout', 'pipe_stderr', 'hide_output',
+                     'exec_async', 'stdin']
 
     def _set_env(self, env):
         if env is None:
             self.env = {}
+        else:
+            self.env = env
         basic_env = [
             'PATH', 'LD_LIBRARY_PATH', 'LIBRARY_PATH', 'CMAKE_PREFIX_PATH',
-            'PYTHON_PATH', 'CPATH', 'INCLUDE'
+            'PYTHON_PATH', 'CPATH', 'INCLUDE', 'JAVA_HOME'
         ]
+        self.basic_env = {}
         for key in basic_env:
             if key not in os.environ:
                 continue
@@ -90,6 +98,9 @@ class ExecInfo:
         for key, val in self.basic_env.items():
             if key not in self.env:
                 self.env[key] = val
+        self.basic_env.update(self.env)
+        if 'LD_PRELOAD' in self.basic_env:
+            del self.basic_env['LD_PRELOAD']
 
     def _set_hostfile(self, hostfile=None, hosts=None):
         if hostfile is not None:
@@ -116,15 +127,13 @@ class ExecInfo:
             self.hostfile = Hostfile()
 
     def mod(self, **kwargs):
-        keys = ['exec_type', 'nprocs', 'ppn', 'user', 'pkey', 'port',
-                'hostfile', 'env', 'sleep_ms', 'sudo',
-                'cwd', 'hosts', 'collect_output',
-                'pipe_stdout', 'pipe_stderr', 'hide_output',
-                'exec_async', 'stdin']
-        for key in keys:
+        self._mod_kwargs(kwargs)
+        return ExecInfo(**kwargs)
+
+    def _mod_kwargs(self, kwargs):
+        for key in self.keys:
             if key not in kwargs and hasattr(self, key):
                 kwargs[key] = getattr(self, key)
-        return ExecInfo(**kwargs)
 
     def copy(self):
         return self.mod()
@@ -166,3 +175,42 @@ class Executable(ABC):
             return cmds
         else:
             raise Exception('Command must be either list or string')
+
+    def wait_list(self, nodes):
+        for node in nodes:
+            node.wait()
+
+    def smash_list_outputs(self, nodes):
+        """
+        Combine the outputs of a set of nodes into a single output.
+        For example, used if executing multiple commands in sequence.
+
+        :param nodes:
+        :return:
+        """
+        self.stdout = '\n'.join([node.stdout for node in nodes])
+        self.stderr = '\n'.join([node.stderr for node in nodes])
+
+    def per_host_outputs(self, nodes):
+        """
+        Convert the outputs of a set of nodes to a per-host dictionary.
+        Used if sending commands to multiple hosts
+
+        :param nodes:
+        :return:
+        """
+        self.stdout = {}
+        self.stderr = {}
+        self.stdout = {node.addr: node.stdout for node in nodes}
+        self.stderr = {node.addr: node.stderr for node in nodes}
+
+    def set_exit_code_list(self, nodes):
+        """
+        Set the exit code from a set of nodes.
+
+        :param nodes: The set of execution nodes that have been executed
+        :return:
+        """
+        for node in nodes:
+            if node.exit_code:
+                self.exit_code = node.exit_code

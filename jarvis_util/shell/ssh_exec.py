@@ -26,8 +26,11 @@ class SshExec(LocalExec):
         self.port = exec_info.port
         self.sudo = exec_info.sudo
         self.ssh_env = exec_info.env
-        super().__init__(self.ssh_cmd(cmd),
-                         exec_info.mod(env=exec_info.basic_env))
+        if not exec_info.hostfile.is_local():
+            super().__init__(self.ssh_cmd(cmd),
+                             exec_info.mod(env=exec_info.basic_env))
+        else:
+            super().__init__(cmd, exec_info)
 
     def ssh_cmd(self, cmd):
         lines = ['ssh']

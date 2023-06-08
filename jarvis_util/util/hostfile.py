@@ -13,12 +13,15 @@ class Hostfile:
     Parse a hostfile or store a set of hosts passed in manually.
     """
 
-    def __init__(self, hostfile=None, all_hosts=None, find_ips=True):
+    def __init__(self, hostfile=None, all_hosts=None, all_hosts_ip=None,
+                 text=None, find_ips=True):
         """
         Constructor. Parse hostfile or store existing host list.
 
         :param hostfile: The path to the hostfile
-        :param all_hosts: a list of strings representing all hosts
+        :param all_hosts: a list of strings representing all hostnames
+        :param all_hosts_ip: a list of strings representing all host IPs
+        :param text: Text of a hostfile
         :param find_ips: Whether to construct host_ip and all_host_ip fields
         """
         self.hosts_ip = []
@@ -28,29 +31,27 @@ class Hostfile:
         self.path = hostfile
         self.find_ips = find_ips
 
+        # Set the host ips directly
+        if all_hosts_ip is not None:
+            self.all_hosts_ip = all_hosts_ip
+            self.hosts_ip = all_hosts_ip
+            self.find_ips = False
+
         # Direct constructor
         if all_hosts is not None:
             self._set_hosts(all_hosts)
 
-        # Hostfile constructor
+        # From hostfile path
         elif hostfile is not None:
             self._load_hostfile(self.path)
 
-    def parse(self, text, set_hosts=False):
-        """
-        Parse a line of a hostfile. Used mainly for unit tests.
+        # From hostfile text
+        elif text is not None:
+            self.parse(text)
 
-        :param text: A line of the hostfile
-        :param set_hosts: Whether or not to set hosts
-        :return:
-        """
-
-        hosts = []
-        self._expand_line(hosts, text)
-        if set_hosts:
-            self._set_hosts(hosts)
+        # Both hostfile and hosts are None
         else:
-            self.hosts = hosts
+            self._set_hosts(['localhost'])
 
     def _load_hostfile(self, path):
         """
@@ -61,14 +62,26 @@ class Hostfile:
         """
         if not os.path.exists(path):
             raise Exception('hostfile not found')
-        hosts = []
-        with open(path, 'r', encoding='utf-8') as fp:
-            lines = fp.read().splitlines()
-            for line in lines:
-                self._expand_line(hosts, line)
         self.path = path
-        self._set_hosts(hosts)
+        with open(path, 'r', encoding='utf-8') as fp:
+            text = fp.read()
+            self.parse(text)
         return self
+
+    def parse(self, text):
+        """
+        Parse a hostfile text.
+
+        :param text: Hostfile text
+        :param set_hosts: Whether or not to set hosts
+        :return: None
+        """
+
+        lines = text.strip().splitlines()
+        hosts = []
+        for line in lines:
+            self._expand_line(hosts, line)
+        self._set_hosts(hosts)
 
     def _expand_line(self, hosts, line):
         """
@@ -161,6 +174,16 @@ class Hostfile:
 
     def is_subset(self):
         return len(self.hosts) != len(self.all_hosts)
+
+    def is_local(self):
+        """
+        Whether this file contains only 'localhost'
+
+        :return: True or false
+        """
+        if len(self) == 0:
+            return True
+        return len(self) == 1 and self.hosts[0] == 'localhost'
 
     def save(self, path):
         self.all_hosts = self.hosts

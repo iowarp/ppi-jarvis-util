@@ -25,20 +25,20 @@ class SizeConv:
 
     @staticmethod
     def kb(num):
-        return int(num.split('k')[0]) * (1 << 10)
+        return int(float(num.split('k')[0]) * (1 << 10))
 
     @staticmethod
     def mb(num):
-        return int(num.split('m')[0]) * (1 << 20)
+        return int(float(num.split('m')[0]) * (1 << 20))
 
     @staticmethod
     def gb(num):
-        return int(num.split('g')[0]) * (1 << 30)
+        return int(float(num.split('g')[0]) * (1 << 30))
 
     @staticmethod
     def tb(num):
-        return int(num.split('t')[0]) * (1 << 40)
+        return int(float(num.split('t')[0]) * (1 << 40))
 
     @staticmethod
     def pb(num):
-        return int(num.split('p')[0]) * (1 << 50)
+        return int(float(num.split('p')[0]) * (1 << 50))

@@ -72,6 +72,8 @@ class LocalExec(Executable):
             self.cwd = os.getcwd()
         else:
             self.cwd = exec_info.cwd
+        if jutil.debug_local_exec:
+            print(cmd)
         self._start_bash_processes()
 
     def _start_bash_processes(self):
@@ -132,6 +134,7 @@ class LocalExec(Executable):
                     sysout.write(text)
                 if self.collect_output:
                     self_sysout.write(text)
+                    self_sysout.flush()
                 if file_sysout is not None:
                     file_sysout.write(line)
             except:

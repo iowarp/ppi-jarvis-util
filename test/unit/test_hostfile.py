@@ -5,20 +5,17 @@ from unittest import TestCase
 
 class TestHostfile(TestCase):
     def test_no_expand_int(self):
-        host = Hostfile()
-        host.parse('0')
+        host = Hostfile(text='0', find_ips=False)
         self.assertTrue(len(host.hosts) == 1)
         self.assertTrue(host.hosts[0] == '0')
 
     def test_no_expand(self):
-        host = Hostfile()
-        host.parse('ares-comp-01')
+        host = Hostfile(text='ares-comp-01', find_ips=False)
         self.assertTrue(len(host.hosts) == 1)
         self.assertTrue(host.hosts[0] == 'ares-comp-01')
 
     def test_expand_set(self):
-        host = Hostfile()
-        host.parse('ares-comp-[01-04]-40g')
+        host = Hostfile(text='ares-comp-[01-04]-40g', find_ips=False)
         self.assertTrue(len(host.hosts) == 4)
         self.assertTrue(host.hosts[0] == 'ares-comp-01-40g')
         self.assertTrue(host.hosts[1] == 'ares-comp-02-40g')
@@ -26,8 +23,7 @@ class TestHostfile(TestCase):
         self.assertTrue(host.hosts[3] == 'ares-comp-04-40g')
 
     def test_expand_two_sets(self):
-        host = Hostfile()
-        host.parse('ares-comp-[01-02]-40g-[01-02]')
+        host = Hostfile(text='ares-comp-[01-02]-40g-[01-02]', find_ips=False)
         self.assertTrue(len(host.hosts) == 4)
         self.assertTrue(host.hosts[0] == 'ares-comp-01-40g-01')
         self.assertTrue(host.hosts[1] == 'ares-comp-01-40g-02')
@@ -35,8 +31,7 @@ class TestHostfile(TestCase):
         self.assertTrue(host.hosts[3] == 'ares-comp-02-40g-02')
 
     def test_subset(self):
-        host = Hostfile()
-        host.parse('ares-comp-[01-02]-40g-[01-02]')
+        host = Hostfile(text='ares-comp-[01-02]-40g-[01-02]', find_ips=False)
         host = host.subset(3)
         self.assertTrue(len(host.hosts) == 3)
         self.assertTrue(host.is_subset())
