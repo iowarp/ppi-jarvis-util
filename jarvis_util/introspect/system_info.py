@@ -255,7 +255,7 @@ class FiInfo(Exec):
             for line in lines:
                 if 'provider' in line:
                     providers.append({
-                        'provider': line.split(':')[1],
+                        'provider': line.split(':')[1].strip(),
                         'host': host
                     })
                 else:
@@ -263,12 +263,14 @@ class FiInfo(Exec):
                     key = splits[0].strip()
                     val = splits[1].strip()
                     if 'fabric' in key:
-                        val = val.split('/')[0]
+                        val = val.split('/')[0].strip()
                     providers[-1][key] = val
         self.df = pd.DataFrame(providers)
 
 
-class StorageDeviceType(Enum):
+# Note, not using enum to avoid YAML serialization errors
+# YAML expects simple types
+class StorageDeviceType:
     PMEM = 'pmem'
     NVME = 'nvme'
     SSD = 'ssd'
@@ -288,6 +290,7 @@ class ResourceGraph:
         model: the exact model of the device
         rota: whether the device is rotational or not
         tran: the transport of the device (e.g., /dev/nvme)
+        dev_type: type of device (derviced from rota + tran)
         fs_type: the type of filesystem (e.g., ext4)
         uuid: filesystem-levle uuid from the FS metadata
         fs_size: total size of the filesystem
@@ -368,14 +371,13 @@ class ResourceGraph:
                                self.list_fs.df,
                                on=['device', 'host'],
                                how='outer')
-        self.all_fs['shared'].fillna(True, inplace=True)
         self.all_fs.drop(['used', 'use%', 'fs_mount', 'partuuid'],
                          axis=1, inplace=True)
-        self.all_fs['mount'].fillna(value='', inplace=True)
         net_df = self.fi_info.df
         net_df.loc[:, 'speed'] = np.nan
         net_df.drop(['version', 'type', 'protocol'],
                     axis=1, inplace=True)
+        net_df.drop_duplicates(inplace=True)
         self.all_net = net_df
 
     def save(self, path):
@@ -516,11 +518,21 @@ class ResourceGraph:
         return self
 
     def _apply_fs_settings(self):
-        if len(self.fs_settings) == 0:
+        num_settings = len(self.fs_settings['register']) + \
+                       len(self.fs_settings['filter_mounts'])
+        if num_settings == 0:
             self.fs = self.all_fs
+            self._derive_storage_cols()
             return
-        df = self.all_fs
-        self.fs = pd.DataFrame(columns=self.all_net.columns)
+        # Get the set of all storage (df)
+        df = pd.DataFrame(self.fs_settings['register'],
+                          columns=self.fs_columns)
+        df = pd.concat([self.all_fs, df])
+        self.fs = df
+        self._derive_storage_cols()
+
+        # Filter the df
+        filters = []
         for fs_set in self.fs_settings['filter_mounts'].values():
             mount_re = fs_set['mount_re']
             mount_suffix = fs_set['mount_suffix']
@@ -530,13 +542,28 @@ class ResourceGraph:
                 with_mount.loc[:, 'mount'] += mount_suffix
             if tran is not None:
                 with_mount.loc[:, 'tran'] = tran
-            self.fs = pd.concat([self.fs, with_mount])
-        admin_df = pd.DataFrame(self.fs_settings['register'],
-                                columns=self.fs_columns)
-        self.fs = pd.concat([self.fs, admin_df])
+            filters.append(with_mount)
+
+        # Create the final filtered df
+        self.fs = pd.concat(filters)
+
+    def _derive_storage_cols(self):
+        df = self.fs
+        if df is None:
+            return
+        df.loc[(df.tran == 'sata') & (df.rota == True),
+               'dev_type'] = str(StorageDeviceType.HDD)
+        df.loc[(df.tran == 'sata') & (df.rota == False),
+               'dev_type'] = str(StorageDeviceType.SSD)
+        df.loc[(df.tran == 'nvme'),
+               'dev_type'] = str(StorageDeviceType.NVME)
+        df['mount'].fillna(value='', inplace=True)
+        df['shared'].fillna(True, inplace=True)
 
     def _apply_net_settings(self):
-        if len(self.net_settings) == 0:
+        num_settings = len(self.net_settings['register']) + \
+                       len(self.net_settings['track_ips'])
+        if num_settings == 0:
             self.net = self.all_net
             return
         self.net = pd.DataFrame(columns=self.all_net.columns)
@@ -550,6 +577,10 @@ class ResourceGraph:
         admin_df = pd.DataFrame(self.net_settings['register'],
                                 columns=self.net_columns)
         self.net = pd.concat([self.net, admin_df])
+        self._derive_net_cols()
+
+    def _derive_net_cols(self):
+        self.net['domain'].fillna('', inplace=True)
 
     def find_shared_storage(self):
         """
@@ -595,14 +626,8 @@ class ResourceGraph:
             matching_devs = pd.DataFrame(columns=df.columns)
             if isinstance(dev_types, str):
                 dev_types = [dev_types]
-            for dev_type in dev_types:
-                if dev_type == StorageDeviceType.HDD:
-                    devs = df[(df.tran == 'sata') & (df.rota == True)]
-                elif dev_type == StorageDeviceType.SSD:
-                    devs = df[(df.tran == 'sata') & (df.rota == False)]
-                elif dev_type == StorageDeviceType.NVME:
-                    devs = df[(df.tran == 'nvme')]
-                matching_devs = pd.concat([matching_devs, devs])
+            matching_devs = [df[df.dev_type == dev_type] for dev_type in dev_types]
+            matching_devs = pd.concat(matching_devs)
             df = matching_devs
         # Get the set of mounts common between all hosts
         if common:
@@ -612,7 +637,7 @@ class ResourceGraph:
                 df = df.groupby(['mount']).first().reset_index(drop=True)
         # Remove storage with too little capacity
         if min_cap is not None:
-            df = df[df.size >= min_cap]
+            df = df[df['size'] >= min_cap]
         # Remove storage with too little available space
         if min_avail is not None:
             df = df[df.avail >= min_avail]
@@ -641,8 +666,8 @@ class ResourceGraph:
         # Get the set of fabrics corresponding to these hosts
         df = df[df.fabric.isin(hosts.hosts_ip)]
         # Filter out protocols which are not common between these hosts
-        df = df.groupby('provider').filter(
-           lambda x: len(x) == len(hosts)).reset_index(drop=True)
+        df = df.groupby(['provider', 'domain']).filter(
+           lambda x: len(x) >= len(hosts)).reset_index(drop=True)
         # Choose only a subset of providers
         if providers is not None:
             if isinstance(providers, str):
