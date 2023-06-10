@@ -322,6 +322,10 @@ class ResourceGraph:
         self.net_columns = [
             'provider', 'fabric', 'domain', 'host', 'speed'
         ]
+        self.create()
+        self.hosts = None
+
+    def create(self):
         self.all_fs = pd.DataFrame(columns=self.fs_columns)
         self.all_net = pd.DataFrame(columns=self.net_columns)
         self.fs = None
@@ -334,7 +338,6 @@ class ResourceGraph:
             'register': [],
             'track_ips': {}
         }
-        self.hosts = None
 
     def build(self, exec_info, introspect=True):
         """
@@ -345,6 +348,7 @@ class ResourceGraph:
         on admin-defined settings
         :return: self
         """
+        self.create()
         if introspect:
             self._introspect(exec_info)
         self.apply()
@@ -362,7 +366,7 @@ class ResourceGraph:
         print('(2/3). Finding mount points common across machines')
         mounts = self.find_storage(common=True, condense=True)
         self.print_df(mounts)
-        x = self._ask_yes_no('2.(1/3). Are there any mount points missing'
+        x = self._ask_yes_no('2.(1/2). Are there any mount points missing '
                              'you would like to add?')
         while x:
             mount = self._ask_string('2.1.(1/7). Mount point')
@@ -370,38 +374,53 @@ class ResourceGraph:
                                      choices=['sata', 'nvme', 'dimm'])
             rota = self._ask_yes_no('2.1.(3/7). Is this device rotational. '
                                     'I.e., is it a hard drive?')
-            shared = self._ask_yes_no('2.1.(4/7). Is this device shared?'
+            shared = self._ask_yes_no('2.1.(4/7). Is this device shared? '
                                       'I.e., a PFS?')
             avail = self._ask_size('2.1.(5/7). How much capacity are you '
                                    'willing to use?')
-            x = self._ask_yes_no('2.1.(6/7). Are you sure this is accurate?')
-            if not x:
+            y = self._ask_yes_no('2.1.(6/7). Are you sure this is accurate?')
+            if not y:
                 continue
             self.add_storage(exec_info.hostfile, mount=mount,
                              tran=tran, rota=rota, shared=shared,
                              avail=avail)
-            x = self._ask_yes_no('2.1.(7/7). Registered. Are there any other'
+            x = self._ask_yes_no('2.1.(7/7). Registered. Are there any other '
                                  'devices you would like to add?')
-        print('2.(2/3). Filter and correct mount points.')
+        print('2.(2/2). Filter and correct mount points.')
+        x = True
         while x:
-            regex = self._ask_re('Enter a regex of mount points to select')
-            suffix = self._ask_string('Enter a suffix to append to these paths.'
+            regex = self._ask_re('2.2.(1/3). Enter a regex of mount '
+                                 'points to select').strip()
+            if regex.endswith('*'):
+                regex = f'^{regex}'
+            else:
+                regex = f'^{regex}$'
+            matches = mounts[mounts['mount'].str.contains(regex)]['mount']
+            print(matches.to_string())
+            y = self._ask_yes_no('Is this correct?')
+            if not y:
+                continue
+            suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
+                                      'append to these paths. '
                                       'Hit enter for no suffix.')
-            x = self._ask_yes_no('Are you sure this is accurate?')
-            if not x:
+            y = self._ask_yes_no('Are you sure this is accurate?')
+            if not y:
                 continue
             self.filter_fs(regex, mount_suffix=suffix)
-        print('(3/3). Would you like to list available networks? There'
-              'are no configuration options here.')
-        net_info = self.find_net_info(exec_info.hostfile)
-        self.print_df(net_info)
+            x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
+                                 'mount points?')
+        x = self._ask_yes_no('(3/3). Would you like to list available networks? '
+                             'There are no configuration options here.')
+        if x:
+            net_info = self.find_net_info(exec_info.hostfile)
+            self.print_df(net_info)
 
     def _ask_string(self, msg):
         x = input(f'{msg}: ')
         return x
 
     def _ask_re(self, msg):
-        x = input(f'{msg}. E.g., * selects everything, /mnt/* for everything'
+        x = input(f'{msg}. E.g., * selects everything, /mnt/* for everything '
                   f'prefixed with /mnt: ')
         return x
 
@@ -618,7 +637,7 @@ class ResourceGraph:
             tran = fs_set['tran']
             with_mount = df[df.mount.str.contains(mount_re)]
             if mount_suffix is not None:
-                with_mount.loc[:, 'mount'] += mount_suffix
+                with_mount.loc[:, 'mount'] += f'/{mount_suffix}'
             if tran is not None:
                 with_mount.loc[:, 'tran'] = tran
             filters.append(with_mount)
@@ -714,7 +733,7 @@ class ResourceGraph:
             df = df.groupby(['mount']).filter(
                 lambda x: len(x) == len(self.hosts)).reset_index(drop=True)
             if condense:
-                df = df.groupby(['mount']).first().reset_index(drop=True)
+                df = df.groupby(['mount']).first().reset_index()
         # Remove storage with too little capacity
         if min_cap is not None:
             df = df[df['size'] >= min_cap]
@@ -758,8 +777,15 @@ class ResourceGraph:
     def print_df(self, df):
         if 'device' in df.columns:
             if 'host' in df.columns:
-                print(df.sort_values('host').to_string())
+                col = ['host', 'mount', 'device', 'dev_type', 'shared',
+                       'avail', 'tran', 'rota', 'fs_type']
+                df = df[col]
+                df = df.sort_values('host')
+                print(df.to_string())
             else:
+                col = ['device', 'mount', 'dev_type', 'shared',
+                       'avail', 'tran', 'rota', 'fs_type']
+                df = df[col]
                 print(df.to_string())
         else:
             print(df.sort_values('provider').to_string())
