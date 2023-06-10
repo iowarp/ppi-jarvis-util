@@ -350,6 +350,85 @@ class ResourceGraph:
         self.apply()
         return self
 
+    def walkthrough_build(self, exec_info):
+        """
+        This provides a CLI to build the resource graph
+
+        :return: None
+        """
+        print('This is the Jarivs resource graph builder')
+        print('(1/3). Introspecting your machine')
+        self.build(exec_info)
+        print('(2/3). Finding mount points common across machines')
+        mounts = self.find_storage(common=True, condense=True)
+        self.print_df(mounts)
+        x = self._ask_yes_no('2.(1/3). Are there any mount points missing'
+                             'you would like to add?')
+        while x:
+            mount = self._ask_string('2.1.(1/7). Mount point')
+            tran = self._ask_choices('2.1.(2/7). What transport?',
+                                     choices=['sata', 'nvme', 'dimm'])
+            rota = self._ask_yes_no('2.1.(3/7). Is this device rotational. '
+                                    'I.e., is it a hard drive?')
+            shared = self._ask_yes_no('2.1.(4/7). Is this device shared?'
+                                      'I.e., a PFS?')
+            avail = self._ask_size('2.1.(5/7). How much capacity are you '
+                                   'willing to use?')
+            x = self._ask_yes_no('2.1.(6/7). Are you sure this is accurate?')
+            if not x:
+                continue
+            self.add_storage(exec_info.hostfile, mount=mount,
+                             tran=tran, rota=rota, shared=shared,
+                             avail=avail)
+            x = self._ask_yes_no('2.1.(7/7). Registered. Are there any other'
+                                 'devices you would like to add?')
+        print('2.(2/3). Filter and correct mount points.')
+        while x:
+            regex = self._ask_re('Enter a regex of mount points to select')
+            suffix = self._ask_string('Enter a suffix to append to these paths.'
+                                      'Hit enter for no suffix.')
+            x = self._ask_yes_no('Are you sure this is accurate?')
+            if not x:
+                continue
+            self.filter_fs(regex, mount_suffix=suffix)
+        print('(3/3). Would you like to list available networks? There'
+              'are no configuration options here.')
+        net_info = self.find_net_info(exec_info.hostfile)
+        self.print_df(net_info)
+
+    def _ask_string(self, msg):
+        x = input(f'{msg}: ')
+        return x
+
+    def _ask_re(self, msg):
+        x = input(f'{msg}. E.g., * selects everything, /mnt/* for everything'
+                  f'prefixed with /mnt: ')
+        return x
+
+    def _ask_yes_no(self, msg):
+        while True:
+            x = input(f'{msg} (yes/no): ')
+            if x == 'yes':
+                return True
+            elif x == 'no':
+                return False
+            else:
+                print(f'{x} is not either yes or no')
+
+    def _ask_choices(self, msg, choices):
+        choices_str = '/'.join(choices)
+        while True:
+            x = input(f'{msg} ({choices_str}): ')
+            if x in choices:
+                return x
+            else:
+                print(f'{x} is not a valid choice')
+
+    def _ask_size(self, msg):
+        x = input(f'{msg} (kK,mM,gG,tT,pP): ')
+        size = SizeConv.to_int(x)
+        return size
+
     def _introspect(self, exec_info):
         """
         Introspect the cluster for resources.
@@ -626,7 +705,8 @@ class ResourceGraph:
             matching_devs = pd.DataFrame(columns=df.columns)
             if isinstance(dev_types, str):
                 dev_types = [dev_types]
-            matching_devs = [df[df.dev_type == dev_type] for dev_type in dev_types]
+            matching_devs = [df[df.dev_type == dev_type]
+                             for dev_type in dev_types]
             matching_devs = pd.concat(matching_devs)
             df = matching_devs
         # Get the set of mounts common between all hosts
