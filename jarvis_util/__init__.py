@@ -11,6 +11,7 @@ from jarvis_util.serialize.yaml_file import *
 from jarvis_util.serialize.text_file import *
 from jarvis_util.serialize.serializer import *
 from jarvis_util.serialize.pickle import *
+from jarvis_util.serialize.json_file import *
 from jarvis_util.shell.filesystem import *
 from jarvis_util.shell.exec import *
 from jarvis_util.shell.exec_info import *
