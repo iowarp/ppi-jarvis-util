@@ -11,7 +11,6 @@ from jarvis_util.serialize.yaml_file import YamlFile
 import json
 import pandas as pd
 import numpy as np
-from enum import Enum
 import shlex
 pd.options.mode.chained_assignment = None
 # pylint: disable=C0121
@@ -409,8 +408,8 @@ class ResourceGraph:
             self.filter_fs(regex, mount_suffix=suffix)
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
                                  'mount points?')
-        x = self._ask_yes_no('(3/3). Would you like to list available networks? '
-                             'There are no configuration options here.')
+        x = self._ask_yes_no('(3/3). Would you like to list available networks?'
+                             ' There are no configuration options here.')
         if x:
             net_info = self.find_net_info(exec_info.hostfile)
             self.print_df(net_info)
