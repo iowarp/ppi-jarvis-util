@@ -33,7 +33,11 @@ class MpiExec(LocalExec):
                          exec_info.mod(env=exec_info.basic_env))
 
     def mpicmd(self):
+        # NOTE(llogan):
+        # Use -x instead of -genv for openmpi
+        # Use --oversubscribe for openmpi
         params = [f"mpirun -n {self.nprocs}"]
+        # params.append('--oversubscribe')
         if self.ppn is not None:
             params.append(f"-ppn {self.ppn}")
         if len(self.hostfile):
@@ -42,6 +46,7 @@ class MpiExec(LocalExec):
             else:
                 params.append(f"--hostfile {self.hostfile.path}")
         params += [f"-genv {key}={val}" for key, val in self.mpi_env.items()]
+        # params += [f"-x {key}={val}" for key, val in self.mpi_env.items()]
         params.append(self.cmd)
         cmd = " ".join(params)
         jutil = JutilManager.get_instance()

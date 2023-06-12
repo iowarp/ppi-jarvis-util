@@ -11,7 +11,6 @@ from jarvis_util.serialize.yaml_file import YamlFile
 import json
 import pandas as pd
 import numpy as np
-from enum import Enum
 import shlex
 pd.options.mode.chained_assignment = None
 # pylint: disable=C0121
@@ -255,7 +254,7 @@ class FiInfo(Exec):
             for line in lines:
                 if 'provider' in line:
                     providers.append({
-                        'provider': line.split(':')[1],
+                        'provider': line.split(':')[1].strip(),
                         'host': host
                     })
                 else:
@@ -263,12 +262,14 @@ class FiInfo(Exec):
                     key = splits[0].strip()
                     val = splits[1].strip()
                     if 'fabric' in key:
-                        val = val.split('/')[0]
+                        val = val.split('/')[0].strip()
                     providers[-1][key] = val
         self.df = pd.DataFrame(providers)
 
 
-class StorageDeviceType(Enum):
+# Note, not using enum to avoid YAML serialization errors
+# YAML expects simple types
+class StorageDeviceType:
     PMEM = 'pmem'
     NVME = 'nvme'
     SSD = 'ssd'
@@ -288,6 +289,7 @@ class ResourceGraph:
         model: the exact model of the device
         rota: whether the device is rotational or not
         tran: the transport of the device (e.g., /dev/nvme)
+        dev_type: type of device (derviced from rota + tran)
         fs_type: the type of filesystem (e.g., ext4)
         uuid: filesystem-levle uuid from the FS metadata
         fs_size: total size of the filesystem
@@ -319,6 +321,10 @@ class ResourceGraph:
         self.net_columns = [
             'provider', 'fabric', 'domain', 'host', 'speed'
         ]
+        self.create()
+        self.hosts = None
+
+    def create(self):
         self.all_fs = pd.DataFrame(columns=self.fs_columns)
         self.all_net = pd.DataFrame(columns=self.net_columns)
         self.fs = None
@@ -331,7 +337,6 @@ class ResourceGraph:
             'register': [],
             'track_ips': {}
         }
-        self.hosts = None
 
     def build(self, exec_info, introspect=True):
         """
@@ -342,10 +347,105 @@ class ResourceGraph:
         on admin-defined settings
         :return: self
         """
+        self.create()
         if introspect:
             self._introspect(exec_info)
         self.apply()
         return self
+
+    def walkthrough_build(self, exec_info):
+        """
+        This provides a CLI to build the resource graph
+
+        :return: None
+        """
+        print('This is the Jarivs resource graph builder')
+        print('(1/3). Introspecting your machine')
+        self.build(exec_info)
+        print('(2/3). Finding mount points common across machines')
+        mounts = self.find_storage(common=True, condense=True)
+        self.print_df(mounts)
+        x = self._ask_yes_no('2.(1/2). Are there any mount points missing '
+                             'you would like to add?')
+        while x:
+            mount = self._ask_string('2.1.(1/7). Mount point')
+            tran = self._ask_choices('2.1.(2/7). What transport?',
+                                     choices=['sata', 'nvme', 'dimm'])
+            rota = self._ask_yes_no('2.1.(3/7). Is this device rotational. '
+                                    'I.e., is it a hard drive?')
+            shared = self._ask_yes_no('2.1.(4/7). Is this device shared? '
+                                      'I.e., a PFS?')
+            avail = self._ask_size('2.1.(5/7). How much capacity are you '
+                                   'willing to use?')
+            y = self._ask_yes_no('2.1.(6/7). Are you sure this is accurate?')
+            if not y:
+                continue
+            self.add_storage(exec_info.hostfile, mount=mount,
+                             tran=tran, rota=rota, shared=shared,
+                             avail=avail)
+            x = self._ask_yes_no('2.1.(7/7). Registered. Are there any other '
+                                 'devices you would like to add?')
+        print('2.(2/2). Filter and correct mount points.')
+        x = True
+        while x:
+            regex = self._ask_re('2.2.(1/3). Enter a regex of mount '
+                                 'points to select').strip()
+            if regex.endswith('*'):
+                regex = f'^{regex}'
+            else:
+                regex = f'^{regex}$'
+            matches = mounts[mounts['mount'].str.contains(regex)]['mount']
+            print(matches.to_string())
+            y = self._ask_yes_no('Is this correct?')
+            if not y:
+                continue
+            suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
+                                      'append to these paths. '
+                                      'Hit enter for no suffix.')
+            y = self._ask_yes_no('Are you sure this is accurate?')
+            if not y:
+                continue
+            self.filter_fs(regex, mount_suffix=suffix)
+            x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
+                                 'mount points?')
+        x = self._ask_yes_no('(3/3). Would you like to list available networks?'
+                             ' There are no configuration options here.')
+        if x:
+            net_info = self.find_net_info(exec_info.hostfile)
+            self.print_df(net_info)
+
+    def _ask_string(self, msg):
+        x = input(f'{msg}: ')
+        return x
+
+    def _ask_re(self, msg):
+        x = input(f'{msg}. E.g., * selects everything, /mnt/* for everything '
+                  f'prefixed with /mnt: ')
+        return x
+
+    def _ask_yes_no(self, msg):
+        while True:
+            x = input(f'{msg} (yes/no): ')
+            if x == 'yes':
+                return True
+            elif x == 'no':
+                return False
+            else:
+                print(f'{x} is not either yes or no')
+
+    def _ask_choices(self, msg, choices):
+        choices_str = '/'.join(choices)
+        while True:
+            x = input(f'{msg} ({choices_str}): ')
+            if x in choices:
+                return x
+            else:
+                print(f'{x} is not a valid choice')
+
+    def _ask_size(self, msg):
+        x = input(f'{msg} (kK,mM,gG,tT,pP): ')
+        size = SizeConv.to_int(x)
+        return size
 
     def _introspect(self, exec_info):
         """
@@ -368,14 +468,13 @@ class ResourceGraph:
                                self.list_fs.df,
                                on=['device', 'host'],
                                how='outer')
-        self.all_fs['shared'].fillna(True, inplace=True)
         self.all_fs.drop(['used', 'use%', 'fs_mount', 'partuuid'],
                          axis=1, inplace=True)
-        self.all_fs['mount'].fillna(value='', inplace=True)
         net_df = self.fi_info.df
         net_df.loc[:, 'speed'] = np.nan
         net_df.drop(['version', 'type', 'protocol'],
                     axis=1, inplace=True)
+        net_df.drop_duplicates(inplace=True)
         self.all_net = net_df
 
     def save(self, path):
@@ -516,27 +615,52 @@ class ResourceGraph:
         return self
 
     def _apply_fs_settings(self):
-        if len(self.fs_settings) == 0:
+        num_settings = len(self.fs_settings['register']) + \
+                       len(self.fs_settings['filter_mounts'])
+        if num_settings == 0:
             self.fs = self.all_fs
+            self._derive_storage_cols()
             return
-        df = self.all_fs
-        self.fs = pd.DataFrame(columns=self.all_net.columns)
+        # Get the set of all storage (df)
+        df = pd.DataFrame(self.fs_settings['register'],
+                          columns=self.fs_columns)
+        df = pd.concat([self.all_fs, df])
+        self.fs = df
+        self._derive_storage_cols()
+
+        # Filter the df
+        filters = []
         for fs_set in self.fs_settings['filter_mounts'].values():
             mount_re = fs_set['mount_re']
             mount_suffix = fs_set['mount_suffix']
             tran = fs_set['tran']
             with_mount = df[df.mount.str.contains(mount_re)]
             if mount_suffix is not None:
-                with_mount.loc[:, 'mount'] += mount_suffix
+                with_mount.loc[:, 'mount'] += f'/{mount_suffix}'
             if tran is not None:
                 with_mount.loc[:, 'tran'] = tran
-            self.fs = pd.concat([self.fs, with_mount])
-        admin_df = pd.DataFrame(self.fs_settings['register'],
-                                columns=self.fs_columns)
-        self.fs = pd.concat([self.fs, admin_df])
+            filters.append(with_mount)
+
+        # Create the final filtered df
+        self.fs = pd.concat(filters)
+
+    def _derive_storage_cols(self):
+        df = self.fs
+        if df is None:
+            return
+        df.loc[(df.tran == 'sata') & (df.rota == True),
+               'dev_type'] = str(StorageDeviceType.HDD)
+        df.loc[(df.tran == 'sata') & (df.rota == False),
+               'dev_type'] = str(StorageDeviceType.SSD)
+        df.loc[(df.tran == 'nvme'),
+               'dev_type'] = str(StorageDeviceType.NVME)
+        df['mount'].fillna(value='', inplace=True)
+        df['shared'].fillna(True, inplace=True)
 
     def _apply_net_settings(self):
-        if len(self.net_settings) == 0:
+        num_settings = len(self.net_settings['register']) + \
+                       len(self.net_settings['track_ips'])
+        if num_settings == 0:
             self.net = self.all_net
             return
         self.net = pd.DataFrame(columns=self.all_net.columns)
@@ -550,6 +674,10 @@ class ResourceGraph:
         admin_df = pd.DataFrame(self.net_settings['register'],
                                 columns=self.net_columns)
         self.net = pd.concat([self.net, admin_df])
+        self._derive_net_cols()
+
+    def _derive_net_cols(self):
+        self.net['domain'].fillna('', inplace=True)
 
     def find_shared_storage(self):
         """
@@ -595,24 +723,19 @@ class ResourceGraph:
             matching_devs = pd.DataFrame(columns=df.columns)
             if isinstance(dev_types, str):
                 dev_types = [dev_types]
-            for dev_type in dev_types:
-                if dev_type == StorageDeviceType.HDD:
-                    devs = df[(df.tran == 'sata') & (df.rota == True)]
-                elif dev_type == StorageDeviceType.SSD:
-                    devs = df[(df.tran == 'sata') & (df.rota == False)]
-                elif dev_type == StorageDeviceType.NVME:
-                    devs = df[(df.tran == 'nvme')]
-                matching_devs = pd.concat([matching_devs, devs])
+            matching_devs = [df[df.dev_type == dev_type]
+                             for dev_type in dev_types]
+            matching_devs = pd.concat(matching_devs)
             df = matching_devs
         # Get the set of mounts common between all hosts
         if common:
             df = df.groupby(['mount']).filter(
                 lambda x: len(x) == len(self.hosts)).reset_index(drop=True)
             if condense:
-                df = df.groupby(['mount']).first().reset_index(drop=True)
+                df = df.groupby(['mount']).first().reset_index()
         # Remove storage with too little capacity
         if min_cap is not None:
-            df = df[df.size >= min_cap]
+            df = df[df['size'] >= min_cap]
         # Remove storage with too little available space
         if min_avail is not None:
             df = df[df.avail >= min_avail]
@@ -641,8 +764,8 @@ class ResourceGraph:
         # Get the set of fabrics corresponding to these hosts
         df = df[df.fabric.isin(hosts.hosts_ip)]
         # Filter out protocols which are not common between these hosts
-        df = df.groupby('provider').filter(
-           lambda x: len(x) == len(hosts)).reset_index(drop=True)
+        df = df.groupby(['provider', 'domain']).filter(
+           lambda x: len(x) >= len(hosts)).reset_index(drop=True)
         # Choose only a subset of providers
         if providers is not None:
             if isinstance(providers, str):
@@ -653,8 +776,15 @@ class ResourceGraph:
     def print_df(self, df):
         if 'device' in df.columns:
             if 'host' in df.columns:
-                print(df.sort_values('host').to_string())
+                col = ['host', 'mount', 'device', 'dev_type', 'shared',
+                       'avail', 'tran', 'rota', 'fs_type']
+                df = df[col]
+                df = df.sort_values('host')
+                print(df.to_string())
             else:
+                col = ['device', 'mount', 'dev_type', 'shared',
+                       'avail', 'tran', 'rota', 'fs_type']
+                df = df[col]
                 print(df.to_string())
         else:
             print(df.sort_values('provider').to_string())
