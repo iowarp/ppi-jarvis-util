@@ -12,6 +12,7 @@ import json
 import pandas as pd
 import numpy as np
 import shlex
+import ipaddress
 pd.options.mode.chained_assignment = None
 # pylint: disable=C0121
 
@@ -261,8 +262,6 @@ class FiInfo(Exec):
                     splits = line.split(':')
                     key = splits[0].strip()
                     val = splits[1].strip()
-                    if 'fabric' in key:
-                        val = val.split('/')[0].strip()
                     providers[-1][key] = val
         self.df = pd.DataFrame(providers)
 
@@ -751,6 +750,14 @@ class ResourceGraph:
             df = df.drop('host', axis=1)
         return df
 
+    @staticmethod
+    def _subnet_matches_hosts(subnet, ip_addrs):
+        network = ipaddress.ip_network(subnet, strict=False)
+        for ip in ip_addrs:
+            if ip in network:
+                return True
+        return False
+
     def find_net_info(self, hosts,
                       providers=None):
         """
@@ -763,7 +770,8 @@ class ResourceGraph:
         """
         df = self.net
         # Get the set of fabrics corresponding to these hosts
-        df = df[df.fabric.isin(hosts.hosts_ip)]
+        ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
+        df = df[df['fabric'].apply(self._subnet_matches_hosts, ip_addrs=ips)]
         # Filter out protocols which are not common between these hosts
         df = df.groupby(['provider', 'domain']).filter(
            lambda x: len(x) >= len(hosts)).reset_index(drop=True)
