@@ -656,6 +656,7 @@ class ResourceGraph:
                'dev_type'] = str(StorageDeviceType.NVME)
         df['mount'].fillna(value='', inplace=True)
         df['shared'].fillna(True, inplace=True)
+        df['tran'].fillna('', inplace=True)
 
     def _apply_net_settings(self):
         num_settings = len(self.net_settings['register']) + \
