@@ -248,9 +248,9 @@ class FiInfo(Exec):
 
     def wait(self):
         super().wait()
+        providers = []
         for host, stdout in self.stdout.items():
             lines = stdout.strip().splitlines()
-            providers = []
             for line in lines:
                 if 'provider' in line:
                     providers.append({
