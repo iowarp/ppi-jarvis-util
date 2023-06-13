@@ -113,7 +113,7 @@ class Lsblk(Exec):
     def wait(self):
         super().wait()
         partitions = []
-        devs = {}
+        devs = []
         for host, stdout in self.stdout.items():
             lsblk_data = json.loads(stdout)['blockdevices']
             for partition in lsblk_data:
@@ -125,7 +125,7 @@ class Lsblk(Exec):
                     'mount': partition['mountpoint'],
                     'host': host
                 })
-                devs[dev['name']] = {
+                devs.append({
                     'parent': f'/dev/{dev["name"]}',
                     'size': SizeConv.to_int(dev['size']),
                     'model': dev['model'],
@@ -134,8 +134,7 @@ class Lsblk(Exec):
                     'mount': dev['mountpoint'],
                     'rota': dev['rota'],
                     'host': host
-                }
-            devs = list(devs.values())
+                })
         part_df = pd.DataFrame(partitions)
         dev_df = pd.DataFrame(devs)
         total_df = pd.merge(part_df,
