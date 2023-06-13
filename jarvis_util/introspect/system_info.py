@@ -135,7 +135,7 @@ class Lsblk(Exec):
                     'rota': dev['rota'],
                     'host': host
                 }
-            devs = list(devs.values())
+        devs = list(devs.values())
         part_df = pd.DataFrame(partitions)
         dev_df = pd.DataFrame(devs)
         total_df = pd.merge(part_df,
