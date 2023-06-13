@@ -129,7 +129,8 @@ class Lsblk(Exec):
                     'parent': f'/dev/{dev["name"]}',
                     'size': SizeConv.to_int(dev['size']),
                     'model': dev['model'],
-                    'tran': dev['tran'].lower(),
+                    'tran': dev['tran'].lower()
+                    if dev['tran'] is not None else '',
                     'mount': dev['mountpoint'],
                     'rota': dev['rota'],
                     'host': host
