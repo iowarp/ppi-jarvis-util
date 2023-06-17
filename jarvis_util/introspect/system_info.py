@@ -501,8 +501,8 @@ class ResourceGraph:
         """
         graph = YamlFile(path).load()
         self.hosts = graph['hosts']
-        self.all_fs = pd.DataFrame(graph['fs'])
-        self.all_net = pd.DataFrame(graph['net'])
+        self.all_fs = pd.DataFrame(graph['fs'], columns=self.fs_columns)
+        self.all_net = pd.DataFrame(graph['net'], columns=self.net_columns)
         self.fs = None
         self.net = None
         self.fs_settings = graph['fs_settings']
@@ -645,7 +645,7 @@ class ResourceGraph:
 
     def _derive_storage_cols(self):
         df = self.fs
-        if df is None:
+        if df is None or len(df) == 0:
             return
         df.loc[(df.tran == 'sata') & (df.rota == True),
                'dev_type'] = str(StorageDeviceType.HDD)
@@ -665,6 +665,8 @@ class ResourceGraph:
             return
         self.net = pd.DataFrame(columns=self.all_net.columns)
         df = self.all_net
+        if df is None or len(df) == 0:
+            return
         for net_set in self.net_settings['track_ips'].values():
             ip_re = net_set['ip_re']
             speed = net_set['speed']
@@ -717,7 +719,7 @@ class ResourceGraph:
         df = df[df.shared == False]
         # Filter devices by whether or not a mount is needed
         if is_mounted:
-            df = df[df.mount.notna()]
+            df = df[df.mount != '']
         # Find devices of a particular type
         if dev_types is not None:
             matching_devs = pd.DataFrame(columns=df.columns)
