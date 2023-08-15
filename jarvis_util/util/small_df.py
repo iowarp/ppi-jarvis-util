@@ -43,7 +43,7 @@ class SmallDf:
             self.columns.update(df.columns)
         elif isinstance(df, list):
             if not isinstance(df[0], dict):
-                df = {col:val for row in df
+                df = {col: val for row in df
                       for col, val in zip(self.columns, df)}
             df = self._drop_duplicates(df)
             self.rows += df
@@ -74,7 +74,7 @@ class SmallDf:
     Set the columns
     """
     def set_columns(self, columns):
-        if not isinstance(columns, list) and not isinstance(columns, tuple):
+        if not isinstance(columns, (list, tuple, set)):
             columns = [columns]
         self.columns.clear()
         self.columns.update(columns)
@@ -90,7 +90,7 @@ class SmallDf:
             return self
         if not isinstance(columns, (list, tuple)):
             columns = [columns]
-        if not any([col in self.columns for col in columns]):
+        if not any([col not in self.columns for col in columns]):
             return self
         self.columns.update(columns)
         self._correct_rows()
@@ -428,6 +428,16 @@ class SmallGroupBy:
         return grp
 
     """
+    Keep only groups meeting the condition
+    """
+    def filter_groups(self, func):
+        grp = SmallGroupBy()
+        for key, grp_df in self.groups.items():
+            if func(grp_df):
+                grp.groups[key] = grp_df
+        return grp
+
+    """
     Get the first element in each group
     """
     def first(self):
@@ -439,7 +449,7 @@ class SmallGroupBy:
     def head(self, n):
         grp = SmallGroupBy()
         for key, grp_df in self.groups.items():
-            grp.groups[key] = grp_df.rows[0:n]
+            grp.groups[key] = SmallDf(rows=grp_df.rows[0:n])
         return grp
 
     """

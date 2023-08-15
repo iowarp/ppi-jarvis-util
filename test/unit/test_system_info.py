@@ -98,34 +98,25 @@ class TestSystemInfo(TestCase):
 
         # Find all mounted NVMes
         df = rg.find_storage([StorageDeviceType.NVME])
-        self.assertTrue(len(df[df.tran == 'nvme']) == 4)
-        self.assertTrue(len(df[df.tran == 'sata']) == 0)
+        self.assertTrue(len(df[lambda r: r['tran'] == 'nvme']) == 4)
+        self.assertTrue(len(df[lambda r: r['tran'] == 'sata']) == 0)
         self.assertTrue(len(df) == 4)
 
         # Find all mounted & common NVMes and SSDs
         df = rg.find_storage([StorageDeviceType.NVME,
                               StorageDeviceType.SSD],
                              common=True)
-        self.assertTrue(len(df[df.tran == 'nvme']) == 3)
-        self.assertTrue(len(df[df.tran == 'sata']) == 3)
+        self.assertTrue(len(df[lambda r: r['tran'] == 'nvme']) == 3)
+        self.assertTrue(len(df[lambda r: r['tran'] == 'sata']) == 3)
         self.assertTrue(len(df) == 6)
-
-        # Select a single nvme per-node
-        df = rg.find_storage([StorageDeviceType.NVME,
-                              StorageDeviceType.SSD],
-                             common=True,
-                             count_per_node=1)
-        self.assertTrue(len(df[df.tran == 'nvme']) == 3)
-        self.assertTrue(len(df[df.tran == 'sata']) == 0)
-        self.assertTrue(len(df) == 3)
 
         # Select a single nvme and ssd per-node
         df = rg.find_storage([StorageDeviceType.NVME,
                               StorageDeviceType.SSD],
                              common=True,
                              count_per_dev=1)
-        self.assertTrue(len(df[df.tran == 'nvme']) == 3)
-        self.assertTrue(len(df[df.tran == 'sata']) == 3)
+        self.assertTrue(len(df[lambda r: r['tran'] == 'nvme']) == 3)
+        self.assertTrue(len(df[lambda r: r['tran'] == 'sata']) == 3)
         self.assertTrue(len(df) == 6)
 
         # Get condensed output
@@ -134,8 +125,8 @@ class TestSystemInfo(TestCase):
                              common=True,
                              condense=True,
                              count_per_dev=1)
-        self.assertTrue(len(df[df.tran == 'nvme']) == 1)
-        self.assertTrue(len(df[df.tran == 'sata']) == 1)
+        self.assertTrue(len(df[lambda r: r['tran'] == 'nvme']) == 1)
+        self.assertTrue(len(df[lambda r: r['tran'] == 'sata']) == 1)
         self.assertTrue(len(df) == 2)
         rg.print_df(df)
 

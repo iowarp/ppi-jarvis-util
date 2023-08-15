@@ -666,8 +666,6 @@ class ResourceGraph:
             return
         self.net = sdf.SmallDf(columns=self.all_net.columns)
         df = self.all_net
-        if df is None or len(df) == 0:
-            return
         for net_set in self.net_settings['track_ips'].values():
             ip_re = net_set['ip_re']
             speed = net_set['speed']
@@ -732,7 +730,7 @@ class ResourceGraph:
             df = matching_devs
         # Get the set of mounts common between all hosts
         if common:
-            df = df.groupby(['mount']).filter(
+            df = df.groupby(['mount']).filter_groups(
                 lambda x: len(x) == len(self.hosts)).reset_index()
             if condense:
                 df = df.groupby(['mount']).first().reset_index()
@@ -774,15 +772,16 @@ class ResourceGraph:
         df = self.net
         # Get the set of fabrics corresponding to these hosts
         ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
-        df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ip_addrs)]
+        df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
         # Filter out protocols which are not common between these hosts
-        df = df.groupby(['provider', 'domain']).filter(
+        df = df.groupby(['provider', 'domain']).filter_groups(
            lambda x: len(x) >= len(hosts)).reset_index()
         # Choose only a subset of providers
         if providers is not None:
-            if not isinstance(providers, set):
-                providers = set(providers)
-            df = df[lambda r: r['providers'] in providers]
+            if not isinstance(providers, (list, set)):
+                providers = [providers]
+            providers = set(providers)
+            df = df[lambda r: r['provider'] in providers]
         return df
 
     def print_df(self, df):
