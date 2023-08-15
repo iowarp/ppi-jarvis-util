@@ -6,6 +6,7 @@ from jarvis_util.serialize.yaml_file import YamlFile
 from jarvis_util.util.import_mod import load_class
 from collections.abc import Iterable
 import copy
+import yaml
 
 
 class SmallDf:
@@ -28,7 +29,7 @@ class SmallDf:
             self.set_columns(columns)
         if not is_loc:
             self.loc = SmallDf(is_loc=True)
-            self.loc.columns = self.rows
+            self.loc.columns = self.columns
             self.loc.rows = self.rows
 
     """
@@ -73,7 +74,7 @@ class SmallDf:
     Set the columns
     """
     def set_columns(self, columns):
-        if not isinstance(columns, Iterable):
+        if not isinstance(columns, list) and not isinstance(columns, tuple):
             columns = [columns]
         self.columns.clear()
         self.columns.update(columns)
@@ -85,9 +86,9 @@ class SmallDf:
     Add columns to the table
     """
     def add_columns(self, columns):
-        if self.is_loc:
-            raise Exception("Cannot add columns to location df")
-        if not isinstance(columns, Iterable):
+        if columns is None:
+            return self
+        if not isinstance(columns, (list, tuple)):
             columns = [columns]
         if not any([col in self.columns for col in columns]):
             return self
@@ -101,7 +102,7 @@ class SmallDf:
     def rm_columns(self, columns):
         if self.is_loc:
             raise Exception("Cannot remove columns from location df")
-        if not isinstance(columns, Iterable):
+        if not isinstance(columns, (list, tuple)):
             columns = [columns]
         if len(columns) == 0:
             return
@@ -136,7 +137,7 @@ class SmallDf:
         if on is None:
             on = self.columns & other.columns
         if len(on) == 0:
-            return SimplDf()
+            return SmallDf()
         rows = []
         for row in self.rows:
             for orow in other.rows:
@@ -171,7 +172,9 @@ class SmallDf:
         rows = self.rows
         if func is not None:
             rows = [row for row in rows if func(row)]
-        df = SmallDf(rows=rows, columns=columns, is_loc=True)
+        df = SmallDf(columns=columns, is_loc=True)
+        df.rows = rows
+        self.add_columns(columns)
         return df
 
     """
@@ -195,12 +198,12 @@ class SmallDf:
             idxer = idxer[0]
             if callable(idxer):
                 return idxer, None
-            elif isinstance(idxer, Iterable) or isinstance(idxer, str):
+            elif isinstance(idxer, (list, tuple, str)):
                 return None, idxer
             elif isinstance(idxer, slice):
                 return None, None
         if len(idxer) == 2:
-            if isinstance(idxer[1], Iterable) or isinstance(idxer[1], str):
+            if isinstance(idxer[1], (list, tuple, str)):
                 columns = idxer[1]
             else:
                 raise Exception("Invlaid parameters to query or loc")
@@ -395,20 +398,24 @@ class SmallGroupBy:
         if columns is None and rows is None:
             return
         if isinstance(columns, str):
-            columns = [columns]
+            self.columns = [columns]
+        else:
+            self.columns = columns
         for row in rows:
-            key = tuple([row[col] for col in columns])
+            key = tuple([row[col] for col in self.columns])
             if key not in self.groups:
                 self.groups[key] = []
             self.groups[key].append(row)
+        for key, rows in self.groups.items():
+            self.groups[key] = SmallDf(rows=self.groups[key])
 
     """
     Expand the groupby into a SmallDf
     """
     def reset_index(self, *args, **kwargs):
         rows = []
-        for grp in self.groups.values():
-            rows += grp
+        for grp_df in self.groups.values():
+            rows += grp_df.rows
         return SmallDf(rows=rows)
 
     """
@@ -416,11 +423,9 @@ class SmallGroupBy:
     """
     def filter(self, func):
         grp = SmallGroupBy()
-        for key, rows in self.groups.items():
-            less_rows = [row for row in rows if func(row)]
-            rows.clear()
-            rows += less_rows
-            grp.groups
+        for key, grp_df in self.groups.items():
+            grp.groups[key] = SmallDf(rows=[row for row in grp_df.rows if func(row)])
+        return grp
 
     """
     Get the first element in each group
@@ -432,7 +437,10 @@ class SmallGroupBy:
     Get the first "n" elements in each group
     """
     def head(self, n):
-        pass
+        grp = SmallGroupBy()
+        for key, grp_df in self.groups.items():
+            grp.groups[key] = grp_df.rows[0:n]
+        return grp
 
     """
     Get the minimum per-group

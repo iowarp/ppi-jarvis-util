@@ -10,8 +10,6 @@ from jarvis_util.util.size_conv import SizeConv
 from jarvis_util.serialize.yaml_file import YamlFile
 import jarvis_util.util.small_df as sdf
 import json
-import pandas as pd
-import numpy as np
 import shlex
 import ipaddress
 # pylint: disable=C0121
@@ -120,7 +118,9 @@ class Lsblk(Exec):
             if len(lsblk_data) == 0:
                 continue
             for partition in lsblk_data:
-                dev = partition['children'][0]
+                dev = partition
+                if 'children' in partition:
+                    dev = partition['children'][0]
                 partitions.append({
                     'parent': f'/dev/{dev["name"]}',
                     'device': f'/dev/{partition["name"]}',
@@ -472,7 +472,7 @@ class ResourceGraph:
                                how='outer')
         self.all_fs.rm_columns(['used', 'use%', 'fs_mount', 'partuuid'])
         net_df = self.fi_info.df
-        net_df.loc[:, 'speed'] = np.nan
+        net_df.loc[:, 'speed'] = 0
         net_df.rm_columns(['version', 'type', 'protocol'])
         net_df.drop_duplicates(inplace=True)
         self.all_net = net_df
@@ -486,8 +486,8 @@ class ResourceGraph:
         """
         graph = {
             'hosts': self.hosts,
-            'fs': self.all_fs.to_dict('records'),
-            'net': self.all_net.to_dict('records'),
+            'fs': self.all_fs.rows,
+            'net': self.all_net.rows,
             'fs_settings': self.fs_settings,
             'net_settings': self.net_settings
         }
@@ -631,10 +631,10 @@ class ResourceGraph:
         # Filter the df
         filters = []
         for fs_set in self.fs_settings['filter_mounts'].values():
-            mount_re = fs_set['mount_re']
+            mount_re = str(fs_set['mount_re'])
             mount_suffix = fs_set['mount_suffix']
             tran = fs_set['tran']
-            with_mount = df[df.mount.str.contains(mount_re)]
+            with_mount = df[lambda r: re.match(mount_re, str(r['mount']))]
             if mount_suffix is not None:
                 with_mount.loc[:, 'mount'] += f'/{mount_suffix}'
             if tran is not None:
@@ -654,9 +654,9 @@ class ResourceGraph:
                'dev_type'] = str(StorageDeviceType.SSD)
         df.loc[lambda r: (r['tran'] == 'nvme'),
                'dev_type'] = str(StorageDeviceType.NVME)
-        df['mount'].fillna('', inplace=True)
-        df['shared'].fillna(True, inplace=True)
-        df['tran'].fillna('', inplace=True)
+        df.loc['mount'].fillna('', inplace=True)
+        df.loc['shared'].fillna(True, inplace=True)
+        df.loc['tran'].fillna('', inplace=True)
 
     def _apply_net_settings(self):
         num_settings = len(self.net_settings['register']) + \

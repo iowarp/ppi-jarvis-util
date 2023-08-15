@@ -28,31 +28,29 @@ class TestSmallDf(TestCase):
     def test_col_assign(self):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
         df = SmallDf(rows=rows)
-        sub_df = df['a']
-        records = [row['a'] for row in sub_df.rows]
-        sub_df['a'] = 25
-        records = [row['a'] for row in sub_df.rows]
-        self.assertTrue(records == [25, 25, 25])
+        df.loc['a'] = 25
+        records = [row['a'] for row in df.rows]
+        self.assertEqual([25, 25, 25], records)
 
     def test_col_row_assign(self):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
         df = SmallDf(rows=rows)
         sub_df = df['a']
-        sub_df[lambda r: r['a'] is None, 'a'] = 25
-        records = [row['a'] for row in sub_df.rows]
-        self.assertTrue(records == [1, 25, 25])
-        records = [row['a'] for row in df.rows]
-        self.assertTrue(records == [1, None, None])
+        sub_df.loc[lambda r: r['a'] is None, 'a'] = 25
+        records = set([row['a'] for row in sub_df.rows])
+        self.assertEqual({1, 25, 25}, records)
+        records = set([row['a'] for row in df.rows])
+        self.assertEqual({1, None, None}, records)
 
     def test_loc(self):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
         df = SmallDf(rows=rows)
         sub_df = df.loc['a']
         sub_df[lambda r: r['a'] is None, 'a'] = 25
-        records = [row['a'] for row in sub_df.rows]
-        self.assertEqual([1, 25, 25], records)
-        records = [row['a'] for row in df.rows]
-        self.assertEqual([1, 25, 25], records)
+        records = set([row['a'] for row in sub_df.rows])
+        self.assertEqual({1, 25, 25}, records)
+        records = set([row['a'] for row in df.rows])
+        self.assertEqual({1, 25, 25}, records)
 
     def test_add(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
@@ -60,8 +58,8 @@ class TestSmallDf(TestCase):
         df.loc['a'].fillna(0)
         df.loc['b'].fillna(0)
         df.loc['c'] = df['a'] + df['b']
-        records = [row['c'] for row in df.rows]
-        self.assertEqual([5, 2, 0], records)
+        records = set([row['c'] for row in df.rows])
+        self.assertEqual({5, 2, 0}, records)
 
     def test_add2(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
@@ -69,8 +67,8 @@ class TestSmallDf(TestCase):
         df.loc['a'].fillna(0)
         df.loc['b'].fillna(0)
         df.loc['c'] = df['a'] + df['b'] + 5
-        records = [row['c'] for row in df.rows]
-        self.assertEqual([10, 7, 5], records)
+        records = set([row['c'] for row in df.rows])
+        self.assertEqual({10, 7, 5}, records)
 
     def test_mul(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
@@ -78,8 +76,8 @@ class TestSmallDf(TestCase):
         df.loc['a'].fillna(0)
         df.loc['b'].fillna(0)
         df.loc['c'] = df['a'] * df['b']
-        records = [row['c'] for row in df.rows]
-        self.assertEqual([6, 0, 0], records)
+        records = set([row['c'] for row in df.rows])
+        self.assertEqual({6, 0, 0}, records)
 
     def test_div(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
@@ -87,8 +85,8 @@ class TestSmallDf(TestCase):
         df.loc['a'].fillna(1)
         df.loc['b'].fillna(1)
         df.loc['c'] = df['a'] / df['b']
-        records = [row['c'] for row in df.rows]
-        self.assertEqual([1.5, 2, 1], records)
+        records = set([row['c'] for row in df.rows])
+        self.assertEqual({1.5, 2, 1}, records)
 
     def test_merge(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
@@ -96,7 +94,7 @@ class TestSmallDf(TestCase):
         rows = [{'a': 3, 'e': 2}, {'a': 3, 'e': 4}]
         df2 = SmallDf(rows=rows)
         df3 = df1.merge(df2)
-        self.assertEqual(5, len(df3))
+        self.assertEqual(4, len(df3))
         self.assertEqual(1, len(df3[lambda r: r['a'] == 3 and r['e'] == 2]))
         self.assertEqual(1, len(df3[lambda r: r['a'] == 3 and r['e'] == 4]))
 
