@@ -753,7 +753,10 @@ class ResourceGraph:
 
     @staticmethod
     def _subnet_matches_hosts(subnet, ip_addrs):
-        network = ipaddress.ip_network(subnet, strict=False)
+        try:
+            network = ipaddress.ip_network(subnet, strict=False)
+        except:
+            return False
         for ip in ip_addrs:
             if ip in network:
                 return True
