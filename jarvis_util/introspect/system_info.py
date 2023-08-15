@@ -396,7 +396,7 @@ class ResourceGraph:
                 regex = f'^{regex}'
             else:
                 regex = f'^{regex}$'
-            matches = mounts[mounts['mount'].str.contains(regex)]['mount']
+            matches = mounts[lambda r: re.match(regex, r['mount']), 'mount']
             print(matches.to_string())
             y = self._ask_yes_no('Is this correct?')
             if not y:
