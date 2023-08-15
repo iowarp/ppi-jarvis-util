@@ -8,12 +8,12 @@ import platform
 from jarvis_util.shell.exec import Exec
 from jarvis_util.util.size_conv import SizeConv
 from jarvis_util.serialize.yaml_file import YamlFile
+import jarvis_util.util.small_df as sdf
 import json
 import pandas as pd
 import numpy as np
 import shlex
 import ipaddress
-pd.options.mode.chained_assignment = None
 # pylint: disable=C0121
 
 
@@ -136,13 +136,13 @@ class Lsblk(Exec):
                     'rota': dev['rota'],
                     'host': host
                 })
-        part_df = pd.DataFrame(partitions)
-        dev_df = pd.DataFrame(devs)
-        total_df = pd.merge(part_df,
-                            dev_df[['parent', 'model', 'tran', 'host']],
-                            on=['parent', 'host'])
-        dev_df = dev_df.rename(columns={'parent': 'device'})
-        total_df = pd.concat([total_df, dev_df])
+        part_df = sdf.SmallDf(rows=partitions)
+        dev_df = sdf.SmallDf(rows=devs)
+        total_df = sdf.merge(
+            dev_df[['parent', 'model', 'tran', 'host']],
+            on=['parent', 'host'])
+        dev_df = dev_df.rename({'parent': 'device'})
+        total_df = sdf.concat([total_df, dev_df])
         self.df = total_df
 
 
@@ -182,8 +182,8 @@ class Blkid(Exec):
                     val = ' '.join(keyval[1:])
                     dev_dict[key] = val
                 dev_list.append(dev_dict)
-        df = pd.DataFrame(dev_list)
-        df = df.rename(columns={'type': 'fs_type'})
+        df = sdf.SmallDf(dev_list)
+        df = df.rename({'type': 'fs_type'})
         self.df = df
 
 
@@ -217,7 +217,7 @@ class ListFses(Exec):
         for host, stdout in self.stdout.items():
             lines = stdout.strip().splitlines()
             rows += [line.split() + [host] for line in lines[1:]]
-        df = pd.DataFrame(rows, columns=columns)
+        df = sdf.SmallDf(rows, columns=columns)
         # pylint: disable=W0108
         df.loc[:, 'fs_size'] = df['fs_size'].apply(
             lambda x: SizeConv.to_int(x))
@@ -263,7 +263,7 @@ class FiInfo(Exec):
                     key = splits[0].strip()
                     val = splits[1].strip()
                     providers[-1][key] = val
-        self.df = pd.DataFrame(providers)
+        self.df = sdf.SmallDf(providers)
 
 
 # Note, not using enum to avoid YAML serialization errors
@@ -324,8 +324,8 @@ class ResourceGraph:
         self.hosts = None
 
     def create(self):
-        self.all_fs = pd.DataFrame(columns=self.fs_columns)
-        self.all_net = pd.DataFrame(columns=self.net_columns)
+        self.all_fs = sdf.SmallDf(columns=self.fs_columns)
+        self.all_net = sdf.SmallDf(columns=self.net_columns)
         self.fs = None
         self.net = None
         self.fs_settings = {
@@ -458,12 +458,12 @@ class ResourceGraph:
         self.list_fs = ListFses(exec_info.mod(hide_output=True))
         self.fi_info = FiInfo(exec_info.mod(hide_output=True))
         self.hosts = exec_info.hostfile.hosts
-        self.all_fs = pd.merge(self.lsblk.df,
+        self.all_fs = sdf.merge(self.lsblk.df,
                                self.blkid.df,
                                on=['device', 'host'],
                                how='outer')
         self.all_fs.loc[:, 'shared'] = False
-        self.all_fs = pd.merge(self.all_fs,
+        self.all_fs = sdf.merge(self.all_fs,
                                self.list_fs.df,
                                on=['device', 'host'],
                                how='outer')
@@ -501,8 +501,8 @@ class ResourceGraph:
         """
         graph = YamlFile(path).load()
         self.hosts = graph['hosts']
-        self.all_fs = pd.DataFrame(graph['fs'], columns=self.fs_columns)
-        self.all_net = pd.DataFrame(graph['net'], columns=self.net_columns)
+        self.all_fs = sdf.SmallDf(graph['fs'], columns=self.fs_columns)
+        self.all_net = sdf.SmallDf(graph['net'], columns=self.net_columns)
         self.fs = None
         self.net = None
         self.fs_settings = graph['fs_settings']
@@ -621,9 +621,9 @@ class ResourceGraph:
             self._derive_storage_cols()
             return
         # Get the set of all storage (df)
-        df = pd.DataFrame(self.fs_settings['register'],
+        df = sdf.SmallDf(self.fs_settings['register'],
                           columns=self.fs_columns)
-        df = pd.concat([self.all_fs, df])
+        df = sdf.concat([self.all_fs, df])
         self.fs = df
         self._derive_storage_cols()
 
@@ -641,7 +641,7 @@ class ResourceGraph:
             filters.append(with_mount)
 
         # Create the final filtered df
-        self.fs = pd.concat(filters)
+        self.fs = sdf.concat(filters)
 
     def _derive_storage_cols(self):
         df = self.fs
@@ -663,7 +663,7 @@ class ResourceGraph:
         if num_settings == 0:
             self.net = self.all_net
             return
-        self.net = pd.DataFrame(columns=self.all_net.columns)
+        self.net = sdf.SmallDf(columns=self.all_net.columns)
         df = self.all_net
         if df is None or len(df) == 0:
             return
@@ -672,10 +672,10 @@ class ResourceGraph:
             speed = net_set['speed']
             with_ip = df[df['fabric'].str.contains(ip_re)]
             with_ip.loc[:, 'speed'] = speed
-            self.net = pd.concat([self.net, with_ip])
-        admin_df = pd.DataFrame(self.net_settings['register'],
+            self.net = sdf.concat([self.net, with_ip])
+        admin_df = sdf.SmallDf(self.net_settings['register'],
                                 columns=self.net_columns)
-        self.net = pd.concat([self.net, admin_df])
+        self.net = sdf.concat([self.net, admin_df])
         self._derive_net_cols()
 
     def _derive_net_cols(self):
@@ -722,12 +722,12 @@ class ResourceGraph:
             df = df[df.mount != '']
         # Find devices of a particular type
         if dev_types is not None:
-            matching_devs = pd.DataFrame(columns=df.columns)
+            matching_devs = sdf.SmallDf(columns=df.columns)
             if isinstance(dev_types, str):
                 dev_types = [dev_types]
             matching_devs = [df[df.dev_type == dev_type]
                              for dev_type in dev_types]
-            matching_devs = pd.concat(matching_devs)
+            matching_devs = sdf.concat(matching_devs)
             df = matching_devs
         # Get the set of mounts common between all hosts
         if common:

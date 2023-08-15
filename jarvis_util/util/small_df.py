@@ -3,6 +3,7 @@ This module provides a simple database implementation which stored
 and saved in a human-readable format.
 """
 from jarvis_util.serialize.yaml_file import YamlFile
+from jarvis_util.util.import_mod import load_class
 from collections.abc import Iterable
 import copy
 
@@ -42,6 +43,7 @@ class SmallDf:
             for row in df:
                 self.columns.update(row.keys())
         self._correct_rows()
+        return self
 
     """
     Set the columns
@@ -53,6 +55,7 @@ class SmallDf:
         self.columns.update(cols)
         if not self.is_loc:
             self._correct_rows()
+        return self
 
     """
     Add columns to the table
@@ -63,9 +66,10 @@ class SmallDf:
         if not isinstance(cols, Iterable):
             cols = [cols]
         if not any([col in self.columns for col in cols]):
-            return
+            return self
         self.columns.update(cols)
         self._correct_rows()
+        return self
 
     """
     Remove columns from the table
@@ -79,6 +83,20 @@ class SmallDf:
             return
         self.columns.difference_update(cols)
         self._correct_rows()
+        return self
+
+    """
+    Rename a column
+    
+    :param cols: Dict[OldName:NewName]
+    """
+    def rename(self, cols):
+        self.columns.difference_update(cols.keys())
+        self.columns.update(cols.values())
+        for row in self.rows:
+            for old_name, new_name in cols.items():
+                row[new_name] = row.pop(old_name)
+        return self
 
     """
     Merge this dictionary with another
@@ -149,10 +167,20 @@ class SmallDf:
                 return idxer, None
             elif isinstance(idxer, Iterable) or isinstance(idxer, str):
                 return None, idxer
+            elif isinstance(idxer, slice):
+                return None, None
         if len(idxer) == 2:
-            if callable(idxer[0]) and \
-               (isinstance(idxer[1], Iterable) or isinstance(idxer[1], str)):
-                return idxer[0], idxer[1]
+            if isinstance(idxer[1], Iterable) or isinstance(idxer[1], str):
+                cols = idxer[1]
+            else:
+                raise Exception("Invlaid parameters to query or loc")
+            if callable(idxer[0]):
+                func = idxer[0]
+            elif isinstance(idxer[0], slice):
+                func = None
+            else:
+                raise Exception("Invlaid parameters to query or loc")
+            return func, cols
         raise Exception("Invlaid parameters to query or loc")
 
     """
@@ -171,6 +199,19 @@ class SmallDf:
     def fillna(self, val):
         self.apply(lambda r, c: val if r[c] is None else r[c])
         return self
+
+    """
+    Sort
+    """
+    def sort_values(self, col):
+        self.rows.sort(key=lambda x: x[col])
+
+    """
+    Group by a combo of columns
+    """
+    def groupby(self, cols):
+        smallgrpby = load_class('jarvis_util.util.small_df', '', 'SmallGroupBy')
+        return SmallGroupBy(cols, self.rows)
 
     """
     A subset of columns from the two dfs
@@ -205,7 +246,7 @@ class SmallDf:
                     row[col] = orow[ocol]
         else:
             for row in df.rows:
-                for col in cols:
+                for col in df.columns:
                     row[col] = other
 
     """
@@ -290,3 +331,78 @@ class SmallDf:
     """
     def load_yaml(self, path):
         self.rows = YamlFile(path).load()
+
+
+""" Concat a list of dfs """
+def concat(dfs):
+    new_df = SmallDf()
+    for df in dfs:
+        new_df.concat(df)
+    return new_df
+
+""" Merge two dfs """
+def merge(df1, df2, on=None, how=None):
+    return df1.merge(df2, on=on)
+
+
+"""
+GroupBy object
+"""
+class SmallGroupBy:
+    """
+    This class groups a df based on columns
+    """
+    def __init__(self, cols, rows):
+        self.groups = {}
+        if isinstance(cols, str):
+            cols = [cols]
+        for row in rows:
+            key = tuple([row[col] for col in cols])
+            if key not in self.groups:
+                self.groups[key] = []
+            self.groups[key].append(row)
+
+    """
+    Expand the groupby into a SmallDf
+    """
+    def reset_index(self, *args, **kwargs):
+        rows = []
+        for grp in self.groups.values():
+            rows += grp
+        return SmallDf(rows=rows)
+
+    """
+    Keep only elements meeting the condition
+    """
+    def filter(self, func):
+        pass
+
+    """
+    Get the first element in each group
+    """
+    def first(self):
+        return self.head(1)
+
+    """
+    Get the first "n" elements in each group
+    """
+    def head(self, n):
+        pass
+
+    """
+    Get the minimum per-group
+    """
+    def min(self):
+        pass
+
+    """
+    Get the maixmum per-group
+    """
+    def max(self):
+        pass
+
+    """
+    Get the number of groups
+    """
+    def __len__(self):
+        return len(self.groups)
