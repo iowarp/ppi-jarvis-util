@@ -14,19 +14,18 @@ class SmallDf:
     and saved in a human-readable format.
 
     :param rows: List[Dict] of entries
-    :param cols: List or string of columns
+    :param columns: List or string of columns
     :param is_loc: Is this df being used for indexing? This will avoid
     destroying columns by accident
     """
-    def __init__(self, rows=None, cols=None, is_loc=False):
+    def __init__(self, rows=None, columns=None, is_loc=False):
         self.rows = []
         self.columns = set()
-        self.dtypes = []
         self.is_loc = is_loc
         if rows is not None:
             self.concat(rows)
-        if cols is not None:
-            self.set_cols(cols)
+        if columns is not None:
+            self.set_columns(columns)
         if not is_loc:
             self.loc = SmallDf(is_loc=True)
             self.loc.columns = self.rows
@@ -36,9 +35,16 @@ class SmallDf:
     Concatenate a dataframe (or records) to this one
     """
     def concat(self, df):
+        if len(df) == 0:
+            return self
         if isinstance(df, SmallDf):
             self.rows += df.rows
+            self.columns.update(df.columns)
         elif isinstance(df, list):
+            if not isinstance(df[0], dict):
+                df = {col:val for row in df
+                      for col, val in zip(self.columns, df)}
+            df = self._drop_duplicates(df)
             self.rows += df
             for row in df:
                 self.columns.update(row.keys())
@@ -46,13 +52,31 @@ class SmallDf:
         return self
 
     """
+    Remove duplicate entries
+    """
+    def drop_duplicates(self, inplace=True):
+        dedup = self._drop_duplicates(self.rows)
+        self.rows.clear()
+        self.rows += dedup
+
+    def _drop_duplicates(self, rows):
+        dedup = list(set(self._fixed_dict(rows)))
+        return self._mutable_dict(dedup)
+
+    def _fixed_dict(self, rows):
+        return tuple((tuple(row.items()) for row in rows))
+
+    def _mutable_dict(self, rows):
+        return [{key:val for key, val in row} for row in rows]
+
+    """
     Set the columns
     """
-    def set_cols(self, cols):
-        if not isinstance(cols, Iterable):
-            cols = [cols]
+    def set_columns(self, columns):
+        if not isinstance(columns, Iterable):
+            columns = [columns]
         self.columns.clear()
-        self.columns.update(cols)
+        self.columns.update(columns)
         if not self.is_loc:
             self._correct_rows()
         return self
@@ -60,41 +84,47 @@ class SmallDf:
     """
     Add columns to the table
     """
-    def add_cols(self, cols):
+    def add_columns(self, columns):
         if self.is_loc:
             raise Exception("Cannot add columns to location df")
-        if not isinstance(cols, Iterable):
-            cols = [cols]
-        if not any([col in self.columns for col in cols]):
+        if not isinstance(columns, Iterable):
+            columns = [columns]
+        if not any([col in self.columns for col in columns]):
             return self
-        self.columns.update(cols)
+        self.columns.update(columns)
         self._correct_rows()
         return self
 
     """
     Remove columns from the table
     """
-    def rm_cols(self, cols):
+    def rm_columns(self, columns):
         if self.is_loc:
             raise Exception("Cannot remove columns from location df")
-        if not isinstance(cols, Iterable):
-            cols = [cols]
-        if len(cols) == 0:
+        if not isinstance(columns, Iterable):
+            columns = [columns]
+        if len(columns) == 0:
             return
-        self.columns.difference_update(cols)
+        self.columns.difference_update(columns)
         self._correct_rows()
         return self
 
     """
+    Analagous to rm_columns
+    """
+    def drop(self, columns):
+        return self.rm_columns(columns)
+
+    """
     Rename a column
     
-    :param cols: Dict[OldName:NewName]
+    :param columns: Dict[OldName:NewName]
     """
-    def rename(self, cols):
-        self.columns.difference_update(cols.keys())
-        self.columns.update(cols.values())
+    def rename(self, columns):
+        self.columns.difference_update(columns.keys())
+        self.columns.update(columns.values())
         for row in self.rows:
-            for old_name, new_name in cols.items():
+            for old_name, new_name in columns.items():
                 row[new_name] = row.pop(old_name)
         return self
 
@@ -111,10 +141,10 @@ class SmallDf:
         for row in self.rows:
             for orow in other.rows:
                 if all([row[col] == orow[col] for col in on]):
-                    row = {}
-                    row.update(copy.deepcopy(row))
-                    row.update(copy.deepcopy(orow))
-                    rows.append(row)
+                    merge_row = {}
+                    merge_row.update(copy.deepcopy(row))
+                    merge_row.update(copy.deepcopy(orow))
+                    rows.append(merge_row)
                     orow['$#matched'] = True
                     row['$#matched'] = True
         rows += self._find_unmatched(self.rows, rows)
@@ -137,11 +167,11 @@ class SmallDf:
     Values of the original dataframe can be modified
     """
     def qloc(self, *idxer):
-        func, cols = self._query_args(*idxer)
+        func, columns = self._query_args(*idxer)
         rows = self.rows
         if func is not None:
             rows = [row for row in rows if func(row)]
-        df = SmallDf(rows=rows, cols=cols, is_loc=True)
+        df = SmallDf(rows=rows, columns=columns, is_loc=True)
         return df
 
     """
@@ -150,11 +180,11 @@ class SmallDf:
     Values of the original dataframe cannot be modified
     """
     def query(self, *idxer):
-        func, cols = self._query_args(*idxer)
+        func, columns = self._query_args(*idxer)
         rows = copy.deepcopy(self.rows)
         if func is not None:
             rows = [row for row in rows if func(row)]
-        df = SmallDf(rows=rows, cols=cols)
+        df = SmallDf(rows=rows, columns=columns)
         return df
 
     """
@@ -171,7 +201,7 @@ class SmallDf:
                 return None, None
         if len(idxer) == 2:
             if isinstance(idxer[1], Iterable) or isinstance(idxer[1], str):
-                cols = idxer[1]
+                columns = idxer[1]
             else:
                 raise Exception("Invlaid parameters to query or loc")
             if callable(idxer[0]):
@@ -180,7 +210,7 @@ class SmallDf:
                 func = None
             else:
                 raise Exception("Invlaid parameters to query or loc")
-            return func, cols
+            return func, columns
         raise Exception("Invlaid parameters to query or loc")
 
     """
@@ -196,7 +226,7 @@ class SmallDf:
     """
     Fill None values
     """
-    def fillna(self, val):
+    def fillna(self, val, inplace=True):
         self.apply(lambda r, c: val if r[c] is None else r[c])
         return self
 
@@ -205,13 +235,14 @@ class SmallDf:
     """
     def sort_values(self, col):
         self.rows.sort(key=lambda x: x[col])
+        return self
 
     """
     Group by a combo of columns
     """
-    def groupby(self, cols):
+    def groupby(self, columns):
         smallgrpby = load_class('jarvis_util.util.small_df', '', 'SmallGroupBy')
-        return SmallGroupBy(cols, self.rows)
+        return SmallGroupBy(columns, self.rows)
 
     """
     A subset of columns from the two dfs
@@ -332,12 +363,18 @@ class SmallDf:
     def load_yaml(self, path):
         self.rows = YamlFile(path).load()
 
+    """
+    Convert into a nice string
+    """
+    def to_string(self):
+        return yaml.dump(self.rows)
+
 
 """ Concat a list of dfs """
 def concat(dfs):
     new_df = SmallDf()
     for df in dfs:
-        new_df.concat(df)
+        new_df = new_df.concat(df)
     return new_df
 
 """ Merge two dfs """
@@ -352,12 +389,15 @@ class SmallGroupBy:
     """
     This class groups a df based on columns
     """
-    def __init__(self, cols, rows):
+    def __init__(self, columns=None, rows=None):
         self.groups = {}
-        if isinstance(cols, str):
-            cols = [cols]
+        self.columns = []
+        if columns is None and rows is None:
+            return
+        if isinstance(columns, str):
+            columns = [columns]
         for row in rows:
-            key = tuple([row[col] for col in cols])
+            key = tuple([row[col] for col in columns])
             if key not in self.groups:
                 self.groups[key] = []
             self.groups[key].append(row)
@@ -375,7 +415,12 @@ class SmallGroupBy:
     Keep only elements meeting the condition
     """
     def filter(self, func):
-        pass
+        grp = SmallGroupBy()
+        for key, rows in self.groups.items():
+            less_rows = [row for row in rows if func(row)]
+            rows.clear()
+            rows += less_rows
+            grp.groups
 
     """
     Get the first element in each group

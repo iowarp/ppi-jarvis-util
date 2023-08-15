@@ -117,6 +117,8 @@ class Lsblk(Exec):
         devs = []
         for host, stdout in self.stdout.items():
             lsblk_data = json.loads(stdout)['blockdevices']
+            if len(lsblk_data) == 0:
+                continue
             for partition in lsblk_data:
                 dev = partition['children'][0]
                 partitions.append({
@@ -139,6 +141,7 @@ class Lsblk(Exec):
         part_df = sdf.SmallDf(rows=partitions)
         dev_df = sdf.SmallDf(rows=devs)
         total_df = sdf.merge(
+            part_df,
             dev_df[['parent', 'model', 'tran', 'host']],
             on=['parent', 'host'])
         dev_df = dev_df.rename({'parent': 'device'})
@@ -459,20 +462,18 @@ class ResourceGraph:
         self.fi_info = FiInfo(exec_info.mod(hide_output=True))
         self.hosts = exec_info.hostfile.hosts
         self.all_fs = sdf.merge(self.lsblk.df,
-                               self.blkid.df,
-                               on=['device', 'host'],
-                               how='outer')
+                                self.blkid.df,
+                                on=['device', 'host'],
+                                how='outer')
         self.all_fs.loc[:, 'shared'] = False
         self.all_fs = sdf.merge(self.all_fs,
                                self.list_fs.df,
                                on=['device', 'host'],
                                how='outer')
-        self.all_fs.drop(['used', 'use%', 'fs_mount', 'partuuid'],
-                         axis=1, inplace=True)
+        self.all_fs.rm_columns(['used', 'use%', 'fs_mount', 'partuuid'])
         net_df = self.fi_info.df
         net_df.loc[:, 'speed'] = np.nan
-        net_df.drop(['version', 'type', 'protocol'],
-                    axis=1, inplace=True)
+        net_df.rm_columns(['version', 'type', 'protocol'])
         net_df.drop_duplicates(inplace=True)
         self.all_net = net_df
 
@@ -647,13 +648,13 @@ class ResourceGraph:
         df = self.fs
         if df is None or len(df) == 0:
             return
-        df.loc[(df.tran == 'sata') & (df.rota == True),
+        df.loc[lambda r: (r['tran'] == 'sata') and (r['rota'] == True),
                'dev_type'] = str(StorageDeviceType.HDD)
-        df.loc[(df.tran == 'sata') & (df.rota == False),
+        df.loc[lambda r: (r['tran'] == 'sata') and (r['rota'] == False),
                'dev_type'] = str(StorageDeviceType.SSD)
-        df.loc[(df.tran == 'nvme'),
+        df.loc[lambda r: (r['tran'] == 'nvme'),
                'dev_type'] = str(StorageDeviceType.NVME)
-        df['mount'].fillna(value='', inplace=True)
+        df['mount'].fillna('', inplace=True)
         df['shared'].fillna(True, inplace=True)
         df['tran'].fillna('', inplace=True)
 
@@ -688,7 +689,7 @@ class ResourceGraph:
         :return: Dataframe
         """
         df = self.fs
-        return df[df.shared == True]
+        return df[lambda r: r['shared'] == True]
 
     def find_storage(self,
                      dev_types=None,
@@ -716,40 +717,40 @@ class ResourceGraph:
         """
         df = self.fs
         # Remove pfs
-        df = df[df.shared == False]
+        df = df[lambda r: r['shared'] == False]
         # Filter devices by whether or not a mount is needed
         if is_mounted:
-            df = df[df.mount != '']
+            df = df[lambda r: r['mount'] != '']
         # Find devices of a particular type
         if dev_types is not None:
             matching_devs = sdf.SmallDf(columns=df.columns)
             if isinstance(dev_types, str):
                 dev_types = [dev_types]
-            matching_devs = [df[df.dev_type == dev_type]
+            matching_devs = [df[lambda r: r['dev_type'] == dev_type]
                              for dev_type in dev_types]
             matching_devs = sdf.concat(matching_devs)
             df = matching_devs
         # Get the set of mounts common between all hosts
         if common:
             df = df.groupby(['mount']).filter(
-                lambda x: len(x) == len(self.hosts)).reset_index(drop=True)
+                lambda x: len(x) == len(self.hosts)).reset_index()
             if condense:
                 df = df.groupby(['mount']).first().reset_index()
         # Remove storage with too little capacity
         if min_cap is not None:
-            df = df[df['size'] >= min_cap]
+            df = df[lambda r: r['size'] >= min_cap]
         # Remove storage with too little available space
         if min_avail is not None:
-            df = df[df.avail >= min_avail]
+            df = df[lambda r: r['avail'] >= min_avail]
         # Take a certain number of each device per-host
         if count_per_dev is not None:
             df = df.groupby(['tran', 'rota', 'host']).\
-                head(count_per_dev).reset_index(drop=True)
+                head(count_per_dev).reset_index()
         # Take a certain number of matched devices per-host
         if count_per_node is not None:
-            df = df.groupby('host').head(count_per_node).reset_index(drop=True)
+            df = df.groupby('host').head(count_per_node).reset_index()
         if common and condense:
-            df = df.drop('host', axis=1)
+            df = df.rm_columns('host')
         return df
 
     @staticmethod
@@ -773,15 +774,15 @@ class ResourceGraph:
         df = self.net
         # Get the set of fabrics corresponding to these hosts
         ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
-        df = df[df['fabric'].apply(self._subnet_matches_hosts, ip_addrs=ips)]
+        df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ip_addrs)]
         # Filter out protocols which are not common between these hosts
         df = df.groupby(['provider', 'domain']).filter(
-           lambda x: len(x) >= len(hosts)).reset_index(drop=True)
+           lambda x: len(x) >= len(hosts)).reset_index()
         # Choose only a subset of providers
         if providers is not None:
-            if isinstance(providers, str):
-                providers = [providers]
-            df = df[df.provider.isin(providers)]
+            if not isinstance(providers, set):
+                providers = set(providers)
+            df = df[lambda r: r['providers'] in providers]
         return df
 
     def print_df(self, df):
