@@ -61,6 +61,15 @@ class TestSmallDf(TestCase):
         records = set([row['c'] for row in df.rows])
         self.assertEqual({5, 2, 0}, records)
 
+    def test_addeq(self):
+        rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        df.loc['a'].fillna(0)
+        df.loc['b'].fillna(0)
+        df.loc['a'] += df['b']
+        records = set([row['a'] for row in df.rows])
+        self.assertEqual({5, 2, 0}, records)
+
     def test_add2(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
         df = SmallDf(rows=rows)

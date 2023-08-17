@@ -302,11 +302,25 @@ class SmallDf:
         return SmallDf(rows=rows)
 
     """
+        Apply an arithmetic op
+        """
+
+    def _opeq(self, other, func):
+        df = self._op(other, func)
+        for row, orow in zip(self.rows, df.rows):
+            for col in df.columns:
+                row[col] = orow[col]
+        return self
+
+    """
     Add two dfs together
     """
     def __add__(self, other):
         return self._op(other,
                         lambda row, col, orow, ocol: row[col] + orow[ocol])
+    def __iadd__(self, other):
+        return self._opeq(other,
+                          lambda row, col, orow, ocol: row[col] + orow[ocol])
 
     """
     Subtract two dfs
@@ -314,6 +328,9 @@ class SmallDf:
     def __sub__(self, other):
         return self._op(other,
                         lambda row, col, orow, ocol: row[col] - orow[ocol])
+    def __isub__(self, other):
+        return self._opeq(other,
+                          lambda row, col, orow, ocol: row[col] + orow[ocol])
 
     """
     Multiply two dfs
@@ -321,6 +338,9 @@ class SmallDf:
     def __mul__(self, other):
         return self._op(other,
                         lambda row, col, orow, ocol: row[col] * orow[ocol])
+    def __imul__(self, other):
+        return self._opeq(other,
+                          lambda row, col, orow, ocol: row[col] + orow[ocol])
 
     """
     Divide two dfs
@@ -328,6 +348,9 @@ class SmallDf:
     def __truediv__(self, other):
         return self._op(other,
                         lambda row, col, orow, ocol: row[col] / orow[ocol])
+    def __itruediv__(self, other):
+        return self._opeq(other,
+                          lambda row, col, orow, ocol: row[col] + orow[ocol])
 
     """
     Length of this df (# rows)
