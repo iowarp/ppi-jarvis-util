@@ -417,10 +417,9 @@ class ResourceGraph:
             self.filter_fs(regex, mount_suffix=suffix)
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
                                  'mount points?')
-        x = print('(3/3). Listing networks.')
-        if x:
-            net_info = self.find_net_info(exec_info.hostfile)
-            self.print_df(net_info)
+        print('(3/3). Listing networks.')
+        net_info = self.find_net_info(exec_info.hostfile)
+        self.print_df(net_info)
 
     def _ask_string(self, msg):
         x = input(f'{msg}: ')
