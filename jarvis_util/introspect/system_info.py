@@ -368,7 +368,8 @@ class ResourceGraph:
         mounts = self.find_storage(common=True, condense=True)
         self.print_df(mounts)
         x = self._ask_yes_no('2.(1/2). Are there any mount points missing '
-                             'you would like to add?')
+                             'you would like to add?',
+                             default='no')
         while x:
             mount = self._ask_string('2.1.(1/7). Mount point')
             tran = self._ask_choices('2.1.(2/7). What transport?',
@@ -379,26 +380,32 @@ class ResourceGraph:
                                       'I.e., a PFS?')
             avail = self._ask_size('2.1.(5/7). How much capacity are you '
                                    'willing to use?')
-            y = self._ask_yes_no('2.1.(6/7). Are you sure this is accurate?')
+            y = self._ask_yes_no('2.1.(6/7). Are you sure this is accurate?',
+                                 default='yes')
             if not y:
                 continue
             self.add_storage(exec_info.hostfile, mount=mount,
                              tran=tran, rota=rota, shared=shared,
                              avail=avail)
             x = self._ask_yes_no('2.1.(7/7). Registered. Are there any other '
-                                 'devices you would like to add?')
+                                 'devices you would like to add?',
+                                 default='no')
+            if x is None:
+                x = False
         print('2.(2/2). Filter and correct mount points.')
         x = True
         while x:
             regex = self._ask_re('2.2.(1/3). Enter a regex of mount '
-                                 'points to select').strip()
+                                 'points to select. Default: .*').strip()
+            if regex is None:
+                regex = '.*'
             if regex.endswith('*'):
                 regex = f'^{regex}'
             else:
                 regex = f'^{regex}$'
             matches = mounts[lambda r: re.match(regex, r['mount']), 'mount']
             print(matches.to_string())
-            y = self._ask_yes_no('Is this correct?')
+            y = self._ask_yes_no('Is this correct?', default='yes')
             if not y:
                 continue
             suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
@@ -410,8 +417,7 @@ class ResourceGraph:
             self.filter_fs(regex, mount_suffix=suffix)
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
                                  'mount points?')
-        x = self._ask_yes_no('(3/3). Would you like to list available networks?'
-                             ' There are no configuration options here.')
+        x = print('(3/3). Listing networks.')
         if x:
             net_info = self.find_net_info(exec_info.hostfile)
             self.print_df(net_info)
@@ -425,9 +431,16 @@ class ResourceGraph:
                   f'prefixed with /mnt: ')
         return x
 
-    def _ask_yes_no(self, msg):
+    def _ask_yes_no(self, msg, default=None):
         while True:
-            x = input(f'{msg} (yes/no): ')
+            txt = [
+                f'{msg} (yes/no)',
+                f' (Default: {default})' if default is not None else ''
+            ]
+            txt = ''.join(txt)
+            x = input(f'{txt}: ')
+            if x is None:
+                x = default
             if x == 'yes':
                 return True
             elif x == 'no':
