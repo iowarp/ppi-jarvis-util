@@ -234,6 +234,14 @@ class SmallDf:
         return self
 
     """
+    Get unique values
+    """
+    def unique(self):
+        df = self.copy()
+        df.drop_duplicates()
+        return df
+
+    """
     Sort
     """
     def sort_values(self, col):
@@ -302,9 +310,8 @@ class SmallDf:
         return SmallDf(rows=rows)
 
     """
-        Apply an arithmetic op
-        """
-
+    Apply an arithmetic op
+    """
     def _opeq(self, other, func):
         df = self._op(other, func)
         for row, orow in zip(self.rows, df.rows):
@@ -394,6 +401,13 @@ class SmallDf:
     """
     def to_string(self):
         return yaml.dump(self.rows)
+
+    """
+    Copy
+    """
+    def copy(self):
+        df = SmallDf(rows=self.rows, columns=self.columns)
+        return df
 
 
 """ Concat a list of dfs """
