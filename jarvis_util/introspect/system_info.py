@@ -439,7 +439,7 @@ class ResourceGraph:
             ]
             txt = ''.join(txt)
             x = input(f'{txt}: ')
-            if x is None:
+            if x == '':
                 x = default
             if x == 'yes':
                 return True
