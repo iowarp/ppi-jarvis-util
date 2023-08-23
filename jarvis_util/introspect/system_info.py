@@ -409,11 +409,15 @@ class ResourceGraph:
             if not y:
                 continue
             suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
-                                      'append to these paths. '
-                                      'Hit enter for no suffix.')
-            y = self._ask_yes_no('Are you sure this is accurate?')
+                                      'append to these paths. \n'
+                                      'Note environment variables must be '
+                                      'escaped using \\\n'
+                                      '(Default: empty): ')
+            y = self._ask_yes_no('Are you sure this is accurate?',
+                                 default='yes')
             if not y:
                 continue
+            suffix = suffix.replace('\$', '$')
             self.filter_fs(regex, mount_suffix=suffix)
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
                                  'mount points?')
