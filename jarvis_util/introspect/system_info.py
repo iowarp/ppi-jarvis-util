@@ -372,6 +372,7 @@ class ResourceGraph:
                              default='no')
         while x:
             mount = self._ask_string('2.1.(1/7). Mount point')
+            mount = mount.replace('\$', '$')
             tran = self._ask_choices('2.1.(2/7). What transport?',
                                      choices=['sata', 'nvme', 'dimm'])
             rota = self._ask_yes_no('2.1.(3/7). Is this device rotational. '
@@ -410,8 +411,6 @@ class ResourceGraph:
                 continue
             suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
                                       'append to these paths. \n'
-                                      'Note environment variables must be '
-                                      'escaped using \\\n'
                                       '(Default: empty): ')
             y = self._ask_yes_no('Are you sure this is accurate?',
                                  default='yes')
