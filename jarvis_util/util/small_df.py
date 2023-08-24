@@ -51,7 +51,7 @@ class SmallDf:
                 rows = {col: val for row in rows
                         for col, val in zip(self.columns, rows)}
             self.rows += rows
-            self.infer_columns(df)
+            self.infer_columns(rows)
         self._correct_rows()
         return self
 
