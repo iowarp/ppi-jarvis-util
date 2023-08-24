@@ -102,7 +102,7 @@ class Lsblk(Exec):
     """
 
     def __init__(self, exec_info):
-        cmd = 'lsblk -o NAME,SIZE,MODEL,TRAN,MOUNTPOINT,ROTA -J -s'
+        cmd = 'lsblk -o NAME,SIZE,MODEL,TRAN,MOUNTPOINT,ROTA -J'
         super().__init__(cmd, exec_info.mod(collect_output=True))
         self.exec_async = exec_info.exec_async
         self.df = None
@@ -111,31 +111,22 @@ class Lsblk(Exec):
 
     def wait(self):
         super().wait()
-        partitions = []
-        devs = []
+        total = []
         for host, stdout in self.stdout.items():
             lsblk_data = json.loads(stdout)['blockdevices']
             if len(lsblk_data) == 0:
                 continue
-            for partition in lsblk_data:
-                dev = partition
-                if 'children' in partition:
-                    dev = partition['children'][0]
+            for dev in lsblk_data:
+                parent = f'/dev/{dev["name"]}'
                 if dev['size'] is None:
                     dev['size'] = '0'
                 if dev['tran'] is None:
-                    dev['tran'] = ''
-                if partition['size'] is None:
-                    partition['size'] = '0'
-                partitions.append({
-                    'parent': f'/dev/{dev["name"]}',
-                    'device': f'/dev/{partition["name"]}',
-                    'size': SizeConv.to_int(partition['size']),
-                    'mount': partition['mountpoint'],
-                    'host': host
-                })
-                devs.append({
-                    'parent': f'/dev/{dev["name"]}',
+                    dev['tran'] = 'sata'
+                if dev['rota'] is None:
+                    dev['rota'] = False
+                total.append({
+                    'parent': None,
+                    'device': parent,
                     'size': SizeConv.to_int(dev['size']),
                     'model': dev['model'],
                     'tran': dev['tran'].lower(),
@@ -143,15 +134,23 @@ class Lsblk(Exec):
                     'rota': dev['rota'],
                     'host': host
                 })
-        part_df = sdf.SmallDf(rows=partitions)
-        dev_df = sdf.SmallDf(rows=devs)
-        total_df = sdf.merge(
-            dev_df[['parent', 'model', 'tran', 'host']],
-            part_df,
-            on=['parent', 'host'])
-        dev_df = dev_df.rename({'parent': 'device'})
-        total_df = sdf.concat([total_df, dev_df])
-        self.df = total_df
+                if 'children' not in dev:
+                    continue
+                for partition in dev['children']:
+                    if partition['size'] is None:
+                        partition['size'] = '0'
+                    total.append({
+                        'parent': parent,
+                        'device': f'/dev/{partition["name"]}',
+                        'size': SizeConv.to_int(partition['size']),
+                        'model': dev['model'],
+                        'tran': dev['tran'].lower(),
+                        'mount': partition['mountpoint'],
+                        'rota': dev['rota'],
+                        'host': host
+                    })
+        self.df = sdf.SmallDf(rows=total)
+        print(self.df)
 
 
 class Blkid(Exec):
