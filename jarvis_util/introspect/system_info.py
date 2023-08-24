@@ -772,10 +772,10 @@ class ResourceGraph:
             # Filter out protocols which are not common between these hosts
             grp = df.groupby(['provider', 'domain']).filter_groups(
                lambda x: len(x) >= len(hosts))
-        if condense:
-            df = grp.first().reset_index()
-        else:
-            df = grp.reset_index()
+            if condense:
+                df = grp.first().reset_index()
+            else:
+                df = grp.reset_index()
         # Choose only a subset of providers
         if providers is not None:
             if not isinstance(providers, (list, set)):
