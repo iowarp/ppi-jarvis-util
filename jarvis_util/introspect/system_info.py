@@ -384,9 +384,15 @@ class ResourceGraph:
                                  default='yes')
             if not y:
                 continue
-            self.add_storage(exec_info.hostfile, mount=mount,
-                             tran=tran, rota=rota, shared=shared,
-                             avail=avail)
+            self.add_storage(exec_info.hostfile, [
+                {
+                    'mount': mount,
+                    'tran': tran,
+                    'rota': rota,
+                    'shared': shared,
+                    'avail': avail
+                }
+            ])
             x = self._ask_yes_no('2.1.(7/7). Registered. Are there any other '
                                  'devices you would like to add?',
                                  default='no')
