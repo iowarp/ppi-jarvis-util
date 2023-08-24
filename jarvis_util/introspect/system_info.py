@@ -146,8 +146,8 @@ class Lsblk(Exec):
         part_df = sdf.SmallDf(rows=partitions)
         dev_df = sdf.SmallDf(rows=devs)
         total_df = sdf.merge(
-            part_df,
             dev_df[['parent', 'model', 'tran', 'host']],
+            part_df,
             on=['parent', 'host'])
         dev_df = dev_df.rename({'parent': 'device'})
         total_df = sdf.concat([total_df, dev_df])
