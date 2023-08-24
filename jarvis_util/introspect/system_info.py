@@ -749,7 +749,7 @@ class ResourceGraph:
         return False
 
     def find_net_info(self,
-                      hosts,
+                      hosts=None,
                       providers=None,
                       condense=False,
                       df=None):
@@ -765,12 +765,13 @@ class ResourceGraph:
         """
         if df is None:
             df = self.net
-        # Get the set of fabrics corresponding to these hosts
-        ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
-        df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
-        # Filter out protocols which are not common between these hosts
-        grp = df.groupby(['provider', 'domain']).filter_groups(
-           lambda x: len(x) >= len(hosts))
+        if hosts is not None:
+            # Get the set of fabrics corresponding to these hosts
+            ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
+            df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
+            # Filter out protocols which are not common between these hosts
+            grp = df.groupby(['provider', 'domain']).filter_groups(
+               lambda x: len(x) >= len(hosts))
         if condense:
             df = grp.first().reset_index()
         else:

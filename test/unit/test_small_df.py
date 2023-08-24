@@ -23,7 +23,10 @@ class TestSmallDf(TestCase):
         df = SmallDf(rows=rows)
         sub_df = df['a']
         records = [row['a'] for row in sub_df.rows]
-        self.assertTrue(records == [1, None, None])
+        self.assertEqual([1, None, None], records)
+        sub_df = df[:, ['a', 'b']]
+        records = sub_df.list()
+        self.assertEqual([[1, 2], [None, None], [None, None]], records)
 
     def test_col_assign(self):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
