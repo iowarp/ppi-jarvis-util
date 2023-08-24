@@ -24,7 +24,11 @@ class SmallDf:
         self.columns = set()
         self.is_loc = is_loc
         if rows is not None:
-            self.concat(rows)
+            if not is_loc:
+                self.concat(rows)
+            else:
+                self.rows = rows
+                self.infer_columns()
         if columns is not None:
             self.set_columns(columns)
         if not is_loc:
@@ -42,12 +46,12 @@ class SmallDf:
             self.rows += df.rows
             self.columns.update(df.columns)
         elif isinstance(df, list):
-            if not isinstance(df[0], dict):
-                df = {col: val for row in df
-                      for col, val in zip(self.columns, df)}
-            self.rows += df
-            for row in df:
-                self.columns.update(row.keys())
+            rows = df
+            if not isinstance(rows[0], dict):
+                rows = {col: val for row in rows
+                        for col, val in zip(self.columns, rows)}
+            self.rows += rows
+            self.infer_columns(df)
         self._correct_rows()
         return self
 
@@ -80,6 +84,15 @@ class SmallDf:
         if not self.is_loc:
             self._correct_rows()
         return self
+
+    """
+    Infer columns based on the rows
+    """
+    def infer_columns(self, rows=None):
+        if rows is None:
+            rows = self.rows
+        for row in rows:
+            self.columns.update(row.keys())
 
     """
     Add columns to the table
@@ -172,8 +185,7 @@ class SmallDf:
         rows = self.rows
         if func is not None:
             rows = [row for row in rows if func(row)]
-        df = SmallDf(columns=columns, is_loc=True)
-        df.rows = rows
+        df = SmallDf(rows=rows, columns=columns, is_loc=True)
         self.add_columns(columns)
         return df
 
@@ -205,6 +217,8 @@ class SmallDf:
         if len(idxer) == 2:
             if isinstance(idxer[1], (list, tuple, str)):
                 columns = idxer[1]
+            elif isinstance(idxer[1], slice):
+                columns = None
             else:
                 raise Exception("Invlaid parameters to query or loc")
             if callable(idxer[0]):

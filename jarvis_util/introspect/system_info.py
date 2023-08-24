@@ -553,7 +553,7 @@ class ResourceGraph:
         df.loc['mount'].fillna('', inplace=True)
         df.loc['shared'].fillna(True, inplace=True)
         df.loc['tran'].fillna('', inplace=True)
-        noavail = df.loc[lambda r: r['avail'] == 0 or r['avail'] is None]
+        noavail = df.loc[lambda r: r['avail'] == 0 or r['avail'] is None, :]
         noavail['avail'] = noavail['size']
 
     def _derive_net_cols(self):
