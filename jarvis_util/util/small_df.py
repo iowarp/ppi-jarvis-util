@@ -407,6 +407,10 @@ class SmallDf:
     """
     def to_string(self):
         return yaml.dump(self.rows)
+    def __str__(self):
+        return self.to_string()
+    def __repr__(self):
+        return self.to_string()
 
     """
     Copy
