@@ -45,7 +45,6 @@ class SmallDf:
             if not isinstance(df[0], dict):
                 df = {col: val for row in df
                       for col, val in zip(self.columns, df)}
-            df = self._drop_duplicates(df)
             self.rows += df
             for row in df:
                 self.columns.update(row.keys())
@@ -99,7 +98,7 @@ class SmallDf:
     """
     Remove columns from the table
     """
-    def rm_columns(self, columns):
+    def drop_columns(self, columns):
         if self.is_loc:
             raise Exception("Cannot remove columns from location df")
         if not isinstance(columns, (list, tuple)):
@@ -111,10 +110,10 @@ class SmallDf:
         return self
 
     """
-    Analagous to rm_columns
+    Analagous to drop_columns
     """
     def drop(self, columns):
-        return self.rm_columns(columns)
+        return self.drop_columns(columns)
 
     """
     Rename a column
@@ -153,7 +152,8 @@ class SmallDf:
         for row in rows:
             if '$#matched' in row:
                 del row['$#matched']
-        return SmallDf(rows=rows)
+        columns = self.columns.union(other.columns)
+        return SmallDf(rows=rows, columns=columns)
 
     def _find_unmatched(self, orig_rows, new_rows):
         unmatched = []
@@ -422,15 +422,29 @@ class SmallDf:
 
 """ Concat a list of dfs """
 def concat(dfs):
+    if dfs is None:
+        return
+    if not isinstance(dfs, (list, tuple, set)):
+        dfs = [dfs]
+    if len(dfs) < 1:
+        return
     new_df = SmallDf()
     for df in dfs:
         new_df = new_df.concat(df)
     return new_df
 
 """ Merge two dfs """
-def merge(df1, df2, on=None, how=None):
-    return df1.merge(df2, on=on)
-
+def merge(dfs, on=None, how=None):
+    if dfs is None:
+        return
+    if not isinstance(dfs, (list, tuple, set)):
+        dfs = [dfs]
+    if len(dfs) <= 1:
+        return
+    base_df = dfs[0]
+    for df in dfs[1:]:
+        base_df = base_df.merge(df, on=on)
+    return base_df
 
 """
 GroupBy object
@@ -471,7 +485,8 @@ class SmallGroupBy:
     def filter(self, func):
         grp = SmallGroupBy()
         for key, grp_df in self.groups.items():
-            grp.groups[key] = SmallDf(rows=[row for row in grp_df.rows if func(row)])
+            grp.groups[key] = SmallDf(
+                rows=[row for row in grp_df.rows if func(row)])
         return grp
 
     """

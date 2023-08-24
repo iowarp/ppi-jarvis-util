@@ -12,6 +12,7 @@ import jarvis_util.util.small_df as sdf
 import json
 import shlex
 import ipaddress
+import copy
 # pylint: disable=C0121
 
 
@@ -162,6 +163,8 @@ class Blkid(Exec):
         fs_type: the type of filesystem (e.g., ext4)
         uuid: filesystem-levle uuid from the FS metadata
         partuuid: the partition-lable UUID for the partition
+        partlabel: semantic partition type information
+        label: semantic label given by users
         host: the host this entry corresponds to
     """
     def __init__(self, exec_info):
@@ -175,6 +178,7 @@ class Blkid(Exec):
     def wait(self):
         super().wait()
         dev_list = []
+        keys = set(['type', 'uuid', 'partuuid'])
         for host, stdout in self.stdout.items():
             devices = stdout.splitlines()
             for dev in devices:
@@ -271,6 +275,7 @@ class FiInfo(Exec):
                     val = splits[1].strip()
                     providers[-1][key] = val
         self.df = sdf.SmallDf(providers)
+        self.df.drop_duplicates()
 
 
 # Note, not using enum to avoid YAML serialization errors
@@ -330,19 +335,13 @@ class ResourceGraph:
         self.create()
         self.hosts = None
 
+    """
+    Build the resource graph
+    """
+
     def create(self):
-        self.all_fs = sdf.SmallDf(columns=self.fs_columns)
-        self.all_net = sdf.SmallDf(columns=self.net_columns)
-        self.fs = None
-        self.net = None
-        self.fs_settings = {
-            'register': [],
-            'filter_mounts': {}
-        }
-        self.net_settings = {
-            'register': [],
-            'track_ips': {}
-        }
+        self.fs = sdf.SmallDf(columns=self.fs_columns)
+        self.net = sdf.SmallDf(columns=self.net_columns)
 
     def build(self, exec_info, introspect=True):
         """
@@ -366,14 +365,15 @@ class ResourceGraph:
         :return: None
         """
         print('This is the Jarivs resource graph builder')
-        print('(1/3). Introspecting your machine')
+        print('(1/4). Introspecting your machine')
         self.build(exec_info)
-        print('(2/3). Finding mount points common across machines')
+        print('(2/4). Finding mount points common across machines')
         mounts = self.find_storage(common=True, condense=True)
         self.print_df(mounts)
         x = self._ask_yes_no('2.(1/2). Are there any mount points missing '
                              'you would like to add?',
                              default='no')
+        new_devs = []
         while x:
             mount = self._ask_string('2.1.(1/7). Mount point')
             mount = mount.replace('\$', '$')
@@ -389,14 +389,20 @@ class ResourceGraph:
                                  default='yes')
             if not y:
                 continue
-            self.add_storage(exec_info.hostfile, mount=mount,
-                             tran=tran, rota=rota, shared=shared,
-                             avail=avail)
-            x = self._ask_yes_no('2.1.(7/7). Registered. Are there any other '
+            new_devs.append({
+                'mount': mount,
+                'tran': tran,
+                'rota': rota,
+                'shared': shared,
+                'avail': avail,
+                'size': avail,
+            })
+            x = self._ask_yes_no('2.1.(7/7). Are there any other '
                                  'devices you would like to add?',
                                  default='no')
             if x is None:
                 x = False
+        self.add_storage(exec_info.hostfile, new_devs)
         print('2.(2/2). Filter and correct mount points.')
         x = True
         while x:
@@ -414,22 +420,33 @@ class ResourceGraph:
             if not y:
                 continue
             suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
-                                      'append to these paths. \n'
-                                      '(Default: empty): ')
+                                      'append to these paths. \n',
+                                      default='${USER}')
             y = self._ask_yes_no('Are you sure this is accurate?',
                                  default='yes')
             if not y:
                 continue
             suffix = suffix.replace('\$', '$')
-            self.filter_fs(regex, mount_suffix=suffix)
+            self.add_suffix(regex, mount_suffix=suffix)
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
-                                 'mount points?')
-        print('(3/3). Listing networks.')
+                                 'mount points?',
+                                 default='no')
+        print("(3/4). Finding network info")
         net_info = self.find_net_info(exec_info.hostfile)
-        self.print_df(net_info)
+        x = self._ask_yes_no('(4/4). Are all hosts symmetrical? I.e., '
+                             'the per-node resource graphs should all '
+                             'be the same.',
+                             default='yes')
+        if x:
+            self.make_common(exec_info.hostfile)
 
-    def _ask_string(self, msg):
-        x = input(f'{msg}: ')
+    def _ask_string(self, msg, default=None):
+        if default is None:
+            x = input(f'{msg}: ')
+        else:
+            x = input(f'{msg} (Default: {default}): ')
+        if len(x) == 0:
+            x = default
         return x
 
     def _ask_re(self, msg):
@@ -480,21 +497,21 @@ class ResourceGraph:
         self.list_fs = ListFses(exec_info.mod(hide_output=True))
         self.fi_info = FiInfo(exec_info.mod(hide_output=True))
         self.hosts = exec_info.hostfile.hosts
-        self.all_fs = sdf.merge(self.lsblk.df,
-                                self.blkid.df,
-                                on=['device', 'host'],
-                                how='outer')
-        self.all_fs.loc[:, 'shared'] = False
-        self.all_fs = sdf.merge(self.all_fs,
-                               self.list_fs.df,
+        self.fs = sdf.merge([self.fs, self.lsblk.df, self.blkid.df],
+                            on=['device', 'host'],
+                            how='outer')
+        self.fs.loc[:, 'shared'] = False
+        self.fs = sdf.merge([self.fs, self.list_fs.df],
                                on=['device', 'host'],
                                how='outer')
-        self.all_fs.rm_columns(['used', 'use%', 'fs_mount', 'partuuid'])
+        self.fs.drop_columns([
+            'used', 'use%', 'fs_mount', 'partuuid',
+            'partlabel', 'label'])
         net_df = self.fi_info.df
         net_df.loc[:, 'speed'] = 0
-        net_df.rm_columns(['version', 'type', 'protocol'])
+        net_df.drop_columns(['version', 'type', 'protocol'])
         net_df.drop_duplicates(inplace=True)
-        self.all_net = net_df
+        self.net = net_df
 
     def save(self, path):
         """
@@ -505,10 +522,8 @@ class ResourceGraph:
         """
         graph = {
             'hosts': self.hosts,
-            'fs': self.all_fs.rows,
-            'net': self.all_net.rows,
-            'fs_settings': self.fs_settings,
-            'net_settings': self.net_settings
+            'fs': self.fs.rows,
+            'net': self.net.rows,
         }
         YamlFile(path).save(graph)
 
@@ -521,147 +536,10 @@ class ResourceGraph:
         """
         graph = YamlFile(path).load()
         self.hosts = graph['hosts']
-        self.all_fs = sdf.SmallDf(graph['fs'], columns=self.fs_columns)
-        self.all_net = sdf.SmallDf(graph['net'], columns=self.net_columns)
-        self.fs = None
-        self.net = None
-        self.fs_settings = graph['fs_settings']
-        self.net_settings = graph['net_settings']
+        self.fs = sdf.SmallDf(graph['fs'], columns=self.fs_columns)
+        self.net = sdf.SmallDf(graph['net'], columns=self.net_columns)
         self.apply()
         return self
-
-    def set_hosts(self, hosts):
-        """
-        Set the set of hosts this resource graph covers
-
-        :param hosts: Hostfile()
-        :return: None
-        """
-        self.hosts = hosts.hosts_ip
-
-    def add_storage(self, hosts, **kwargs):
-        """
-        Register a storage device record
-
-        :param hosts: Hostfile() indicating set of hosts to make record for
-        :param kwargs: storage record
-        :return: None
-        """
-        for host in hosts.hosts:
-            record = kwargs.copy()
-            record['host'] = host
-            self.fs_settings['register'].append(record)
-
-    def add_net(self, hosts, **kwargs):
-        """
-        Register a network record
-
-        :param hosts: Hostfile() indicating set of hosts to make record for
-        :param kwargs: net record
-        :return: None
-        """
-        for host, ip in zip(hosts.hosts, hosts.hosts_ip):
-            record = kwargs.copy()
-            record['fabric'] = ip
-            record['host'] = host
-            self.net_settings['register'].append(record)
-
-    def filter_fs(self, mount_re,
-                  mount_suffix=None, tran=None):
-        """
-        Track all filesystems + devices matching the mount regex.
-
-        :param mount_re: The regex to match a set of mountpoints
-        :param mount_suffix: After the mount_re is matched, append this path
-        to the mountpoint to indicate where users can access data. A typical
-        value for this is /${USER}, indicating the mountpoint has a subdirectory
-        per-user where they can access data.
-        :param shared: Whether this mount point is shared
-        :param tran: The transport of this device
-        :return: self
-        """
-        self.fs_settings['filter_mounts']['mount_re'] = {
-            'mount_re': mount_re,
-            'mount_suffix': mount_suffix,
-            'tran': tran
-        }
-        return self
-
-    def filter_ip(self, ip_re, speed=None):
-        """
-        Track all IPs matching the regex. The IPs with this regex all have
-        a certain speed.
-
-        :param ip_re: The regex to match
-        :param speed: The speed of the fabric
-        :return: self
-        """
-        self.net_settings['track_ips'][ip_re] = {
-            'ip_re': ip_re,
-            'speed': SizeConv.to_int(speed) if speed is not None else speed
-        }
-        return self
-
-    def filter_hosts(self, hosts, speed=None):
-        """
-        Track all ips matching the hostnames.
-
-        :param hosts: Hostfile() of the hosts to filter for
-        :param speed: Speed of the interconnect (e.g., 1gbps)
-        :return: self
-        """
-        for host in hosts.hosts_ip:
-            self.filter_ip(host, speed)
-        return self
-
-    def filter_net(self, ip_re=None, hosts=None, speed=None):
-        if ip_re is not None:
-            self.filter_ip(ip_re, speed=speed)
-        if hosts is not None:
-            self.filter_hosts(hosts, speed=speed)
-
-    def apply(self):
-        """
-        Apply fs and net settings to the resource graph
-
-        :return: self
-        """
-        self._apply_fs_settings()
-        self._apply_net_settings()
-        # self.fs.size = self.fs.size.fillna(0)
-        # self.fs.avail = self.fs.avail.fillna(0)
-        # self.fs.fs_size = self.fs.fs_size.fillna(0)
-        return self
-
-    def _apply_fs_settings(self):
-        num_settings = len(self.fs_settings['register']) + \
-                       len(self.fs_settings['filter_mounts'])
-        if num_settings == 0:
-            self.fs = self.all_fs
-            self._derive_storage_cols()
-            return
-        # Get the set of all storage (df)
-        df = sdf.SmallDf(self.fs_settings['register'],
-                          columns=self.fs_columns)
-        df = sdf.concat([self.all_fs, df])
-        self.fs = df
-        self._derive_storage_cols()
-
-        # Filter the df
-        filters = []
-        for fs_set in self.fs_settings['filter_mounts'].values():
-            mount_re = str(fs_set['mount_re'])
-            mount_suffix = fs_set['mount_suffix']
-            tran = fs_set['tran']
-            with_mount = df[lambda r: re.match(mount_re, str(r['mount']))]
-            if mount_suffix is not None:
-                with_mount.loc[:, 'mount'] += f'/{mount_suffix}'
-            if tran is not None:
-                with_mount.loc[:, 'tran'] = tran
-            filters.append(with_mount)
-
-        # Create the final filtered df
-        self.fs = sdf.concat(filters)
 
     def _derive_storage_cols(self):
         df = self.fs
@@ -677,27 +555,112 @@ class ResourceGraph:
         df.loc['shared'].fillna(True, inplace=True)
         df.loc['tran'].fillna('', inplace=True)
 
-    def _apply_net_settings(self):
-        num_settings = len(self.net_settings['register']) + \
-                       len(self.net_settings['track_ips'])
-        if num_settings == 0:
-            self.net = self.all_net
-            return
-        self.net = sdf.SmallDf(columns=self.all_net.columns)
-        df = self.all_net
-        for net_set in self.net_settings['track_ips'].values():
-            ip_re = net_set['ip_re']
-            speed = net_set['speed']
-            with_ip = df[df['fabric'].str.contains(ip_re)]
-            with_ip.loc[:, 'speed'] = speed
-            self.net = sdf.concat([self.net, with_ip])
-        admin_df = sdf.SmallDf(self.net_settings['register'],
-                                columns=self.net_columns)
-        self.net = sdf.concat([self.net, admin_df])
-        self._derive_net_cols()
-
     def _derive_net_cols(self):
         self.net['domain'].fillna('', inplace=True)
+
+    def set_hosts(self, hosts):
+        """
+        Set the set of hosts this resource graph covers
+
+        :param hosts: Hostfile()
+        :return: None
+        """
+        self.hosts = hosts.hosts_ip
+
+    """
+    Update the resource graph
+    """
+
+    def add_storage(self, hosts, records):
+        """
+        Register a set of storage devices on a set of hosts
+
+        :param hosts: Hostfile() indicating set of hosts to make record for
+        :param records: A list or single dict of device info
+        :return: None
+        """
+        if not isinstance(records, list):
+            records = [records]
+        new_rows = []
+        for host in hosts.hosts:
+            for record in records:
+                record = copy.deepcopy(record)
+                record['host'] = host
+                new_rows.append(record)
+        new_df = sdf.SmallDf(rows=new_rows, columns=self.fs.columns)
+        self.fs = sdf.concat([self.fs, new_df])
+        self.apply()
+
+    def add_net(self, hosts, records):
+        """
+        Register a network record
+
+        :param hosts: Hostfile() indicating set of hosts to make record for
+        :param records: A list or single dict of network info
+        :return: None
+        """
+        new_rows = []
+        new_rows = []
+        for host, ip in zip(hosts.hosts, hosts.hosts_ip):
+            for record in records:
+                record = copy.deepcopy(record)
+                record['fabric'] = ip
+                record['host'] = host
+                new_rows.append(record)
+        new_df = sdf.SmallDf(rows=new_rows, columns=self.net.columns)
+        self.net = sdf.concat([self.net, new_df])
+        self.apply()
+
+    def filter_fs(self, mount_res):
+        """
+        Track all filesystems + devices matching the mount regex.
+
+        :param mount_res: A list or single regex to match mountpoints
+        :return: self
+        """
+        self.fs = self.find_storage(mount_res=mount_res)
+        self.apply()
+        return self
+
+    def add_suffix(self, mount_re, mount_suffix):
+        """
+        Track all filesystems + devices matching the mount regex.
+
+        :param mount_re: The regex to match a set of mountpoints
+        :param mount_suffix: After the mount_re is matched, append this path
+        to the mountpoint to indicate where users can access data. A typical
+        value for this is /${USER}, indicating the mountpoint has a subdirectory
+        per-user where they can access data.
+        :return: self
+        """
+        df = self.fs.loc[lambda r: re.match(mount_re, str(r['mount'])), 'mount']
+        df += f'/{mount_suffix}'
+        return self
+
+    def make_common(self, hosts):
+        """
+        This resource graph should contain only entries common across all hosts.
+
+        :return: self
+        """
+        self.fs = self.find_storage(common=True,
+                                    condense=True)
+        self.net = self.find_net_info(hosts, condense=True)
+        return self
+
+    def apply(self):
+        """
+        Remove duplicates from the host
+        :return:
+        """
+        self.fs.drop_duplicates()
+        self.net.drop_duplicates()
+        self._derive_net_cols()
+        self._derive_storage_cols()
+
+    """
+    Query the resource graph
+    """
 
     def find_shared_storage(self):
         """
@@ -716,7 +679,9 @@ class ResourceGraph:
                      count_per_node=None,
                      count_per_dev=None,
                      min_cap=None,
-                     min_avail=None):
+                     min_avail=None,
+                     mount_res=None,
+                     df=None):
         """
         Find a set of storage devices.
 
@@ -730,29 +695,30 @@ class ResourceGraph:
         :param count_per_dev: Choose only a subset of devices matching query
         :param min_cap: Remove devices with too little overall capacity
         :param min_avail: Remove devices with too little available space
+        :param mount_res: A regex or list of regexes to match mount points
+        :param df: The data frame to run this query
         :return: Dataframe
         """
-        df = self.fs
-        # Remove pfs
-        df = df[lambda r: r['shared'] == False]
+        if df is None:
+            df = self.fs
         # Filter devices by whether or not a mount is needed
         if is_mounted:
             df = df[lambda r: r['mount'] != '']
+        # Filter devices matching the mount regex
+        if mount_res is not None:
+            if not isinstance(mount_res, (list, tuple, set)):
+                mount_res = [mount_res]
+            df = df[lambda r:
+                    any([re.match(reg, str(r['mount'])) for reg in mount_res])]
         # Find devices of a particular type
         if dev_types is not None:
-            matching_devs = sdf.SmallDf(columns=df.columns)
-            if isinstance(dev_types, str):
+            if not isinstance(dev_types, (list, tuple, set)):
                 dev_types = [dev_types]
-            matching_devs = [df[lambda r: r['dev_type'] == dev_type]
-                             for dev_type in dev_types]
-            matching_devs = sdf.concat(matching_devs)
-            df = matching_devs
+            df = df[lambda r: str(r['dev_type']) in dev_types]
         # Get the set of mounts common between all hosts
         if common:
             df = df.groupby(['mount']).filter_groups(
                 lambda x: len(x) == len(self.hosts)).reset_index()
-            if condense:
-                df = df.groupby(['mount']).first().reset_index()
         # Remove storage with too little capacity
         if min_cap is not None:
             df = df[lambda r: r['size'] >= min_cap]
@@ -761,13 +727,14 @@ class ResourceGraph:
             df = df[lambda r: r['avail'] >= min_avail]
         # Take a certain number of each device per-host
         if count_per_dev is not None:
-            df = df.groupby(['tran', 'rota', 'host']).\
+            df = df.groupby(['dev_type', 'host']).\
                 head(count_per_dev).reset_index()
         # Take a certain number of matched devices per-host
         if count_per_node is not None:
             df = df.groupby('host').head(count_per_node).reset_index()
         if common and condense:
-            df = df.rm_columns('host')
+            df = df.groupby(['mount']).first().reset_index()
+        #     df = df.drop_columns('host')
         return df
 
     @staticmethod
@@ -775,29 +742,39 @@ class ResourceGraph:
         try:
             network = ipaddress.ip_network(subnet, strict=False)
         except:
-            return False
+            return True
         for ip in ip_addrs:
             if ip in network:
                 return True
         return False
 
-    def find_net_info(self, hosts,
-                      providers=None):
+    def find_net_info(self,
+                      hosts,
+                      providers=None,
+                      condense=False,
+                      df=None):
         """
         Find the set of networks common between each host.
 
         :param hosts: A Hostfile() data structure containing the set of
         all hosts to find network information for
         :param providers: The network protocols to search for.
+        :param condense: Only retain information for a single host
+        :param df: The df to use for this query
         :return: Dataframe
         """
-        df = self.net
+        if df is None:
+            df = self.net
         # Get the set of fabrics corresponding to these hosts
         ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
         df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
         # Filter out protocols which are not common between these hosts
-        df = df.groupby(['provider', 'domain']).filter_groups(
-           lambda x: len(x) >= len(hosts)).reset_index()
+        grp = df.groupby(['provider', 'domain']).filter_groups(
+           lambda x: len(x) >= len(hosts))
+        if condense:
+            df = grp.first().reset_index()
+        else:
+            df = grp.reset_index()
         # Choose only a subset of providers
         if providers is not None:
             if not isinstance(providers, (list, set)):
