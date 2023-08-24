@@ -21,10 +21,12 @@ class SmallDf:
     def __init__(self, rows=None, columns=None):
         self.rows = []
         self.columns = []
-        if rows is not None:
-            self.concat(rows)
         if columns is not None:
             self.set_columns(columns)
+        if rows is not None:
+            self.concat(rows)
+        if columns is None:
+            self.infer_columns()
 
     """
     Concatenate a dataframe (or records) to this one
@@ -38,10 +40,9 @@ class SmallDf:
         elif isinstance(df, list):
             rows = df
             if not isinstance(rows[0], dict):
-                rows = {col: val for row in rows
-                        for col, val in zip(self.columns, rows)}
+                rows = [{col: row[i] for i, col in enumerate(self.columns)}
+                        for row in rows]
             self.rows += rows
-            self.infer_columns(rows)
         self._correct_rows()
         return self
 
@@ -90,7 +91,7 @@ class SmallDf:
             return self
         if not isinstance(columns, (list, tuple)):
             columns = [columns]
-        new_cols = [col for col in self.columns if col not in self.columns]
+        new_cols = [col for col in columns if col not in self.columns]
         self.columns += new_cols
         self._correct_rows()
         return self
@@ -127,7 +128,7 @@ class SmallDf:
     """
     def merge(self, other, on=None):
         if on is None:
-            on = self.columns & other.columns
+            on = set(self.columns) & set(other.columns)
         if len(on) == 0:
             return SmallDf()
         rows = []
@@ -145,8 +146,7 @@ class SmallDf:
         for row in rows:
             if '$#matched' in row:
                 del row['$#matched']
-        columns = self.columns.union(other.columns)
-        return SmallDf(rows=rows, columns=columns)
+        return SmallDf(rows=rows)
 
     def _find_unmatched(self, orig_rows, new_rows):
         unmatched = []
@@ -296,14 +296,13 @@ class SmallDf:
                 raise Exception("Number of rows in dfs different")
             if len(self.columns) != len(other.columns):
                 raise Exception("Column names don't match")
-            rows = [{col: func(row, col, orow, ocol)}
-                    for row, orow in zip(self.rows, other.rows)
-                    for col, ocol in zip(self.columns, other.columns)]
+            rows = [{col: func(row, col, orow, ocol)
+                     for col, ocol in zip(self.columns, other.columns)}
+                    for row, orow in zip(self.rows, other.rows)]
         else:
-            rows = [{col: row[col] + other}
-                    for row in self.rows
-                    for col in self.columns]
-        return SmallDf(rows=rows)
+            rows = [{col: row[col] + other for col in self.columns}
+                    for row in self.rows]
+        return SmallDf(rows=rows, columns=self.columns)
 
     """
     Apply an arithmetic op
@@ -406,6 +405,7 @@ class SmallDf:
     Copy
     """
     def copy(self):
+        # rows = [{col: row[col] for col in self.columns} for row in self.rows]
         rows = [[row[col] for col in self.columns ] for row in self.rows]
         df = SmallDf(rows=rows, columns=self.columns)
         return df
