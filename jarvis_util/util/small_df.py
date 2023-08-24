@@ -104,7 +104,7 @@ class SmallDf:
             columns = [columns]
         if len(columns) == 0:
             return
-        self.columns.difference_update(columns)
+        self.columns = [col for col in self.columns if col not in columns]
         self._correct_rows()
         return self
 

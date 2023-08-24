@@ -231,14 +231,6 @@ class ListFses(Exec):
             lines = stdout.strip().splitlines()
             rows += [line.split() + [host] for line in lines[1:]]
         df = sdf.SmallDf(rows, columns=columns)
-        # pylint: disable=W0108
-        df[:, 'fs_size'] = df['fs_size'].apply(
-            lambda x: SizeConv.to_int(x))
-        df[:, 'used'] = df['used'].apply(
-            lambda x: SizeConv.to_int(x))
-        df[:, 'avail'] = df['avail'].apply(
-            lambda x: SizeConv.to_int(x))
-        # pylint: enable=W0108
         self.df = df
 
 
@@ -532,7 +524,7 @@ class ResourceGraph:
         net_df = self.fi_info.df
         net_df[:, 'speed'] = 0
         net_df.drop_columns(['version', 'type', 'protocol'])
-        net_df.drop_duplicates(inplace=True)
+        net_df.drop_duplicates()
         self.net = net_df
 
     def save(self, path):
