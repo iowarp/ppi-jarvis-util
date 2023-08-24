@@ -414,8 +414,8 @@ class ResourceGraph:
             if not y:
                 continue
             suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
-                                      'append to these paths. \n'
-                                      '(Default: empty): ')
+                                      'append to these paths. \n',
+                                      default='${USER}')
             y = self._ask_yes_no('Are you sure this is accurate?',
                                  default='yes')
             if not y:
@@ -436,8 +436,13 @@ class ResourceGraph:
             self.all_net = self.find_net_info(exec_info.hostfile)
             self.net = self.all_net
 
-    def _ask_string(self, msg):
-        x = input(f'{msg}: ')
+    def _ask_string(self, msg, default=None):
+        if default is None:
+            x = input(f'{msg}: ')
+        else:
+            x = input(f'{msg} (Default: {default}: ')
+        if x is None:
+            x = default
         return x
 
     def _ask_re(self, msg):
