@@ -22,7 +22,9 @@ def load_class(import_str, path, class_name):
     :param class_name: The name of the class in the file
     :return:
     """
-    sys.path.insert(0, path)
+    if len(path):
+        sys.path.insert(0, path)
     module = __import__(import_str, fromlist=[class_name])
-    sys.path.pop(0)
+    if len(path):
+        sys.path.pop(0)
     return getattr(module, class_name)

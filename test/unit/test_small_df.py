@@ -1,0 +1,114 @@
+from jarvis_util.util.argparse import ArgParse
+from jarvis_util.shell.exec import Exec
+from jarvis_util.shell.local_exec import LocalExecInfo
+from jarvis_util.util.hostfile import Hostfile
+from jarvis_util.introspect.system_info import Lsblk, \
+    ListFses, FiInfo, Blkid, ResourceGraph, StorageDeviceType
+from jarvis_util.util.size_conv import SizeConv
+from jarvis_util.util.small_df import SmallDf
+import pathlib
+import itertools
+from unittest import TestCase
+
+
+class TestSmallDf(TestCase):
+    def test_create(self):
+        rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        self.assertTrue(len(df) == 3)
+        self.assertEqual(df.columns, set(['a', 'b', 'c', 'd']))
+
+    def test_query(self):
+        rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        sub_df = df['a']
+        records = [row['a'] for row in sub_df.rows]
+        self.assertTrue(records == [1, None, None])
+
+    def test_col_assign(self):
+        rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        df.loc['a'] = 25
+        records = [row['a'] for row in df.rows]
+        self.assertEqual([25, 25, 25], records)
+
+    def test_col_row_assign(self):
+        rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        sub_df = df['a']
+        sub_df.loc[lambda r: r['a'] is None, 'a'] = 25
+        records = set([row['a'] for row in sub_df.rows])
+        self.assertEqual({1, 25, 25}, records)
+        records = set([row['a'] for row in df.rows])
+        self.assertEqual({1, None, None}, records)
+
+    def test_loc(self):
+        rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        sub_df = df.loc['a']
+        sub_df[lambda r: r['a'] is None, 'a'] = 25
+        records = set([row['a'] for row in sub_df.rows])
+        self.assertEqual({1, 25, 25}, records)
+        records = set([row['a'] for row in df.rows])
+        self.assertEqual({1, 25, 25}, records)
+
+    def test_add(self):
+        rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        df.loc['a'].fillna(0)
+        df.loc['b'].fillna(0)
+        df.loc['c'] = df['a'] + df['b']
+        records = set([row['c'] for row in df.rows])
+        self.assertEqual({5, 2, 0}, records)
+
+    def test_addeq(self):
+        rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        df.loc['a'].fillna(0)
+        df.loc['b'].fillna(0)
+        df.loc['a'] += df['b']
+        records = set([row['a'] for row in df.rows])
+        self.assertEqual({5, 2, 0}, records)
+
+    def test_add2(self):
+        rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        df.loc['a'].fillna(0)
+        df.loc['b'].fillna(0)
+        df.loc['c'] = df['a'] + df['b'] + 5
+        records = set([row['c'] for row in df.rows])
+        self.assertEqual({10, 7, 5}, records)
+
+    def test_mul(self):
+        rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        df.loc['a'].fillna(0)
+        df.loc['b'].fillna(0)
+        df.loc['c'] = df['a'] * df['b']
+        records = set([row['c'] for row in df.rows])
+        self.assertEqual({6, 0, 0}, records)
+
+    def test_div(self):
+        rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
+        df = SmallDf(rows=rows)
+        df.loc['a'].fillna(1)
+        df.loc['b'].fillna(1)
+        df.loc['c'] = df['a'] / df['b']
+        records = set([row['c'] for row in df.rows])
+        self.assertEqual({1.5, 2, 1}, records)
+
+    def test_merge(self):
+        rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
+        df1 = SmallDf(rows=rows)
+        rows = [{'a': 3, 'e': 2}, {'a': 3, 'e': 4}]
+        df2 = SmallDf(rows=rows)
+        df3 = df1.merge(df2)
+        self.assertEqual(4, len(df3))
+        self.assertEqual(1, len(df3[lambda r: r['a'] == 3 and r['e'] == 2]))
+        self.assertEqual(1, len(df3[lambda r: r['a'] == 3 and r['e'] == 4]))
+
+    def test_groupby(self):
+        rows = [{'a': 3, 'b': 2}, {'a': 3, 'b': 1}, {'a': 2, 'b': 4}]
+        df1 = SmallDf(rows=rows)
+        grp = df1.groupby('a')
+        self.assertEqual(2, len(grp))
