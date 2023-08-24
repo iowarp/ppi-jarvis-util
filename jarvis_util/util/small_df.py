@@ -256,10 +256,13 @@ class SmallDf:
         return df
 
     """
-    List operator
+    Convert dataframe to a list of record values
     """
     def list(self):
-        return [list(row.values()) for row in self.rows]
+        if len(self.columns) > 1:
+            return [list(row.values()) for row in self.rows]
+        else:
+            return [list(row.values())[0] for row in self.rows]
 
     """
     Sort
