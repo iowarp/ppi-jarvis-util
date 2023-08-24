@@ -138,4 +138,8 @@ class TestSystemInfo(TestCase):
         df = rg.find_net_info(hosts, providers='tcp')
         self.assertTrue(len(df) == 3)
 
+        # Find common + condensed TCP networks
+        df = rg.find_net_info(hosts, providers='tcp', condense=True)
+        self.assertTrue(len(df) == 1)
+
         rg.print_df(df)

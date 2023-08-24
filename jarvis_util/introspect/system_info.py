@@ -366,9 +366,9 @@ class ResourceGraph:
         :return: None
         """
         print('This is the Jarivs resource graph builder')
-        print('(1/3). Introspecting your machine')
+        print('(1/4). Introspecting your machine')
         self.build(exec_info)
-        print('(2/3). Finding mount points common across machines')
+        print('(2/4). Finding mount points common across machines')
         mounts = self.find_storage(common=True, condense=True)
         self.print_df(mounts)
         x = self._ask_yes_no('2.(1/2). Are there any mount points missing '
@@ -424,9 +424,17 @@ class ResourceGraph:
             self.filter_fs(regex, mount_suffix=suffix)
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
                                  'mount points?')
-        print('(3/3). Listing networks.')
+        print("(3/4). Finding network info")
         net_info = self.find_net_info(exec_info.hostfile)
-        self.print_df(net_info)
+        x = self._ask_yes_no('(4/4). Are all hosts symmetrical? I.e., '
+                             'the per-node resource graphs should all '
+                             'be the same.',
+                             default='yes')
+        if x:
+            self.all_fs = self.find_storage(common=True, condense=True)
+            self.fs = self.all_fs
+            self.all_net = self.find_net_info(exec_info.hostfile)
+            self.net = self.all_net
 
     def _ask_string(self, msg):
         x = input(f'{msg}: ')
@@ -766,8 +774,8 @@ class ResourceGraph:
         # Take a certain number of matched devices per-host
         if count_per_node is not None:
             df = df.groupby('host').head(count_per_node).reset_index()
-        if common and condense:
-            df = df.rm_columns('host')
+        # if common and condense:
+        #     df = df.rm_columns('host')
         return df
 
     @staticmethod
@@ -781,14 +789,17 @@ class ResourceGraph:
                 return True
         return False
 
-    def find_net_info(self, hosts,
-                      providers=None):
+    def find_net_info(self,
+                      hosts,
+                      providers=None,
+                      condense=False):
         """
         Find the set of networks common between each host.
 
         :param hosts: A Hostfile() data structure containing the set of
         all hosts to find network information for
         :param providers: The network protocols to search for.
+        :param condense: Only retain information for a single host
         :return: Dataframe
         """
         df = self.net
@@ -796,8 +807,12 @@ class ResourceGraph:
         ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
         df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
         # Filter out protocols which are not common between these hosts
-        df = df.groupby(['provider', 'domain']).filter_groups(
-           lambda x: len(x) >= len(hosts)).reset_index()
+        grp = df.groupby(['provider', 'domain']).filter_groups(
+           lambda x: len(x) >= len(hosts))
+        if condense:
+            df = grp.first().reset_index()
+        else:
+            df = grp.reset_index()
         # Choose only a subset of providers
         if providers is not None:
             if not isinstance(providers, (list, set)):
