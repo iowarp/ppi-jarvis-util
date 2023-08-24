@@ -630,7 +630,7 @@ class ResourceGraph:
         :return: self
         """
         df = self.fs.loc[lambda r: re.match(mount_re, str(r['mount'])), 'mount']
-        df += mount_suffix
+        df += f'/{mount_suffix}'
         return self
 
     def make_common(self, hosts):
