@@ -554,7 +554,7 @@ class ResourceGraph:
         df.loc['shared'].fillna(True, inplace=True)
         df.loc['tran'].fillna('', inplace=True)
         df.loc['size'].fillna(0)
-        df.loc['size'].apply(lambda r: SizeConv.to_int(r['size']))
+        df.loc['size'].apply(lambda r, c: SizeConv.to_int(r[c]))
         noavail = df.loc[lambda r: r['avail'] == 0 or r['avail'] is None, :]
         noavail['avail'] = noavail['size']
 
