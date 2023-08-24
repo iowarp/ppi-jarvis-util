@@ -242,6 +242,12 @@ class SmallDf:
         return df
 
     """
+    List operator
+    """
+    def list(self):
+        return [list(row.values()) for row in self.rows]
+
+    """
     Sort
     """
     def sort_values(self, col):

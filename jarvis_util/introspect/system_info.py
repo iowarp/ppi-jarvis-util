@@ -121,6 +121,12 @@ class Lsblk(Exec):
                 dev = partition
                 if 'children' in partition:
                     dev = partition['children'][0]
+                if dev['size'] is None:
+                    dev['size'] = '0'
+                if dev['tran'] is None:
+                    dev['tran'] = ''
+                if partition['size'] is None:
+                    partition['size'] = '0'
                 partitions.append({
                     'parent': f'/dev/{dev["name"]}',
                     'device': f'/dev/{partition["name"]}',
@@ -132,8 +138,7 @@ class Lsblk(Exec):
                     'parent': f'/dev/{dev["name"]}',
                     'size': SizeConv.to_int(dev['size']),
                     'model': dev['model'],
-                    'tran': dev['tran'].lower()
-                    if dev['tran'] is not None else '',
+                    'tran': dev['tran'].lower(),
                     'mount': dev['mountpoint'],
                     'rota': dev['rota'],
                     'host': host
