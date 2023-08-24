@@ -740,7 +740,7 @@ class ResourceGraph:
         try:
             network = ipaddress.ip_network(subnet, strict=False)
         except:
-            return False
+            return True
         for ip in ip_addrs:
             if ip in network:
                 return True
