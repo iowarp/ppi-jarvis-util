@@ -424,7 +424,8 @@ class ResourceGraph:
             suffix = suffix.replace('\$', '$')
             self.add_suffix(regex, mount_suffix=suffix)
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
-                                 'mount points?')
+                                 'mount points?',
+                                 default='no')
         print("(3/4). Finding network info")
         net_info = self.find_net_info(exec_info.hostfile)
         x = self._ask_yes_no('(4/4). Are all hosts symmetrical? I.e., '
