@@ -416,7 +416,7 @@ class ResourceGraph:
             if not y:
                 continue
             suffix = suffix.replace('\$', '$')
-            self.filter_fs(regex, mount_suffix=suffix)
+            self.add_suffix(regex, mount_suffix=suffix)
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
                                  'mount points?')
         print("(3/4). Finding network info")
@@ -426,7 +426,7 @@ class ResourceGraph:
                              'be the same.',
                              default='yes')
         if x:
-            self.make_common()
+            self.make_common(exec_info.hostfile)
 
     def _ask_string(self, msg, default=None):
         if default is None:
@@ -621,17 +621,18 @@ class ResourceGraph:
         per-user where they can access data.
         :return: self
         """
-        df = self.fs.loc[lambda r: re.match(mount_re, str(r['mount']))]
+        df = self.fs.loc[lambda r: re.match(mount_re, str(r['mount'])), 'mount']
         df += mount_suffix
+        return self
 
-    def make_common(self):
+    def make_common(self, hosts):
         """
         This resource graph should contain only entries common across all hosts.
 
         :return: self
         """
         self.fs = self.find_storage(common=True, condense=True)
-        self.net = self.find_net_info(exec_info.hostfile)
+        self.net = self.find_net_info(hosts)
         return self
 
     def apply(self):
@@ -707,8 +708,6 @@ class ResourceGraph:
         if common:
             df = df.groupby(['mount']).filter_groups(
                 lambda x: len(x) == len(self.hosts)).reset_index()
-            if condense:
-                df = df.groupby(['mount']).first().reset_index()
         # Remove storage with too little capacity
         if min_cap is not None:
             df = df[lambda r: r['size'] >= min_cap]
@@ -722,7 +721,8 @@ class ResourceGraph:
         # Take a certain number of matched devices per-host
         if count_per_node is not None:
             df = df.groupby('host').head(count_per_node).reset_index()
-        # if common and condense:
+        if common and condense:
+            df = df.groupby(['mount']).first().reset_index()
         #     df = df.rm_columns('host')
         return df
 

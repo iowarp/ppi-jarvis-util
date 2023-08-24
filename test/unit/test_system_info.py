@@ -119,26 +119,26 @@ class TestSystemInfo(TestCase):
 
         # Find all mounted NVMes
         df = rg.find_storage(dev_types=[StorageDeviceType.NVME])
-        self.assertTrue(len(df[lambda r: r['tran'] == 'nvme']) == 7)
-        self.assertTrue(len(df[lambda r: r['tran'] == 'sata']) == 0)
-        self.assertTrue(len(df) == 7)
+        self.assertEqual(7, len(df[lambda r: r['tran'] == 'nvme']))
+        self.assertEqual(0, len(df[lambda r: r['tran'] == 'sata']))
+        self.assertEqual(7, len(df))
 
         # Find all mounted & common NVMes and SSDs
         df = rg.find_storage([StorageDeviceType.NVME,
                               StorageDeviceType.SSD],
                              common=True)
-        self.assertTrue(len(df[lambda r: r['tran'] == 'nvme']) == 6)
-        self.assertTrue(len(df[lambda r: r['tran'] == 'sata']) == 6)
-        self.assertTrue(len(df) == 12)
+        self.assertEqual(6, len(df[lambda r: r['tran'] == 'nvme']))
+        self.assertEqual(6, len(df[lambda r: r['tran'] == 'sata']))
+        self.assertEqual(12, len(df))
 
         # Select a single nvme and ssd per-node
         df = rg.find_storage([StorageDeviceType.NVME,
                               StorageDeviceType.SSD],
                              common=True,
                              count_per_dev=1)
-        self.assertTrue(len(df[lambda r: r['tran'] == 'nvme']) == 3)
-        self.assertTrue(len(df[lambda r: r['tran'] == 'sata']) == 3)
-        self.assertTrue(len(df) == 6)
+        self.assertEqual(3, len(df[lambda r: r['tran'] == 'nvme']))
+        self.assertEqual(3, len(df[lambda r: r['tran'] == 'sata']))
+        self.assertEqual(6, len(df))
 
         # Get condensed output
         df = rg.find_storage([StorageDeviceType.NVME,
@@ -146,21 +146,51 @@ class TestSystemInfo(TestCase):
                              common=True,
                              condense=True,
                              count_per_dev=1)
-        self.assertTrue(len(df[lambda r: r['tran'] == 'nvme']) == 2)
-        self.assertTrue(len(df[lambda r: r['tran'] == 'sata']) == 2)
-        self.assertTrue(len(df) == 4)
+        self.assertEqual(1, len(df[lambda r: str(r['tran']) == 'nvme']))
+        self.assertEqual(1, len(df[lambda r: str(r['tran']) == 'sata']))
+        self.assertEqual(2, len(df))
         rg.print_df(df)
 
         # Find common networks between hosts
         df = rg.find_net_info(hosts)
-        self.assertTrue(len(df) == 9)
+        self.assertEqual(9, len(df))
 
         # Find common tcp networks
         df = rg.find_net_info(hosts, providers='tcp')
-        self.assertTrue(len(df) == 3)
+        self.assertEqual(3, len(df))
 
         # Find common + condensed TCP networks
         df = rg.find_net_info(hosts, providers='tcp', condense=True)
-        self.assertTrue(len(df) == 1)
+        self.assertEqual(1, len(df))
 
         rg.print_df(df)
+
+    def test_add_suffix(self):
+        rg = ResourceGraph()
+        all_hosts = ['host1', 'host2', 'host3']
+        all_hosts_ip = ['192.168.1.0', '192.168.1.1', '192.168.1.2']
+        providers = ['tcp', 'ib', 'roce']
+        hosts = Hostfile(all_hosts=all_hosts, all_hosts_ip=all_hosts_ip)
+
+        # Add networks for each node
+        rg.set_hosts(hosts)
+        rg.add_net(hosts,
+                   [{'provider': provider} for provider in providers])
+        rg.add_net(hosts.subset(1),
+                   [{'provider': 'uncommon'}])
+
+        # Add storage
+        rg.add_storage(hosts, [
+            {
+                'device': '/dev/sda1',
+                'mount': '/',
+                'tran': 'sata',
+                'rota': True,
+                'size': SizeConv.to_int('10g'),
+                'shared': False
+            }
+        ])
+
+        rg.add_suffix('/', '${USER}')
+        df = rg.find_storage(mount_res='/\${USER}')
+        self.assertEqual(3, len(df))

@@ -45,7 +45,6 @@ class SmallDf:
             if not isinstance(df[0], dict):
                 df = {col: val for row in df
                       for col, val in zip(self.columns, df)}
-            df = self._drop_duplicates(df)
             self.rows += df
             for row in df:
                 self.columns.update(row.keys())
@@ -471,7 +470,8 @@ class SmallGroupBy:
     def filter(self, func):
         grp = SmallGroupBy()
         for key, grp_df in self.groups.items():
-            grp.groups[key] = SmallDf(rows=[row for row in grp_df.rows if func(row)])
+            grp.groups[key] = SmallDf(
+                rows=[row for row in grp_df.rows if func(row)])
         return grp
 
     """
