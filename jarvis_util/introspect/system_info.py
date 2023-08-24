@@ -440,7 +440,7 @@ class ResourceGraph:
         if default is None:
             x = input(f'{msg}: ')
         else:
-            x = input(f'{msg} (Default: {default}: ')
+            x = input(f'{msg} (Default: {default}): ')
         if x is None:
             x = default
         return x
