@@ -373,6 +373,7 @@ class ResourceGraph:
         x = self._ask_yes_no('2.(1/2). Are there any mount points missing '
                              'you would like to add?',
                              default='no')
+        new_devs = []
         while x:
             mount = self._ask_string('2.1.(1/7). Mount point')
             mount = mount.replace('\$', '$')
@@ -388,20 +389,20 @@ class ResourceGraph:
                                  default='yes')
             if not y:
                 continue
-            self.add_storage(exec_info.hostfile, [
-                {
-                    'mount': mount,
-                    'tran': tran,
-                    'rota': rota,
-                    'shared': shared,
-                    'avail': avail
-                }
-            ])
-            x = self._ask_yes_no('2.1.(7/7). Registered. Are there any other '
+            new_devs.append({
+                'mount': mount,
+                'tran': tran,
+                'rota': rota,
+                'shared': shared,
+                'avail': avail,
+                'size': avail,
+            })
+            x = self._ask_yes_no('2.1.(7/7). Are there any other '
                                  'devices you would like to add?',
                                  default='no')
             if x is None:
                 x = False
+        self.add_storage(exec_info.hostfile, new_devs)
         print('2.(2/2). Filter and correct mount points.')
         x = True
         while x:
@@ -700,8 +701,6 @@ class ResourceGraph:
         """
         if df is None:
             df = self.fs
-        # Remove pfs
-        df = df[lambda r: r['shared'] == False]
         # Filter devices by whether or not a mount is needed
         if is_mounted:
             df = df[lambda r: r['mount'] != '']
