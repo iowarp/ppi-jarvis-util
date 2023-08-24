@@ -637,8 +637,9 @@ class ResourceGraph:
 
         :return: self
         """
-        self.fs = self.find_storage(common=True, condense=True)
-        self.net = self.find_net_info(hosts)
+        self.fs = self.find_storage(common=True,
+                                    condense=True)
+        self.net = self.find_net_info(hosts, condense=True)
         return self
 
     def apply(self):
