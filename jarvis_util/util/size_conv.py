@@ -10,6 +10,8 @@ class SizeConv:
 
     @staticmethod
     def to_int(text):
+        if not isinstance(text, str):
+            return int(text)
         text = text.lower()
         if 'k' in text:
             return SizeConv.kb(text)
