@@ -272,6 +272,7 @@ class FiInfo(Exec):
                     val = splits[1].strip()
                     providers[-1][key] = val
         self.df = sdf.SmallDf(providers)
+        self.df.drop_duplicates()
 
 
 # Note, not using enum to avoid YAML serialization errors
