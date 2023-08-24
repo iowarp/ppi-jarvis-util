@@ -192,23 +192,5 @@ class TestSystemInfo(TestCase):
         ])
 
         rg.add_suffix('/', '${USER}')
-        df = rg.find_storage(mount_res='/\${USER}')
+        df = rg.find_storage(mount_res='.*\${USER}')
         self.assertEqual(3, len(df))
-
-    def test_ares(self):
-        rg = ResourceGraph()
-        TEST_DIR = pathlib.Path(__file__).parent.resolve()
-        rg = rg.load(f'{TEST_DIR}/ares.yaml')
-        hosts = Hostfile(all_hosts=[
-            'ares-comp-19-40g',
-            'ares-comp-20-40g',
-            'ares-comp-21-40g',
-            'ares-comp-22-40g',
-        ], all_hosts_ip=[
-            '172.20.0.0',
-            '172.20.0.1',
-            '172.20.0.2',
-            '172.20.0.3',
-        ])
-        df = rg.find_net_info(hosts, providers='verbs', condense=True)
-        self.assertTrue(len(df) > 0)

@@ -163,6 +163,8 @@ class Blkid(Exec):
         fs_type: the type of filesystem (e.g., ext4)
         uuid: filesystem-levle uuid from the FS metadata
         partuuid: the partition-lable UUID for the partition
+        partlabel: semantic partition type information
+        label: semantic label given by users
         host: the host this entry corresponds to
     """
     def __init__(self, exec_info):
@@ -176,6 +178,7 @@ class Blkid(Exec):
     def wait(self):
         super().wait()
         dev_list = []
+        keys = set(['type', 'uuid', 'partuuid'])
         for host, stdout in self.stdout.items():
             devices = stdout.splitlines()
             for dev in devices:
@@ -493,19 +496,19 @@ class ResourceGraph:
         self.list_fs = ListFses(exec_info.mod(hide_output=True))
         self.fi_info = FiInfo(exec_info.mod(hide_output=True))
         self.hosts = exec_info.hostfile.hosts
-        self.fs = sdf.merge(self.lsblk.df,
-                                self.blkid.df,
-                                on=['device', 'host'],
-                                how='outer')
+        self.fs = sdf.merge([self.fs, self.lsblk.df, self.blkid.df],
+                            on=['device', 'host'],
+                            how='outer')
         self.fs.loc[:, 'shared'] = False
-        self.fs = sdf.merge(self.fs,
-                               self.list_fs.df,
+        self.fs = sdf.merge([self.fs, self.list_fs.df],
                                on=['device', 'host'],
                                how='outer')
-        self.fs.rm_columns(['used', 'use%', 'fs_mount', 'partuuid'])
+        self.fs.drop_columns([
+            'used', 'use%', 'fs_mount', 'partuuid',
+            'partlabel', 'label'])
         net_df = self.fi_info.df
         net_df.loc[:, 'speed'] = 0
-        net_df.rm_columns(['version', 'type', 'protocol'])
+        net_df.drop_columns(['version', 'type', 'protocol'])
         net_df.drop_duplicates(inplace=True)
         self.net = net_df
 
@@ -732,7 +735,7 @@ class ResourceGraph:
             df = df.groupby('host').head(count_per_node).reset_index()
         if common and condense:
             df = df.groupby(['mount']).first().reset_index()
-        #     df = df.rm_columns('host')
+        #     df = df.drop_columns('host')
         return df
 
     @staticmethod
