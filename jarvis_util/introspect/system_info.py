@@ -441,7 +441,7 @@ class ResourceGraph:
             x = input(f'{msg}: ')
         else:
             x = input(f'{msg} (Default: {default}): ')
-        if x is None:
+        if len(x) == 0:
             x = default
         return x
 
