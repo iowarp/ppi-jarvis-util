@@ -303,7 +303,6 @@ class ResourceGraph:
         dev_type: type of device (derviced from rota + tran)
         fs_type: the type of filesystem (e.g., ext4)
         uuid: filesystem-levle uuid from the FS metadata
-        fs_size: total size of the filesystem
         avail: total number of bytes remaining
         shared: whether the this is a shared service or not
         host: the host this record corresponds to
@@ -326,7 +325,7 @@ class ResourceGraph:
         self.fi_info = None
         self.fs_columns = [
             'parent', 'device', 'size', 'mount', 'model', 'rota',
-            'tran', 'fs_type', 'uuid', 'fs_size',
+            'tran', 'fs_type', 'uuid',
             'avail', 'shared', 'host'
         ]
         self.net_columns = [
@@ -505,7 +504,7 @@ class ResourceGraph:
                                on=['device', 'host'],
                                how='outer')
         self.fs.drop_columns([
-            'used', 'use%', 'fs_mount', 'partuuid',
+            'used', 'use%', 'fs_mount', 'partuuid', 'fs_size',
             'partlabel', 'label'])
         net_df = self.fi_info.df
         net_df.loc[:, 'speed'] = 0
@@ -554,6 +553,8 @@ class ResourceGraph:
         df.loc['mount'].fillna('', inplace=True)
         df.loc['shared'].fillna(True, inplace=True)
         df.loc['tran'].fillna('', inplace=True)
+        noavail = df.loc[lambda r: r['avail'] == 0 or r['avail'] is None]
+        noavail['avail'] = noavail['size']
 
     def _derive_net_cols(self):
         self.net['domain'].fillna('', inplace=True)
