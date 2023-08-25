@@ -608,6 +608,7 @@ class ResourceGraph:
         df['size'].apply(lambda r, c: SizeConv.to_int(r[c]))
         noavail = df[lambda r: r['avail'] == 0 or r['avail'] is None, :]
         noavail['avail'] = noavail['size']
+        df['avail'].apply(lambda r, c: SizeConv.to_int(r[c]))
 
     def _derive_net_cols(self):
         self.net['domain'].fillna('')
