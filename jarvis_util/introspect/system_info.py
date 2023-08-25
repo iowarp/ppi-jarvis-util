@@ -482,6 +482,7 @@ class ResourceGraph:
                              default='yes')
         if x:
             self.make_common(exec_info.hostfile)
+        self.apply()
 
     def _ask_string(self, msg, default=None):
         if default is None:
