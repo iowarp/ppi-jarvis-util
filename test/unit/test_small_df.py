@@ -15,86 +15,77 @@ class TestSmallDf(TestCase):
     def test_create(self):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
         df = SmallDf(rows=rows)
-        self.assertTrue(len(df) == 3)
+        self.assertEqual(3, len(df))
         self.assertEqual(df.columns, set(['a', 'b', 'c', 'd']))
 
     def test_query(self):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
         df = SmallDf(rows=rows)
-        sub_df = df['a']
-        records = [row['a'] for row in sub_df.rows]
-        self.assertTrue(records == [1, None, None])
+        sub_df = df('a')
+        records = sub_df.list()
+        self.assertEqual([1, None, None], records)
+        sub_df = df[:, ['a', 'b']]
+        records = sub_df.list()
+        self.assertEqual([[1, 2], [None, None], [None, None]], records)
 
     def test_col_assign(self):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
         df = SmallDf(rows=rows)
-        df.loc['a'] = 25
-        records = [row['a'] for row in df.rows]
+        df['a'] = 25
+        records = df['a'].list()
         self.assertEqual([25, 25, 25], records)
 
     def test_col_row_assign(self):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
         df = SmallDf(rows=rows)
         sub_df = df['a']
-        sub_df.loc[lambda r: r['a'] is None, 'a'] = 25
-        records = set([row['a'] for row in sub_df.rows])
-        self.assertEqual({1, 25, 25}, records)
-        records = set([row['a'] for row in df.rows])
-        self.assertEqual({1, None, None}, records)
-
-    def test_loc(self):
-        rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
-        df = SmallDf(rows=rows)
-        sub_df = df.loc['a']
         sub_df[lambda r: r['a'] is None, 'a'] = 25
-        records = set([row['a'] for row in sub_df.rows])
-        self.assertEqual({1, 25, 25}, records)
-        records = set([row['a'] for row in df.rows])
+        records = set(df['a'].list())
         self.assertEqual({1, 25, 25}, records)
 
     def test_add(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
         df = SmallDf(rows=rows)
-        df.loc['a'].fillna(0)
-        df.loc['b'].fillna(0)
-        df.loc['c'] = df['a'] + df['b']
-        records = set([row['c'] for row in df.rows])
+        df['a'].fillna(0)
+        df['b'].fillna(0)
+        df['c'] = df['a'] + df['b']
+        records = set(df['c'].list())
         self.assertEqual({5, 2, 0}, records)
 
     def test_addeq(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
         df = SmallDf(rows=rows)
-        df.loc['a'].fillna(0)
-        df.loc['b'].fillna(0)
-        df.loc['a'] += df['b']
-        records = set([row['a'] for row in df.rows])
+        df['a'].fillna(0)
+        df['b'].fillna(0)
+        df['a'] += df['b']
+        records = set(df['a'].list())
         self.assertEqual({5, 2, 0}, records)
 
     def test_add2(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
         df = SmallDf(rows=rows)
-        df.loc['a'].fillna(0)
-        df.loc['b'].fillna(0)
-        df.loc['c'] = df['a'] + df['b'] + 5
-        records = set([row['c'] for row in df.rows])
+        df['a'].fillna(0)
+        df['b'].fillna(0)
+        df['c'] = df['a'] + df['b'] + 5
+        records = set(df['c'].list())
         self.assertEqual({10, 7, 5}, records)
 
     def test_mul(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
         df = SmallDf(rows=rows)
-        df.loc['a'].fillna(0)
-        df.loc['b'].fillna(0)
-        df.loc['c'] = df['a'] * df['b']
-        records = set([row['c'] for row in df.rows])
+        df['a'].fillna(0)
+        df['b'].fillna(0)
+        df['c'] = df['a'] * df['b']
+        records = set(df['c'].list())
         self.assertEqual({6, 0, 0}, records)
 
     def test_div(self):
         rows = [{'a': 3, 'b': 2}, {'a': 2}, {'d': 4}]
         df = SmallDf(rows=rows)
-        df.loc['a'].fillna(1)
-        df.loc['b'].fillna(1)
-        df.loc['c'] = df['a'] / df['b']
-        records = set([row['c'] for row in df.rows])
+        df['a'].fillna(1)
+        df['b'].fillna(1)
+        df['c'] = df['a'] / df['b']
+        records = set(df['c'].list())
         self.assertEqual({1.5, 2, 1}, records)
 
     def test_merge(self):

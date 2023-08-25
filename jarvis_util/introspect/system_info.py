@@ -3,12 +3,14 @@ This module provides methods for querying the information of the host
 system. This can be used to make scripts more portable.
 """
 
+import socket
 import re
 import platform
 from jarvis_util.shell.exec import Exec
 from jarvis_util.util.size_conv import SizeConv
 from jarvis_util.serialize.yaml_file import YamlFile
 import jarvis_util.util.small_df as sdf
+from jarvis_util.util.hostfile import Hostfile
 import json
 import shlex
 import ipaddress
@@ -229,14 +231,6 @@ class ListFses(Exec):
             lines = stdout.strip().splitlines()
             rows += [line.split() + [host] for line in lines[1:]]
         df = sdf.SmallDf(rows, columns=columns)
-        # pylint: disable=W0108
-        df.loc[:, 'fs_size'] = df['fs_size'].apply(
-            lambda x: SizeConv.to_int(x))
-        df.loc[:, 'used'] = df['used'].apply(
-            lambda x: SizeConv.to_int(x))
-        df.loc[:, 'avail'] = df['avail'].apply(
-            lambda x: SizeConv.to_int(x))
-        # pylint: enable=W0108
         self.df = df
 
 
@@ -303,7 +297,6 @@ class ResourceGraph:
         dev_type: type of device (derviced from rota + tran)
         fs_type: the type of filesystem (e.g., ext4)
         uuid: filesystem-levle uuid from the FS metadata
-        fs_size: total size of the filesystem
         avail: total number of bytes remaining
         shared: whether the this is a shared service or not
         host: the host this record corresponds to
@@ -313,6 +306,7 @@ class ResourceGraph:
         domain: network domain
         host: the host this network corresponds to
         speed: the network speed of the interconnect
+        shared: whether the network is used across hosts
 
     TODO: Need to verify on more than ubuntu20.04
     TODO: Can we make this work for windows?
@@ -326,11 +320,12 @@ class ResourceGraph:
         self.fi_info = None
         self.fs_columns = [
             'parent', 'device', 'size', 'mount', 'model', 'rota',
-            'tran', 'fs_type', 'uuid', 'fs_size',
+            'tran', 'fs_type', 'uuid',
             'avail', 'shared', 'host'
         ]
         self.net_columns = [
-            'provider', 'fabric', 'domain', 'host', 'speed'
+            'provider', 'fabric', 'domain', 'host',
+            'speed', 'shared'
         ]
         self.create()
         self.hosts = None
@@ -358,19 +353,16 @@ class ResourceGraph:
         self.apply()
         return self
 
-    def walkthrough_build(self, exec_info):
-        """
-        This provides a CLI to build the resource graph
+    def walkthrough_build(self, exec_info, introspect=True):
+        self.build(exec_info, introspect)
+        self.walkthrough_prune(exec_info)
 
-        :return: None
-        """
-        print('This is the Jarivs resource graph builder')
-        print('(1/4). Introspecting your machine')
-        self.build(exec_info)
+    def walkthrough_prune(self, exec_info):
         print('(2/4). Finding mount points common across machines')
         mounts = self.find_storage(common=True, condense=True)
         self.print_df(mounts)
-        x = self._ask_yes_no('2.(1/2). Are there any mount points missing '
+        # Add missing mountpoints
+        x = self._ask_yes_no('2.(1/3). Are there any mount points missing '
                              'you would like to add?',
                              default='no')
         new_devs = []
@@ -403,11 +395,14 @@ class ResourceGraph:
             if x is None:
                 x = False
         self.add_storage(exec_info.hostfile, new_devs)
-        print('2.(2/2). Filter and correct mount points.')
-        x = True
+        # Correct discovered mount points
+        x = self._ask_yes_no('2.(2/3). Would you like to correct '
+                             'any mountpoints?',
+                             default='no')
         while x:
             regex = self._ask_re('2.2.(1/3). Enter a regex of mount '
-                                 'points to select. Default: .*').strip()
+                                 'points to select',
+                                 default='.*').strip()
             if regex is None:
                 regex = '.*'
             if regex.endswith('*'):
@@ -420,7 +415,7 @@ class ResourceGraph:
             if not y:
                 continue
             suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
-                                      'append to these paths. \n',
+                                      'append to these paths.',
                                       default='${USER}')
             y = self._ask_yes_no('Are you sure this is accurate?',
                                  default='yes')
@@ -431,14 +426,64 @@ class ResourceGraph:
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
                                  'mount points?',
                                  default='no')
+        # Eliminate unneded mount points
+        x = self._ask_yes_no(
+            '2.(3/3). Would you like to remove any mount points?',
+            default='no')
+        mounts = self.fs['mount'].unique().list()
+        print(f'Mount points: {mounts}')
+        while x:
+            regex = self._ask_re('2.3.(1/3). Enter a regex of mount '
+                                 'points to remove.').strip()
+            if regex is None:
+                regex = '.*'
+            if regex.endswith('*'):
+                regex = f'^{regex}'
+            else:
+                regex = f'^{regex}$'
+            matches = self.fs[lambda r: re.match(regex, r['mount']), 'mount']
+            print(matches.to_string())
+            y = self._ask_yes_no('2.3.(2/3). Is this correct?', default='yes')
+            if not y:
+                continue
+            self.fs = self.fs[lambda r: not re.match(regex, r['mount'])]
+            mounts = self.fs['mount'].unique().list()
+            print(f'Mount points: {mounts}')
+            x = self._ask_yes_no('2.3.(3/3). Any more?', default='no')
+
+        # Fill in missing network information
         print("(3/4). Finding network info")
         net_info = self.find_net_info(exec_info.hostfile)
+        fabrics = net_info['fabric'].unique().list()
+        hostname = socket.gethostname()
+        ip_address = socket.gethostbyname(hostname)
+        print(f'This IP addr of this node ({hostname}) is: {ip_address}')
+        print(f'We detect the following {len(fabrics)} fabrics: {fabrics}')
+        x = False
+        for fabric in fabrics:
+            fabric_info = net_info[lambda r: r['fabric'] == fabric]
+            print(f'3.(1/4). Now modifying {fabric}:')
+            print(f'Providers: {fabric_info["provider"].unique().list()}')
+            print(f'Domains: {fabric_info["domain"].unique().list()}')
+            x = self._ask_yes_no('3.(2/4). Keep this fabric?', default='no')
+            if not x:
+               net_info = net_info[lambda r: r['fabric'] != fabric]
+               print()
+               continue
+            shared = self._ask_yes_no('3.(3/4). Is this fabric shared across hosts?',
+                                      default='yes')
+            speed = self._ask_size('3.(4/4). What is the speed of this network?')
+            fabric_info['speed'] = speed
+            fabric_info['shared'] = shared
+            print()
+        self.net = net_info
         x = self._ask_yes_no('(4/4). Are all hosts symmetrical? I.e., '
                              'the per-node resource graphs should all '
                              'be the same.',
                              default='yes')
         if x:
             self.make_common(exec_info.hostfile)
+        self.apply()
 
     def _ask_string(self, msg, default=None):
         if default is None:
@@ -449,19 +494,22 @@ class ResourceGraph:
             x = default
         return x
 
-    def _ask_re(self, msg):
-        x = input(f'{msg}. E.g., * selects everything, /mnt/* for everything '
-                  f'prefixed with /mnt: ')
+    def _ask_re(self, msg, default=None):
+        if default is not None:
+            msg = f'{msg} (Default: {default})'
+        x = input(f'{msg}: ')
+        if len(x) == 0:
+            x = default
+        if x is None:
+            x = ''
         return x
 
     def _ask_yes_no(self, msg, default=None):
         while True:
-            txt = [
-                f'{msg} (yes/no)',
-                f' (Default: {default})' if default is not None else ''
-            ]
-            txt = ''.join(txt)
-            x = input(f'{txt}: ')
+            msg = f'{msg} (yes/no)'
+            if default is not None:
+                msg = f'{msg} (Default: {default})'
+            x = input(f'{msg}: ')
             if x == '':
                 x = default
             if x == 'yes':
@@ -500,17 +548,17 @@ class ResourceGraph:
         self.fs = sdf.merge([self.fs, self.lsblk.df, self.blkid.df],
                             on=['device', 'host'],
                             how='outer')
-        self.fs.loc[:, 'shared'] = False
+        self.fs[:, 'shared'] = False
         self.fs = sdf.merge([self.fs, self.list_fs.df],
                                on=['device', 'host'],
                                how='outer')
         self.fs.drop_columns([
-            'used', 'use%', 'fs_mount', 'partuuid',
+            'used', 'use%', 'fs_mount', 'partuuid', 'fs_size',
             'partlabel', 'label'])
         net_df = self.fi_info.df
-        net_df.loc[:, 'speed'] = 0
+        net_df[:, 'speed'] = 0
         net_df.drop_columns(['version', 'type', 'protocol'])
-        net_df.drop_duplicates(inplace=True)
+        net_df.drop_duplicates()
         self.net = net_df
 
     def save(self, path):
@@ -545,18 +593,23 @@ class ResourceGraph:
         df = self.fs
         if df is None or len(df) == 0:
             return
-        df.loc[lambda r: (r['tran'] == 'sata') and (r['rota'] == True),
+        df[lambda r: (r['tran'] == 'sata') and (r['rota'] == True),
                'dev_type'] = str(StorageDeviceType.HDD)
-        df.loc[lambda r: (r['tran'] == 'sata') and (r['rota'] == False),
+        df[lambda r: (r['tran'] == 'sata') and (r['rota'] == False),
                'dev_type'] = str(StorageDeviceType.SSD)
-        df.loc[lambda r: (r['tran'] == 'nvme'),
+        df[lambda r: (r['tran'] == 'nvme'),
                'dev_type'] = str(StorageDeviceType.NVME)
-        df.loc['mount'].fillna('', inplace=True)
-        df.loc['shared'].fillna(True, inplace=True)
-        df.loc['tran'].fillna('', inplace=True)
+        df['mount'].fillna('')
+        df['shared'].fillna(True)
+        df['tran'].fillna('')
+        df['size'].fillna(0)
+        df['size'].apply(lambda r, c: SizeConv.to_int(r[c]))
+        noavail = df[lambda r: r['avail'] == 0 or r['avail'] is None, :]
+        noavail['avail'] = noavail['size']
+        df['avail'].apply(lambda r, c: SizeConv.to_int(r[c]))
 
     def _derive_net_cols(self):
-        self.net['domain'].fillna('', inplace=True)
+        self.net['domain'].fillna('')
 
     def set_hosts(self, hosts):
         """
@@ -633,7 +686,7 @@ class ResourceGraph:
         per-user where they can access data.
         :return: self
         """
-        df = self.fs.loc[lambda r: re.match(mount_re, str(r['mount'])), 'mount']
+        df = self.fs[lambda r: re.match(mount_re, str(r['mount'])), 'mount']
         df += f'/{mount_suffix}'
         return self
 
@@ -749,38 +802,50 @@ class ResourceGraph:
         return False
 
     def find_net_info(self,
-                      hosts,
+                      hosts=None,
+                      strip_ips=False,
                       providers=None,
                       condense=False,
+                      shared=None,
                       df=None):
         """
         Find the set of networks common between each host.
 
         :param hosts: A Hostfile() data structure containing the set of
         all hosts to find network information for
+        :param strip_ips: remove IPs that are not compatible with the hostfile
         :param providers: The network protocols to search for.
         :param condense: Only retain information for a single host
         :param df: The df to use for this query
+        :param shared: Filter out local networks
         :return: Dataframe
         """
         if df is None:
             df = self.net
-        # Get the set of fabrics corresponding to these hosts
-        ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
-        df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
-        # Filter out protocols which are not common between these hosts
-        grp = df.groupby(['provider', 'domain']).filter_groups(
-           lambda x: len(x) >= len(hosts))
-        if condense:
-            df = grp.first().reset_index()
-        else:
-            df = grp.reset_index()
+        if hosts is not None:
+            # Get the set of fabrics corresponding to these hosts
+            if strip_ips:
+                ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
+                df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
+            # Filter out protocols which are not common between these hosts
+            grp = df.groupby(['provider', 'domain']).filter_groups(
+               lambda x: len(x) >= len(hosts))
+            if condense:
+                df = grp.first().reset_index()
+            else:
+                df = grp.reset_index()
         # Choose only a subset of providers
         if providers is not None:
             if not isinstance(providers, (list, set)):
                 providers = [providers]
             providers = set(providers)
             df = df[lambda r: r['provider'] in providers]
+        # Choose only shared networks
+        if shared is not None:
+            if shared:
+                df = df[lambda r: r['shared']]
+            else:
+                df = df[lambda r: not r['shared']]
         return df
 
     def print_df(self, df):

@@ -201,4 +201,3 @@ class TestSystemInfo(TestCase):
         rg = rg.load(f'{TEST_DIR}/ares.yaml')
         hosts = Hostfile()
         rg.make_common(hosts)
-        self.assertTrue(len(df) > 0)

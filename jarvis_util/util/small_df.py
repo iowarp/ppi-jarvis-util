@@ -16,21 +16,17 @@ class SmallDf:
 
     :param rows: List[Dict] of entries
     :param columns: List or string of columns
-    :param is_loc: Is this df being used for indexing? This will avoid
     destroying columns by accident
     """
-    def __init__(self, rows=None, columns=None, is_loc=False):
+    def __init__(self, rows=None, columns=None):
         self.rows = []
-        self.columns = set()
-        self.is_loc = is_loc
-        if rows is not None:
-            self.concat(rows)
+        self.columns = []
         if columns is not None:
             self.set_columns(columns)
-        if not is_loc:
-            self.loc = SmallDf(is_loc=True)
-            self.loc.columns = self.columns
-            self.loc.rows = self.rows
+        if rows is not None:
+            self.concat(rows)
+        if columns is None:
+            self.infer_columns()
 
     """
     Concatenate a dataframe (or records) to this one
@@ -40,21 +36,20 @@ class SmallDf:
             return self
         if isinstance(df, SmallDf):
             self.rows += df.rows
-            self.columns.update(df.columns)
+            self.add_columns(df.columns)
         elif isinstance(df, list):
-            if not isinstance(df[0], dict):
-                df = {col: val for row in df
-                      for col, val in zip(self.columns, df)}
-            self.rows += df
-            for row in df:
-                self.columns.update(row.keys())
+            rows = df
+            if not isinstance(rows[0], dict):
+                rows = [{col: row[i] for i, col in enumerate(self.columns)}
+                        for row in rows]
+            self.rows += rows
         self._correct_rows()
         return self
 
     """
     Remove duplicate entries
     """
-    def drop_duplicates(self, inplace=True):
+    def drop_duplicates(self):
         dedup = self._drop_duplicates(self.rows)
         self.rows.clear()
         self.rows += dedup
@@ -73,13 +68,20 @@ class SmallDf:
     Set the columns
     """
     def set_columns(self, columns):
-        if not isinstance(columns, (list, tuple, set)):
+        if not isinstance(columns, (list, tuple)):
             columns = [columns]
-        self.columns.clear()
-        self.columns.update(columns)
-        if not self.is_loc:
-            self._correct_rows()
+        self.columns = columns
+        self._correct_rows()
         return self
+
+    """
+    Infer columns based on the rows
+    """
+    def infer_columns(self, rows=None):
+        if rows is None:
+            rows = self.rows
+        for row in rows:
+            self.add_columns(list(row.keys()))
 
     """
     Add columns to the table
@@ -89,9 +91,8 @@ class SmallDf:
             return self
         if not isinstance(columns, (list, tuple)):
             columns = [columns]
-        if not any([col not in self.columns for col in columns]):
-            return self
-        self.columns.update(columns)
+        new_cols = [col for col in columns if col not in self.columns]
+        self.columns += new_cols
         self._correct_rows()
         return self
 
@@ -99,21 +100,13 @@ class SmallDf:
     Remove columns from the table
     """
     def drop_columns(self, columns):
-        if self.is_loc:
-            raise Exception("Cannot remove columns from location df")
-        if not isinstance(columns, (list, tuple)):
+        if not isinstance(columns, (list, tuple, set)):
             columns = [columns]
         if len(columns) == 0:
             return
-        self.columns.difference_update(columns)
+        self.columns = [col for col in self.columns if col not in columns]
         self._correct_rows()
         return self
-
-    """
-    Analagous to drop_columns
-    """
-    def drop(self, columns):
-        return self.drop_columns(columns)
 
     """
     Rename a column
@@ -121,8 +114,9 @@ class SmallDf:
     :param columns: Dict[OldName:NewName]
     """
     def rename(self, columns):
-        self.columns.difference_update(columns.keys())
-        self.columns.update(columns.values())
+        for i, col in enumerate(self.columns):
+            if col in columns:
+                self.columns[i] = col
         for row in self.rows:
             for old_name, new_name in columns.items():
                 row[new_name] = row.pop(old_name)
@@ -134,7 +128,7 @@ class SmallDf:
     """
     def merge(self, other, on=None):
         if on is None:
-            on = self.columns & other.columns
+            on = set(self.columns) & set(other.columns)
         if len(on) == 0:
             return SmallDf()
         rows = []
@@ -152,8 +146,7 @@ class SmallDf:
         for row in rows:
             if '$#matched' in row:
                 del row['$#matched']
-        columns = self.columns.union(other.columns)
-        return SmallDf(rows=rows, columns=columns)
+        return SmallDf(rows=rows)
 
     def _find_unmatched(self, orig_rows, new_rows):
         unmatched = []
@@ -163,30 +156,25 @@ class SmallDf:
         return unmatched
 
     """
+    Identify a subset of rows matching the query
+    :return: a list of booleans
+    """
+    def match(self, fun):
+        return [func(row) for row in rows]
+
+    """
     Identify a subset of rows
     A subset of the dataset is returned
     Values of the original dataframe can be modified
     """
-    def qloc(self, *idxer):
+    def loc(self, *idxer):
         func, columns = self._query_args(*idxer)
         rows = self.rows
         if func is not None:
             rows = [row for row in rows if func(row)]
-        df = SmallDf(columns=columns, is_loc=True)
-        df.rows = rows
         self.add_columns(columns)
-        return df
-
-    """
-    Identify a subset of rows
-    A deepcopy of the dataset is returned
-    Values of the original dataframe cannot be modified
-    """
-    def query(self, *idxer):
-        func, columns = self._query_args(*idxer)
-        rows = copy.deepcopy(self.rows)
-        if func is not None:
-            rows = [row for row in rows if func(row)]
+        if columns is None:
+            columns = self.columns
         df = SmallDf(rows=rows, columns=columns)
         return df
 
@@ -205,16 +193,18 @@ class SmallDf:
         if len(idxer) == 2:
             if isinstance(idxer[1], (list, tuple, str)):
                 columns = idxer[1]
+            elif isinstance(idxer[1], slice):
+                columns = None
             else:
-                raise Exception("Invlaid parameters to query or loc")
+                raise Exception("Invlaid parameters to loc")
             if callable(idxer[0]):
                 func = idxer[0]
             elif isinstance(idxer[0], slice):
                 func = None
             else:
-                raise Exception("Invlaid parameters to query or loc")
+                raise Exception("Invlaid parameters to loc")
             return func, columns
-        raise Exception("Invlaid parameters to query or loc")
+        raise Exception("Invlaid parameters to loc")
 
     """
     Apply a function to all rows
@@ -229,7 +219,7 @@ class SmallDf:
     """
     Fill None values
     """
-    def fillna(self, val, inplace=True):
+    def fillna(self, val):
         self.apply(lambda r, c: val if r[c] is None else r[c])
         return self
 
@@ -242,10 +232,16 @@ class SmallDf:
         return df
 
     """
-    List operator
+    Convert dataframe to a list of record values
     """
     def list(self):
-        return [list(row.values()) for row in self.rows]
+        if len(self.columns) > 1:
+            return [[row[col] for col in self.columns] for row in self.rows]
+        elif len(self.columns) == 1:
+            col = list(self.columns)[0]
+            return [row[col] for row in self.rows]
+        else:
+            return []
 
     """
     Sort
@@ -262,28 +258,22 @@ class SmallDf:
         return SmallGroupBy(columns, self.rows)
 
     """
-    A subset of columns from the two dfs
+    loc
     """
     def __getitem__(self, idxer):
-        if self.is_loc:
-            if isinstance(idxer, tuple):
-                return self.qloc(*idxer)
-            else:
-                return self.qloc(idxer)
+        if isinstance(idxer, tuple):
+            return self.loc(*idxer)
         else:
-            if isinstance(idxer, tuple):
-                return self.query(*idxer)
-            else:
-                return self.query(idxer)
+            return self.loc(idxer)
 
     """
-    Assign 
+    Assign (loc + assign)
     """
     def __setitem__(self, idxer, other):
         if isinstance(idxer, tuple):
-            df = self.qloc(*idxer)
+            df = self.loc(*idxer)
         else:
-            df = self.qloc(idxer)
+            df = self.loc(idxer)
         if isinstance(other, SmallDf):
             if len(df.rows) != len(other.rows):
                 raise Exception("Number of rows in dfs different")
@@ -306,14 +296,13 @@ class SmallDf:
                 raise Exception("Number of rows in dfs different")
             if len(self.columns) != len(other.columns):
                 raise Exception("Column names don't match")
-            rows = [{col: func(row, col, orow, ocol)}
-                    for row, orow in zip(self.rows, other.rows)
-                    for col, ocol in zip(self.columns, other.columns)]
+            rows = [{col: func(row, col, orow, ocol)
+                     for col, ocol in zip(self.columns, other.columns)}
+                    for row, orow in zip(self.rows, other.rows)]
         else:
-            rows = [{col: row[col] + other}
-                    for row in self.rows
-                    for col in self.columns]
-        return SmallDf(rows=rows)
+            rows = [{col: row[col] + other for col in self.columns}
+                    for row in self.rows]
+        return SmallDf(rows=rows, columns=self.columns)
 
     """
     Apply an arithmetic op
@@ -385,10 +374,10 @@ class SmallDf:
         for col in self.columns:
             if col not in row:
                 row[col] = None
-        keys = list(row.keys())
-        for col in keys:
-            if col not in self.columns:
-                del row[col]
+        # keys = list(row.keys())
+        # for col in keys:
+        #     if col not in self.columns:
+        #         del row[col]
 
     """
     Save to YAML
@@ -406,7 +395,7 @@ class SmallDf:
     Convert into a nice string
     """
     def to_string(self):
-        return yaml.dump(self.rows)
+        return yaml.dump(self.copy().rows)
     def __str__(self):
         return self.to_string()
     def __repr__(self):
@@ -416,7 +405,9 @@ class SmallDf:
     Copy
     """
     def copy(self):
-        df = SmallDf(rows=self.rows, columns=self.columns)
+        # rows = [{col: row[col] for col in self.columns} for row in self.rows]
+        rows = [[row[col] for col in self.columns ] for row in self.rows]
+        df = SmallDf(rows=rows, columns=self.columns)
         return df
 
 
