@@ -361,7 +361,8 @@ class ResourceGraph:
         print('(2/4). Finding mount points common across machines')
         mounts = self.find_storage(common=True, condense=True)
         self.print_df(mounts)
-        x = self._ask_yes_no('2.(1/2). Are there any mount points missing '
+        # Add missing mountpoints
+        x = self._ask_yes_no('2.(1/3). Are there any mount points missing '
                              'you would like to add?',
                              default='no')
         new_devs = []
@@ -394,9 +395,10 @@ class ResourceGraph:
             if x is None:
                 x = False
         self.add_storage(exec_info.hostfile, new_devs)
-        x = self._ask_yes_no('2.(2/2). Would you like to correct '
+        # Correct discovered mount points
+        x = self._ask_yes_no('2.(2/3). Would you like to correct '
                              'any mountpoints?',
-                             default='yes')
+                             default='no')
         while x:
             regex = self._ask_re('2.2.(1/3). Enter a regex of mount '
                                  'points to select. Default: .*').strip()
@@ -423,30 +425,36 @@ class ResourceGraph:
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
                                  'mount points?',
                                  default='no')
+        # Eliminate unneded mount points
+        x = self._ask_yes_no('2.(3/3). Are there any mounts you would like to remove?',
+                             default='no')
+        if x:
+            print('Not implemented right now. Moving on.')
+        # Fill in missing network information
         print("(3/4). Finding network info")
         net_info = self.find_net_info(exec_info.hostfile)
         fabrics = net_info['fabric'].unique().list()
         hostname = socket.gethostname()
         ip_address = socket.gethostbyname(hostname)
         print(f'This IP addr of this node ({hostname}) is: {ip_address}')
-        print(f'We detect the following {len(fabrics)} fabrics:')
-        print(fabrics)
+        print(f'We detect the following {len(fabrics)} fabrics: {fabrics}')
         x = False
         for fabric in fabrics:
             fabric_info = net_info[lambda r: r['fabric'] == fabric]
-            print(f'Now modifying {fabric}:')
-            print(f'Providers: {fabric_info["provider"].unique()}')
+            print(f'3.(1/4). Now modifying {fabric}:')
+            print(f'Providers: {fabric_info["provider"].unique().list()}')
             print(f'Domains: {fabric_info["domain"].unique().list()}')
-            x = self._ask_yes_no('Keep this fabric?', default='no')
+            x = self._ask_yes_no('3.(2/4). Keep this fabric?', default='no')
             if not x:
                net_info = net_info[lambda r: r['fabric'] != fabric]
-               print(net_info)
                continue
-            shared = self._ask_yes_no('Is this fabric shared across hosts?',
+            shared = self._ask_yes_no('3.(3/4). Is this fabric shared across hosts?',
                                       default='yes')
-            speed = self._ask_size('What is the speed of this network?')
+            speed = self._ask_size('3.(4/4). What is the speed of this network?')
             fabric_info['speed'] = speed
             fabric_info['shared'] = shared
+            print()
+        self.net = net_info
         x = self._ask_yes_no('(4/4). Are all hosts symmetrical? I.e., '
                              'the per-node resource graphs should all '
                              'be the same.',
