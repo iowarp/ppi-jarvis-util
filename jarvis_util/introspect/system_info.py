@@ -401,7 +401,8 @@ class ResourceGraph:
                              default='no')
         while x:
             regex = self._ask_re('2.2.(1/3). Enter a regex of mount '
-                                 'points to select. Default: .*').strip()
+                                 'points to select',
+                                 default='.*').strip()
             if regex is None:
                 regex = '.*'
             if regex.endswith('*'):
@@ -426,10 +427,30 @@ class ResourceGraph:
                                  'mount points?',
                                  default='no')
         # Eliminate unneded mount points
-        x = self._ask_yes_no('2.(3/3). Are there any mounts you would like to remove?',
-                             default='no')
-        if x:
-            print('Not implemented right now. Moving on.')
+        x = self._ask_yes_no(
+            '2.(3/3). Would you like to remove any mount points?',
+            default='no')
+        mounts = self.fs['mount'].unique().list()
+        print(f'Mount points: {mounts}')
+        while x:
+            regex = self._ask_re('2.3.(1/3). Enter a regex of mount '
+                                 'points to remove.').strip()
+            if regex is None:
+                regex = '.*'
+            if regex.endswith('*'):
+                regex = f'^{regex}'
+            else:
+                regex = f'^{regex}$'
+            matches = self.fs[lambda r: re.match(regex, r['mount']), 'mount']
+            print(matches.to_string())
+            y = self._ask_yes_no('2.3.(2/3). Is this correct?', default='yes')
+            if not y:
+                continue
+            self.fs = self.fs[lambda r: not re.match(regex, r['mount'])]
+            mounts = self.fs['mount'].unique().list()
+            print(f'Mount points: {mounts}')
+            x = self._ask_yes_no('2.3.(3/3). Any more?', default='no')
+
         # Fill in missing network information
         print("(3/4). Finding network info")
         net_info = self.find_net_info(exec_info.hostfile)
@@ -471,9 +492,15 @@ class ResourceGraph:
             x = default
         return x
 
-    def _ask_re(self, msg):
+    def _ask_re(self, msg, default=None):
+        if default is not None:
+            msg = f'{msg} (Default: {default})'
         x = input(f'{msg}. E.g., * selects everything, /mnt/* for everything '
                   f'prefixed with /mnt: ')
+        if len(x) == 0:
+            x = default
+        if x is None:
+            x = ''
         return x
 
     def _ask_yes_no(self, msg, default=None):

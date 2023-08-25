@@ -395,7 +395,7 @@ class SmallDf:
     Convert into a nice string
     """
     def to_string(self):
-        return yaml.dump(self.rows)
+        return yaml.dump(self.copy().rows)
     def __str__(self):
         return self.to_string()
     def __repr__(self):
