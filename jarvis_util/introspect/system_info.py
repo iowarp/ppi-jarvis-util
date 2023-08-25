@@ -415,7 +415,7 @@ class ResourceGraph:
             if not y:
                 continue
             suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
-                                      'append to these paths. \n',
+                                      'append to these paths.',
                                       default='${USER}')
             y = self._ask_yes_no('Are you sure this is accurate?',
                                  default='yes')
@@ -496,8 +496,7 @@ class ResourceGraph:
     def _ask_re(self, msg, default=None):
         if default is not None:
             msg = f'{msg} (Default: {default})'
-        x = input(f'{msg}. E.g., * selects everything, /mnt/* for everything '
-                  f'prefixed with /mnt: ')
+        x = input(f'{msg}: ')
         if len(x) == 0:
             x = default
         if x is None:
@@ -506,11 +505,9 @@ class ResourceGraph:
 
     def _ask_yes_no(self, msg, default=None):
         while True:
-            txt = [
-                f'{msg} (yes/no)',
-                f' (Default: {default})' if default is not None else ''
-            ]
-            txt = ''.join(txt)
+            msg = f'{msg} (yes/no)'
+            if default is not None:
+                msg = f'{msg} (Default: {default})'
             x = input(f'{txt}: ')
             if x == '':
                 x = default
