@@ -468,6 +468,7 @@ class ResourceGraph:
             x = self._ask_yes_no('3.(2/4). Keep this fabric?', default='no')
             if not x:
                net_info = net_info[lambda r: r['fabric'] != fabric]
+               print()
                continue
             shared = self._ask_yes_no('3.(3/4). Is this fabric shared across hosts?',
                                       default='yes')
