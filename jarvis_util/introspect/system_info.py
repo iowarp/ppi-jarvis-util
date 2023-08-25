@@ -508,7 +508,7 @@ class ResourceGraph:
             msg = f'{msg} (yes/no)'
             if default is not None:
                 msg = f'{msg} (Default: {default})'
-            x = input(f'{txt}: ')
+            x = input(f'{msg}: ')
             if x == '':
                 x = default
             if x == 'yes':
