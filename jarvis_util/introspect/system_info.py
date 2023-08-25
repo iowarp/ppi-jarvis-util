@@ -790,19 +790,20 @@ class ResourceGraph:
         #     df = df.drop_columns('host')
         return df
 
-    # @staticmethod
-    # def _subnet_matches_hosts(subnet, ip_addrs):
-    #     try:
-    #         network = ipaddress.ip_network(subnet, strict=False)
-    #     except:
-    #         return True
-    #     for ip in ip_addrs:
-    #         if ip in network:
-    #             return True
-    #     return False
+    @staticmethod
+    def _subnet_matches_hosts(subnet, ip_addrs):
+        try:
+            network = ipaddress.ip_network(subnet, strict=False)
+        except:
+            return True
+        for ip in ip_addrs:
+            if ip in network:
+                return True
+        return False
 
     def find_net_info(self,
                       hosts=None,
+                      strip_ips=False,
                       providers=None,
                       condense=False,
                       shared=None,
@@ -812,6 +813,7 @@ class ResourceGraph:
 
         :param hosts: A Hostfile() data structure containing the set of
         all hosts to find network information for
+        :param strip_ips: remove IPs that are not compatible with the hostfile
         :param providers: The network protocols to search for.
         :param condense: Only retain information for a single host
         :param df: The df to use for this query
@@ -822,8 +824,9 @@ class ResourceGraph:
             df = self.net
         if hosts is not None:
             # Get the set of fabrics corresponding to these hosts
-            # ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
-            # df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
+            if strip_ips:
+                ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
+                df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
             # Filter out protocols which are not common between these hosts
             grp = df.groupby(['provider', 'domain']).filter_groups(
                lambda x: len(x) >= len(hosts))
