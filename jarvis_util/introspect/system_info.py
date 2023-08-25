@@ -790,21 +790,22 @@ class ResourceGraph:
         #     df = df.drop_columns('host')
         return df
 
-    @staticmethod
-    def _subnet_matches_hosts(subnet, ip_addrs):
-        try:
-            network = ipaddress.ip_network(subnet, strict=False)
-        except:
-            return True
-        for ip in ip_addrs:
-            if ip in network:
-                return True
-        return False
+    # @staticmethod
+    # def _subnet_matches_hosts(subnet, ip_addrs):
+    #     try:
+    #         network = ipaddress.ip_network(subnet, strict=False)
+    #     except:
+    #         return True
+    #     for ip in ip_addrs:
+    #         if ip in network:
+    #             return True
+    #     return False
 
     def find_net_info(self,
                       hosts=None,
                       providers=None,
                       condense=False,
+                      shared=False,
                       df=None):
         """
         Find the set of networks common between each host.
@@ -814,6 +815,7 @@ class ResourceGraph:
         :param providers: The network protocols to search for.
         :param condense: Only retain information for a single host
         :param df: The df to use for this query
+        :param shared: Filter out local networks
         :return: Dataframe
         """
         if df is None:
@@ -835,6 +837,9 @@ class ResourceGraph:
                 providers = [providers]
             providers = set(providers)
             df = df[lambda r: r['provider'] in providers]
+        # Choose only shared networks
+        if shared:
+            df = df[lambda r: r['shared']]
         return df
 
     def print_df(self, df):
