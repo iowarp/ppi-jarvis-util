@@ -790,22 +790,22 @@ class ResourceGraph:
         #     df = df.drop_columns('host')
         return df
 
-    @staticmethod
-    def _subnet_matches_hosts(subnet, ip_addrs):
-        try:
-            network = ipaddress.ip_network(subnet, strict=False)
-        except:
-            return True
-        for ip in ip_addrs:
-            if ip in network:
-                return True
-        return False
+    # @staticmethod
+    # def _subnet_matches_hosts(subnet, ip_addrs):
+    #     try:
+    #         network = ipaddress.ip_network(subnet, strict=False)
+    #     except:
+    #         return True
+    #     for ip in ip_addrs:
+    #         if ip in network:
+    #             return True
+    #     return False
 
     def find_net_info(self,
                       hosts=None,
                       providers=None,
                       condense=False,
-                      shared=False,
+                      shared=None,
                       df=None):
         """
         Find the set of networks common between each host.
@@ -822,8 +822,8 @@ class ResourceGraph:
             df = self.net
         if hosts is not None:
             # Get the set of fabrics corresponding to these hosts
-            ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
-            df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
+            # ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
+            # df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
             # Filter out protocols which are not common between these hosts
             grp = df.groupby(['provider', 'domain']).filter_groups(
                lambda x: len(x) >= len(hosts))
@@ -838,8 +838,11 @@ class ResourceGraph:
             providers = set(providers)
             df = df[lambda r: r['provider'] in providers]
         # Choose only shared networks
-        if shared:
-            df = df[lambda r: r['shared']]
+        if shared is not None:
+            if shared:
+                df = df[lambda r: r['shared']]
+            else:
+                df = df[lambda r: not r['shared']]
         return df
 
     def print_df(self, df):
