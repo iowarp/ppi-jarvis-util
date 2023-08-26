@@ -42,7 +42,8 @@ class TestSystemInfo(TestCase):
         # Add networks for each node
         rg.set_hosts(hosts)
         rg.add_net(hosts,
-                   [{'provider': provider} for provider in providers])
+                   [{'provider': provider, 'shared': True}
+                    for provider in providers])
         rg.add_net(hosts.subset(1),
                    [{'provider': 'uncommon'}])
 
@@ -152,7 +153,7 @@ class TestSystemInfo(TestCase):
         rg.print_df(df)
 
         # Find common networks between hosts
-        df = rg.find_net_info(hosts)
+        df = rg.find_net_info(hosts, shared=True)
         self.assertEqual(9, len(df))
 
         # Find common tcp networks

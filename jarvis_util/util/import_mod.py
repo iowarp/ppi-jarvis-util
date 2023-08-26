@@ -20,7 +20,7 @@ def load_class(import_str, path, class_name):
     "/home/hello/myrepo". The import string "myrepo.dir1.pkg" will find
     the "myrepo" part of the import string at "/home/hello/myrepo/myrepo".
     :param class_name: The name of the class in the file
-    :return:
+    :return: The class data type
     """
     if len(path):
         sys.path.insert(0, path)

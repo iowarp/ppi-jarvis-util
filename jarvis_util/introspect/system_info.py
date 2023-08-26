@@ -10,7 +10,6 @@ from jarvis_util.shell.exec import Exec
 from jarvis_util.util.size_conv import SizeConv
 from jarvis_util.serialize.yaml_file import YamlFile
 import jarvis_util.util.small_df as sdf
-from jarvis_util.util.hostfile import Hostfile
 import json
 import shlex
 import ipaddress
@@ -180,7 +179,6 @@ class Blkid(Exec):
     def wait(self):
         super().wait()
         dev_list = []
-        keys = set(['type', 'uuid', 'partuuid'])
         for host, stdout in self.stdout.items():
             devices = stdout.splitlines()
             for dev in devices:
@@ -368,7 +366,7 @@ class ResourceGraph:
         new_devs = []
         while x:
             mount = self._ask_string('2.1.(1/7). Mount point')
-            mount = mount.replace('\$', '$')
+            mount = mount.replace(r'\$', '$')
             tran = self._ask_choices('2.1.(2/7). What transport?',
                                      choices=['sata', 'nvme', 'dimm'])
             rota = self._ask_yes_no('2.1.(3/7). Is this device rotational. '
@@ -421,7 +419,7 @@ class ResourceGraph:
                                  default='yes')
             if not y:
                 continue
-            suffix = suffix.replace('\$', '$')
+            suffix = suffix.replace(r'\$', '$')
             self.add_suffix(regex, mount_suffix=suffix)
             x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
                                  'mount points?',
@@ -452,7 +450,7 @@ class ResourceGraph:
             x = self._ask_yes_no('2.3.(3/3). Any more?', default='no')
 
         # Fill in missing network information
-        print("(3/4). Finding network info")
+        print('(3/4). Finding network info')
         net_info = self.find_net_info(exec_info.hostfile)
         fabrics = net_info['fabric'].unique().list()
         hostname = socket.gethostname()
@@ -460,6 +458,7 @@ class ResourceGraph:
         print(f'This IP addr of this node ({hostname}) is: {ip_address}')
         print(f'We detect the following {len(fabrics)} fabrics: {fabrics}')
         x = False
+        # pylint: disable=W0640
         for fabric in fabrics:
             fabric_info = net_info[lambda r: r['fabric'] == fabric]
             print(f'3.(1/4). Now modifying {fabric}:')
@@ -467,15 +466,18 @@ class ResourceGraph:
             print(f'Domains: {fabric_info["domain"].unique().list()}')
             x = self._ask_yes_no('3.(2/4). Keep this fabric?', default='no')
             if not x:
-               net_info = net_info[lambda r: r['fabric'] != fabric]
-               print()
-               continue
-            shared = self._ask_yes_no('3.(3/4). Is this fabric shared across hosts?',
+                net_info = net_info[lambda r: r['fabric'] != fabric]
+                print()
+                continue
+            shared = self._ask_yes_no('3.(3/4). '
+                                      'Is this fabric shared across hosts?',
                                       default='yes')
-            speed = self._ask_size('3.(4/4). What is the speed of this network?')
+            speed = self._ask_size('3.(4/4). '
+                                   'What is the speed of this network?')
             fabric_info['speed'] = speed
             fabric_info['shared'] = shared
             print()
+        # pylint: enable=W0640
         self.net = net_info
         x = self._ask_yes_no('(4/4). Are all hosts symmetrical? I.e., '
                              'the per-node resource graphs should all '
@@ -762,7 +764,7 @@ class ResourceGraph:
             if not isinstance(mount_res, (list, tuple, set)):
                 mount_res = [mount_res]
             df = df[lambda r:
-                    any([re.match(reg, str(r['mount'])) for reg in mount_res])]
+                    any(re.match(reg, str(r['mount'])) for reg in mount_res)]
         # Find devices of a particular type
         if dev_types is not None:
             if not isinstance(dev_types, (list, tuple, set)):
@@ -792,10 +794,12 @@ class ResourceGraph:
 
     @staticmethod
     def _subnet_matches_hosts(subnet, ip_addrs):
+        # pylint: disable=W0702
         try:
             network = ipaddress.ip_network(subnet, strict=False)
         except:
             return True
+        # pylint: enable=W0702
         for ip in ip_addrs:
             if ip in network:
                 return True
