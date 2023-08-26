@@ -193,7 +193,7 @@ class TestSystemInfo(TestCase):
         ])
 
         rg.add_suffix('/', '${USER}')
-        df = rg.find_storage(mount_res='.*\${USER}')
+        df = rg.find_storage(mount_res=r'.*\${USER}')
         self.assertEqual(3, len(df))
 
     def test_ares(self):
