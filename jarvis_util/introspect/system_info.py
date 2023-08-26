@@ -828,12 +828,10 @@ class ResourceGraph:
                 ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
                 df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
             # Filter out protocols which are not common between these hosts
-            grp = df.groupby(['provider', 'domain']).filter_groups(
-               lambda x: len(x) >= len(hosts))
             if condense:
+                grp = df.groupby(['provider', 'domain']).filter_groups(
+                   lambda x: len(x) >= len(hosts))
                 df = grp.first().reset_index()
-            else:
-                df = grp.reset_index()
         # Choose only a subset of providers
         if providers is not None:
             if not isinstance(providers, (list, set)):
