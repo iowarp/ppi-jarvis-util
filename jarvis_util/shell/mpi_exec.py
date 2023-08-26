@@ -45,7 +45,8 @@ class MpiExec(LocalExec):
                 params.append(f"--host {','.join(self.hostfile.hosts)}")
             else:
                 params.append(f"--hostfile {self.hostfile.path}")
-        params += [f"-genv {key}=\"{val}\"" for key, val in self.mpi_env.items()]
+        params += [f"-genv {key}=\"{val}\""
+                   for key, val in self.mpi_env.items()]
         # params += [f"-x {key}={val}" for key, val in self.mpi_env.items()]
         params.append(self.cmd)
         cmd = " ".join(params)

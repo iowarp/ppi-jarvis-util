@@ -16,12 +16,12 @@ class TestSmallDf(TestCase):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
         df = SmallDf(rows=rows)
         self.assertEqual(3, len(df))
-        self.assertEqual(df.columns, set(['a', 'b', 'c', 'd']))
+        self.assertEqual(set(['a', 'b', 'c', 'd']), set(df.columns))
 
     def test_query(self):
         rows = [{'a': 1, 'b': 2}, {'c': 3}, {'d': 4}]
         df = SmallDf(rows=rows)
-        sub_df = df('a')
+        sub_df = df['a']
         records = sub_df.list()
         self.assertEqual([1, None, None], records)
         sub_df = df[:, ['a', 'b']]
@@ -103,3 +103,5 @@ class TestSmallDf(TestCase):
         df1 = SmallDf(rows=rows)
         grp = df1.groupby('a')
         self.assertEqual(2, len(grp))
+        self.assertEqual(set([tuple([2]), tuple([3])]),
+                         set(grp.groups.keys()))
