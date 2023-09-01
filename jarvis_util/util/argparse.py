@@ -36,6 +36,7 @@ class ArgParse(ABC):
         self.menus = []
         self.vars = {}
         self.remainder = []
+        self.remainder_kv = {}
         self.pos_required = False
         self.keep_remainder = False
         self.remainder_as_kv = False
@@ -307,7 +308,7 @@ class ArgParse(ABC):
             # Verify argument is apart of the menu
             if opt_name not in menu['kw_opts']:
                 if self.remainder_as_kv:
-                    self.kwargs[opt_name] = opt_val
+                    self.remainder_kv[opt_name] = opt_val
                     i += 1
                     continue
                 elif self.keep_remainder:
