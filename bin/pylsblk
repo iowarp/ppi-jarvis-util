@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+
+import os
+import yaml
+
+def get_device_info(device_name):
+    info = {
+        'device': device_name,
+        'sector_size': 512,
+        'size': 0,
+        'mount': None,
+        'model': None,
+        'tran': 'sata',
+        'rota': True,
+        'parent': None
+    }
+
+    sector_size_file = f'/sys/class/block/{device_name}/queue/hw_sector_size'
+    if os.path.exists(sector_size_file):
+        with open(sector_size_file) as sector_size_fd:
+            info['sector_size'] = int(sector_size_fd.read().strip()) * 512
+
+    # Get device size
+    size_file = f'/sys/class/block/{device_name}/size'
+    if os.path.exists(size_file):
+        with open(size_file) as size_fd:
+            info['size'] = int(size_fd.read().strip()) * info['sector_size']
+
+    # Get mount point
+    with open('/proc/mounts') as mounts_fd:
+        for line in mounts_fd:
+            parts = line.strip().split()
+            if len(parts) >= 2 and parts[0] == f'/dev/{device_name}':
+                info['mount'] = parts[1]
+
+    # Get device model
+    model_file = f'/sys/class/block/{device_name}/device/model'
+    if os.path.exists(model_file):
+        with open(model_file) as model_fd:
+            info['model'] = model_fd.read().strip()
+
+    # Get device transport
+    transport_file = f'/sys/class/block/{device_name}/device/transport'
+    if os.path.exists(transport_file):
+        with open(transport_file) as transport_fd:
+            info['tran'] = transport_fd.read().strip()
+
+    # Get device rotation
+    rotational_file = f'/sys/class/block/{device_name}/queue/rotational'
+    if os.path.exists(rotational_file):
+        with open(rotational_file) as rotational_fd:
+            info['rota'] = int(rotational_fd.read().strip())
+
+    return info
+
+
+def main():
+    bdev_names = [bdev_name for bdev_name in os.listdir('/sys/class/block/')
+                  if not bdev_name.startswith('loop')]
+    bdevs = [get_device_info(bdev_name)
+             for bdev_name in bdev_names]
+
+    # Get correct lineage
+    for parent in bdevs:
+        for child in bdevs:
+            if parent['device'] in child['device'] and \
+                    parent['device'] != child['device']:
+                child['parent'] = parent['device']
+                child['model'] = parent['model']
+                child['rota'] = parent['rota']
+                child['tran'] = parent['tran']
+
+    # Print bdev info
+    print(yaml.dump(bdevs))
+
+if __name__ == '__main__':
+    main()
