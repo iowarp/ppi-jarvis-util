@@ -184,7 +184,7 @@ class PyLsblk(Exec):
         super().wait()
         total = []
         for host, stdout in self.stdout.items():
-            lsblk_data = yaml.load(stdout)
+            lsblk_data = yaml.load(stdout, Loader=yaml.FullLoader)
             for dev in lsblk_data:
                 if dev['tran'] == 'pcie':
                     dev['tran'] = 'nvme'
