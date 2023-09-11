@@ -11,6 +11,7 @@ from jarvis_util.util.size_conv import SizeConv
 from jarvis_util.serialize.yaml_file import YamlFile
 import jarvis_util.util.small_df as sdf
 import json
+import yaml
 import shlex
 import ipaddress
 import copy
@@ -155,6 +156,44 @@ class Lsblk(Exec):
         print(self.df)
 
 
+class PyLsblk(Exec):
+    """
+       List all block devices in the system per-node. PyLsblk will return
+       a YAML output
+
+       A table is stored per-host:
+           parent: the parent device of the partition (e.g., /dev/sda or NaN)
+           device: the name of the partition (e.g., /dev/sda1)
+           size: total size of the partition (bytes)
+           mount: where the partition is mounted (if anywhere)
+           model: the exact model of the device
+           tran: the transport of the device (e.g., /dev/nvme)
+           rota: whether or not the device is rotational
+           host: the host this record corresponds to
+       """
+
+    def __init__(self, exec_info):
+        cmd = 'pylsblk'
+        super().__init__(cmd, exec_info.mod(collect_output=True))
+        self.exec_async = exec_info.exec_async
+        self.df = None
+        if not self.exec_async:
+            self.wait()
+
+    def wait(self):
+        super().wait()
+        total = []
+        for host, stdout in self.stdout.items():
+            lsblk_data = yaml.load(stdout)
+            for dev in lsblk_data:
+                if dev['tran'] == 'pcie':
+                    dev['tran'] = 'nvme'
+                dev['host'] = host
+                total.append(dev)
+        self.df = sdf.SmallDf(rows=total)
+        print(self.df)
+
+
 class Blkid(Exec):
     """
     List all filesystems (even those unmounted) and their properties
@@ -162,7 +201,7 @@ class Blkid(Exec):
     Stores a per-host table with the following:
         device: the device (or partition) which stores the data (e.g., /dev/sda)
         fs_type: the type of filesystem (e.g., ext4)
-        uuid: filesystem-levle uuid from the FS metadata
+        uuid: filesystem-level uuid from the FS metadata
         partuuid: the partition-lable UUID for the partition
         partlabel: semantic partition type information
         label: semantic label given by users
@@ -341,7 +380,7 @@ class ResourceGraph:
         Build a resource graph.
 
         :param exec_info: Where to collect resource information
-        :param introspect: Whether to introspect system info, or rely solely
+        :param introspect: Whether to pylsblk system info, or rely solely
         on admin-defined settings
         :return: self
         """
@@ -542,7 +581,7 @@ class ResourceGraph:
         :param exec_info: Where to collect resource information
         :return: None
         """
-        self.lsblk = Lsblk(exec_info.mod(hide_output=True))
+        self.lsblk = PyLsblk(exec_info.mod(hide_output=True))
         self.blkid = Blkid(exec_info.mod(hide_output=True))
         self.list_fs = ListFses(exec_info.mod(hide_output=True))
         self.fi_info = FiInfo(exec_info.mod(hide_output=True))
