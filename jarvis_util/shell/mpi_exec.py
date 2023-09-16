@@ -11,6 +11,11 @@ from .exec_info import ExecInfo, ExecType
 
 
 class MpiVersion(LocalExec):
+    """
+    Introspect the current MPI implementation from the machine using
+    mpirun --version
+    """
+
     def __init__(self, exec_info):
         self.cmd = 'mpirun --version'
         super().__init__(self.cmd,
@@ -58,9 +63,9 @@ class OpenMpiExec(LocalExec):
             params.append(f'-ppn {self.ppn}')
         if len(self.hostfile):
             if self.hostfile.is_subset() or self.hostfile.path is None:
-                params.append(f"--host {','.join(self.hostfile.hosts)}")
+                params.append(f'--host {",".join(self.hostfile.hosts)}')
             else:
-                params.append(f"--hostfile {self.hostfile.path}")
+                params.append(f'--hostfile {self.hostfile.path}')
         params += [f'-x {key}=\"{val}\"'
                    for key, val in self.mpi_env.items()]
         params.append(self.cmd)
@@ -99,9 +104,9 @@ class MpichExec(LocalExec):
             params.append(f'-ppn {self.ppn}')
         if len(self.hostfile):
             if self.hostfile.is_subset() or self.hostfile.path is None:
-                params.append(f"--host {','.join(self.hostfile.hosts)}")
+                params.append(f'--host {",".join(self.hostfile.hosts)}')
             else:
-                params.append(f"--hostfile {self.hostfile.path}")
+                params.append(f'--hostfile {self.hostfile.path}')
         params += [f'-genv {key}=\"{val}\"'
                    for key, val in self.mpi_env.items()]
         params.append(self.cmd)

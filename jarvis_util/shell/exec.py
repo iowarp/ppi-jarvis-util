@@ -41,7 +41,7 @@ class Exec(Executable):
         elif exec_type == ExecType.INTEL_MPI:
             self.exec_ = MpichExec(cmd, exec_info)
         elif exec_type == ExecType.OPENMPI:
-            self.exec_ = OpenMpiExec(cmd.exec_info)
+            self.exec_ = OpenMpiExec(cmd, exec_info)
 
         self.set_exit_code()
         self.set_output()
