@@ -19,6 +19,9 @@ class ExecType(Enum):
     SSH = 'SSH'
     PSSH = 'PSSH'
     MPI = 'MPI'
+    MPICH = 'MPICH'
+    OPENMPI = 'OPENMPI'
+    INTEL_MPI = 'INTEL_MPI'
 
 
 class ExecInfo:
