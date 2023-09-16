@@ -6,7 +6,7 @@ remotely.
 from .local_exec import LocalExec
 from .pssh_exec import PsshExec
 from .pssh_exec import SshExec
-from .mpi_exec import MpiExec
+from .mpi_exec import MpiVersion, MpichExec, OpenMpiExec
 from .exec_info import ExecInfo, ExecType, Executable
 
 
@@ -26,14 +26,23 @@ class Exec(Executable):
         super().__init__()
         if exec_info is None:
             exec_info = ExecInfo()
-        if exec_info.exec_type == ExecType.LOCAL:
+        exec_type = exec_info.exec_type
+        if exec_type == ExecType.LOCAL:
             self.exec_ = LocalExec(cmd, exec_info)
-        elif exec_info.exec_type == ExecType.SSH:
+        elif exec_type == ExecType.SSH:
             self.exec_ = SshExec(cmd, exec_info)
-        elif exec_info.exec_type == ExecType.PSSH:
+        elif exec_type == ExecType.PSSH:
             self.exec_ = PsshExec(cmd, exec_info)
-        elif exec_info.exec_type == ExecType.MPI:
-            self.exec_ = MpiExec(cmd, exec_info)
+        elif exec_type == ExecType.MPI:
+            exec_type = MpiVersion(exec_info).version
+
+        if exec_type == ExecType.MPICH:
+            self.exec_ = MpichExec(cmd, exec_info)
+        elif exec_type == ExecType.INTEL_MPI:
+            self.exec_ = MpichExec(cmd, exec_info)
+        elif exec_type == ExecType.OPENMPI:
+            self.exec_ = OpenMpiExec(cmd, exec_info)
+
         self.set_exit_code()
         self.set_output()
 
