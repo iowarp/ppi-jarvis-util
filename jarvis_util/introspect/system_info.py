@@ -183,7 +183,7 @@ class PyLsblk(Exec):
     def wait(self):
         super().wait()
         total = []
-        for host, stdout in self.stdout.items():F
+        for host, stdout in self.stdout.items():
             lsblk_data = yaml.load(stdout, Loader=yaml.FullLoader)
             for dev in lsblk_data:
                 if dev['tran'] == 'pcie':
