@@ -6,6 +6,7 @@ passwords, working directory, etc.
 
 from enum import Enum
 from jarvis_util.util.hostfile import Hostfile
+from jarvis_util.jutil_manager import JutilManager
 import os
 from abc import ABC, abstractmethod
 
@@ -152,6 +153,7 @@ class Executable(ABC):
         self.exit_code = None
         self.stdout = ''
         self.stderr = ''
+        self.jutil = JutilManager.get_instance()
 
     def failed(self):
         return self.exit_code != 0

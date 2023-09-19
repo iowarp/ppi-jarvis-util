@@ -27,7 +27,6 @@ class LocalExec(Executable):
         """
 
         super().__init__()
-        jutil = JutilManager.get_instance()
         cmd = self.smash_cmd(cmd)
 
         # Managing console output and collection
@@ -39,13 +38,13 @@ class LocalExec(Executable):
         self.hide_output = exec_info.hide_output
         # pylint: disable=R1732
         if self.collect_output is None:
-            self.collect_output = jutil.collect_output
+            self.collect_output = self.jutil.collect_output
         if self.pipe_stdout is not None:
             self.pipe_stdout_fp = open(self.pipe_stdout, 'wb')
         if self.pipe_stderr is not None:
             self.pipe_stderr_fp = open(self.pipe_stderr, 'wb')
         if self.hide_output is None:
-            self.hide_output = jutil.hide_output
+            self.hide_output = self.jutil.hide_output
         # pylint: enable=R1732
         self.stdout = io.StringIO()
         self.stderr = io.StringIO()
@@ -72,7 +71,7 @@ class LocalExec(Executable):
             self.cwd = os.getcwd()
         else:
             self.cwd = exec_info.cwd
-        if jutil.debug_local_exec:
+        if self.jutil.debug_local_exec:
             print(cmd)
         self._start_bash_processes()
 
