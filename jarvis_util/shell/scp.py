@@ -28,6 +28,7 @@ class _Scp(LocalExec):
         self.pkey = exec_info.pkey
         self.port = exec_info.port
         self.sudo = exec_info.sudo
+        self.jutil = JutilManager.get_instance()
         super().__init__(self.rsync_cmd(src_path, dst_path),
                          exec_info.mod(env=exec_info.basic_env))
 
