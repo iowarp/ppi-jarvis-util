@@ -27,7 +27,6 @@ class LocalExec(Executable):
         """
 
         super().__init__()
-        cmd = self.smash_cmd(cmd)
 
         # Managing console output and collection
         self.collect_output = exec_info.collect_output
@@ -56,13 +55,13 @@ class LocalExec(Executable):
         self.exit_code = 0
 
         # Copy ENV
+        self.basic_env = exec_info.basic_env.copy()
         self.env = exec_info.env.copy()
         for key, val in os.environ.items():
             if key not in self.env:
                 self.env[key] = val
 
         # Managing command execution
-        self.cmd = cmd
         self.sudo = exec_info.sudo
         self.stdin = exec_info.stdin
         self.exec_async = exec_info.exec_async
@@ -71,13 +70,15 @@ class LocalExec(Executable):
             self.cwd = os.getcwd()
         else:
             self.cwd = exec_info.cwd
+
+        # Create the command
+        cmd = self.smash_cmd(cmd, self.sudo, self.basic_env)
+        self.cmd = cmd
         if self.jutil.debug_local_exec:
             print(cmd)
         self._start_bash_processes()
 
     def _start_bash_processes(self):
-        if self.sudo:
-            self.cmd = f'sudo {self.cmd}'
         time.sleep(self.sleep_ms)
         # pylint: disable=R1732
         self.proc = subprocess.Popen(self.cmd,

@@ -166,20 +166,26 @@ class Executable(ABC):
     def wait(self):
         pass
 
-    def smash_cmd(self, cmds):
+    def smash_cmd(self, cmds, sudo, basic_env):
         """
         Convert a list of commands into a single command for the shell
         to execute.
 
         :param cmds: A list of commands or a single command string
+        :param prefix: A prefix for each command
         :return:
         """
-        if isinstance(cmds, list):
-            return ' && '.join(cmds)
-        elif isinstance(cmds, str):
-            return cmds
-        else:
-            raise Exception('Command must be either list or string')
+        env = None
+        if sudo:
+            env = [f'-E {key}=\"{val}\"' for key, val in
+                   basic_env.items()]
+            env = ' '.join(env)
+            env = f'sudo {env}'
+        if not isinstance(cmds, (list, tuple)):
+            cmds = [cmds]
+        if env is not None:
+            cmds = [f'{env} {cmd}' for cmd in cmds]
+        return ' && '.join(cmds)
 
     def wait_list(self, nodes):
         for node in nodes:
