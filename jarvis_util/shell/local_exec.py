@@ -72,7 +72,7 @@ class LocalExec(Executable):
             self.cwd = exec_info.cwd
 
         # Create the command
-        cmd = self.smash_cmd(cmd, self.sudo, self.basic_env)
+        cmd = self.smash_cmd(cmd, self.sudo, self.basic_env, exec_info.sudoenv)
         self.cmd = cmd
         if self.jutil.debug_local_exec:
             print(cmd)

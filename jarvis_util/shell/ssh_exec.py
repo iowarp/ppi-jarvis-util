@@ -26,7 +26,7 @@ class SshExec(LocalExec):
         self.sudo = exec_info.sudo
         self.ssh_env = exec_info.env
         self.basic_env = exec_info.env
-        cmd = self.smash_cmd(cmd, self.sudo, self.basic_env)
+        cmd = self.smash_cmd(cmd, self.sudo, self.basic_env, exec_info.sudoenv)
         if not exec_info.hostfile.is_local():
             super().__init__(self.ssh_cmd(cmd),
                              exec_info.mod(env=exec_info.basic_env))

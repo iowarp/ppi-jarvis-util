@@ -34,7 +34,7 @@ class ExecInfo:
     def __init__(self,  exec_type=ExecType.LOCAL, nprocs=None, ppn=None,
                  user=None, pkey=None, port=None,
                  hostfile=None, hosts=None, env=None,
-                 sleep_ms=0, sudo=False, cwd=None,
+                 sleep_ms=0, sudo=False, sudoenv=True, cwd=None,
                  collect_output=None, pipe_stdout=None, pipe_stderr=None,
                  hide_output=None, exec_async=False, stdin=None):
         """
@@ -50,6 +50,7 @@ class ExecInfo:
         :param env: The environment variables to use for command.
         :param sleep_ms: Sleep for a period of time AFTER executing
         :param sudo: Execute command with root privilege. E.g., SSH, PSSH
+        :param sudoenv: Support environment preservation in sudo
         :param cwd: Set current working directory. E.g., SSH, PSSH
         :param collect_output: Collect program output in python buffer
         :param pipe_stdout: Pipe STDOUT into a file. (path string)
@@ -72,6 +73,7 @@ class ExecInfo:
         self._set_env(env)
         self.cwd = cwd
         self.sudo = sudo
+        self.sudoenv = self.sudoenv
         self.sleep_ms = sleep_ms
         self.collect_output = collect_output
         self.pipe_stdout = pipe_stdout
@@ -166,7 +168,7 @@ class Executable(ABC):
     def wait(self):
         pass
 
-    def smash_cmd(self, cmds, sudo, basic_env):
+    def smash_cmd(self, cmds, sudo, basic_env, sudoenv):
         """
         Convert a list of commands into a single command for the shell
         to execute.
@@ -175,10 +177,11 @@ class Executable(ABC):
         :param prefix: A prefix for each command
         :param sudo: Whether or not root is required
         :param basic_env: The environment to forward to the command
+        :param sudoenv: Whether sudo supports environment forwarding
         :return:
         """
         env = None
-        if sudo:
+        if sudo and sudoenv:
             env = [f'-E {key}=\"{val}\"' for key, val in
                    basic_env.items()]
             env = ' '.join(env)
