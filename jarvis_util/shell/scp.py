@@ -4,6 +4,7 @@ This class is intended to be called from Exec, not by general users.
 """
 from .local_exec import LocalExec
 from .exec_info import Executable
+from jarvis_util.jutil_manager import JutilManager
 
 
 class _Scp(LocalExec):
