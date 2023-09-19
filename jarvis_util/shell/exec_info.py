@@ -73,7 +73,7 @@ class ExecInfo:
         self._set_env(env)
         self.cwd = cwd
         self.sudo = sudo
-        self.sudoenv = self.sudoenv
+        self.sudoenv = sudoenv
         self.sleep_ms = sleep_ms
         self.collect_output = collect_output
         self.pipe_stdout = pipe_stdout
