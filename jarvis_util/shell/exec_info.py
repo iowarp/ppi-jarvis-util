@@ -181,10 +181,12 @@ class Executable(ABC):
         :return:
         """
         env = None
-        if sudo and sudoenv:
-            env = [f'-E {key}=\"{val}\"' for key, val in
-                   basic_env.items()]
-            env = ' '.join(env)
+        if sudo:
+            env = ''
+            if sudoenv:
+                env = [f'-E {key}=\"{val}\"' for key, val in
+                       basic_env.items()]
+                env = ' '.join(env)
             env = f'sudo {env}'
         if not isinstance(cmds, (list, tuple)):
             cmds = [cmds]
