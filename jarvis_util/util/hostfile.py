@@ -28,6 +28,7 @@ class Hostfile:
         self.hosts = []
         self.all_hosts = []
         self.all_hosts_ip = []
+        self.subhosts = []
         self.path = hostfile
         self.find_ips = find_ips
 
@@ -52,6 +53,8 @@ class Hostfile:
         # Both hostfile and hosts are None
         else:
             self._set_hosts(['localhost'])
+
+        self.hosts_iter = [Hostfile(hosts=host) for host in self.hosts]
 
     def _load_hostfile(self, path):
         """
@@ -194,10 +197,10 @@ class Hostfile:
         return self
 
     def list(self):
-        return [Hostfile(all_hosts=host) for host in self.hosts]
+        return self.hosts_iter
 
     def enumerate(self):
-        return enumerate(subhosts())
+        return enumerate(self.list())
 
     def host_str(self, sep=','):
         return sep.join(self.hosts)
