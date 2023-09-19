@@ -47,6 +47,8 @@ class _Scp(LocalExec):
         else:
             lines.append(f'{self.addr}:{dst_path}')
         rsync_cmd = ' '.join(lines)
+        if self.debug_scp:
+            print(rsync_cmd)
         return rsync_cmd
 
 
