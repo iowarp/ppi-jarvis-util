@@ -202,6 +202,9 @@ class Hostfile:
     def enumerate(self):
         return enumerate(self.hosts)
 
+    def enumerate_ips(self):
+        return enumerate(self.hosts_ip)
+
     def host_str(self, sep=','):
         return sep.join(self.hosts)
 
