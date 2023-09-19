@@ -54,7 +54,8 @@ class Hostfile:
         else:
             self._set_hosts(['localhost'])
 
-        self.hosts_iter = [Hostfile(all_hosts=[host]) for host in self.hosts]
+        self.hosts_iter = [Hostfile(all_hosts=[host], find_ips=find_ips)
+                           for host in self.hosts]
 
     def _load_hostfile(self, path):
         """
