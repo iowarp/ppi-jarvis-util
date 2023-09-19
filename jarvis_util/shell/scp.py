@@ -22,7 +22,7 @@ class _Scp(LocalExec):
         :param exec_info: Info needed to execute command with SSH
         """
 
-        self.addr = exec_info.hostfile.hosts[0]
+        self.addr = exec_info.hostfile.hosts_ip[0]
         self.src_path = src_path
         self.dst_path = dst_path
         self.user = exec_info.user
