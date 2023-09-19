@@ -193,17 +193,11 @@ class Hostfile:
             fp.write('\n'.join(self.all_hosts))
         return self
 
-    def ip_list(self):
-        return self.hosts_ip
-
-    def hostname_list(self):
-        return self.hosts
+    def list(self):
+        return [Hostfile(all_hosts=host) for host in self.hosts]
 
     def enumerate(self):
-        return enumerate(self.hosts)
-
-    def enumerate_ips(self):
-        return enumerate(self.hosts_ip)
+        return enumerate(subhosts())
 
     def host_str(self, sep=','):
         return sep.join(self.hosts)
