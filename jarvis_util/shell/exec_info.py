@@ -173,6 +173,8 @@ class Executable(ABC):
 
         :param cmds: A list of commands or a single command string
         :param prefix: A prefix for each command
+        :param sudo: Whether or not root is required
+        :param basic_env: The environment to forward to the command
         :return:
         """
         env = None
