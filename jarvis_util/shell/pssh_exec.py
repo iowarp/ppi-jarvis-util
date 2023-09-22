@@ -22,7 +22,6 @@ class PsshExec(Executable):
         :param exec_info: Info needed to execute command with SSH
         """
         super().__init__()
-        self.cmd = self.smash_cmd(cmd)
         self.exec_async = exec_info.exec_async
         self.hosts = exec_info.hostfile.hosts
         self.execs_ = []

@@ -4,6 +4,7 @@ This class is intended to be called from Exec, not by general users.
 """
 from .local_exec import LocalExec
 from .exec_info import Executable
+from jarvis_util.jutil_manager import JutilManager
 
 
 class _Scp(LocalExec):
@@ -22,12 +23,15 @@ class _Scp(LocalExec):
         """
 
         self.addr = exec_info.hostfile.hosts[0]
+        if self.addr == 'localhost' or self.addr == '127.0.0.1':
+            return
         self.src_path = src_path
         self.dst_path = dst_path
         self.user = exec_info.user
         self.pkey = exec_info.pkey
         self.port = exec_info.port
         self.sudo = exec_info.sudo
+        self.jutil = JutilManager.get_instance()
         super().__init__(self.rsync_cmd(src_path, dst_path),
                          exec_info.mod(env=exec_info.basic_env))
 
@@ -47,6 +51,8 @@ class _Scp(LocalExec):
         else:
             lines.append(f'{self.addr}:{dst_path}')
         rsync_cmd = ' '.join(lines)
+        if self.jutil.debug_scp:
+            print(rsync_cmd)
         return rsync_cmd
 
 

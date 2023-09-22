@@ -45,6 +45,7 @@ class ArgParse(ABC):
         self.menu = None
         self.menu_name = None
         self.kwargs = {}
+        self.real_kwargs = {}
         self.define_options()
         self._parse()
 
@@ -190,6 +191,7 @@ class ArgParse(ABC):
         default_args = self.default_kwargs(
             list(self.menu['kw_opts'].values()) + self.menu['pos_opts'])
         default_args.update(self.kwargs)
+        self.real_kwargs = self.kwargs
         self.kwargs = default_args
 
     @staticmethod

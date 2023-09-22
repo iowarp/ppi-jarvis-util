@@ -775,6 +775,7 @@ class ResourceGraph:
                      min_cap=None,
                      min_avail=None,
                      mount_res=None,
+                     shared=None,
                      df=None):
         """
         Find a set of storage devices.
@@ -790,6 +791,7 @@ class ResourceGraph:
         :param min_cap: Remove devices with too little overall capacity
         :param min_avail: Remove devices with too little available space
         :param mount_res: A regex or list of regexes to match mount points
+        :param shared: Whether to search for devices which are shared
         :param df: The data frame to run this query
         :return: Dataframe
         """
@@ -829,6 +831,8 @@ class ResourceGraph:
         if common and condense:
             df = df.groupby(['mount']).first().reset_index()
         #     df = df.drop_columns('host')
+        if shared is not None:
+            df = df[lambda r: r['shared'] == shared]
         return df
 
     @staticmethod
