@@ -49,7 +49,6 @@ class LocalExec(Executable):
         self.stderr = io.StringIO()
         self.last_stdout_size = 0
         self.last_stderr_size = 0
-        self.executing_ = True
         self.print_stdout_thread = None
         self.print_stderr_thread = None
         self.exit_code = 0
@@ -99,7 +98,7 @@ class LocalExec(Executable):
             self.wait()
 
     def wait(self):
-        self.proc.wait()
+        # self.proc.wait()
         self.join_print_worker()
         self.set_exit_code()
         return self.exit_code
@@ -114,16 +113,20 @@ class LocalExec(Executable):
             return None
 
     def print_stdout_worker(self):
-        while self.executing_:
+        while self.proc.poll() is None:
             self.print_to_outputs(self.proc.stdout, self.stdout,
                                   self.pipe_stdout_fp, sys.stdout)
             time.sleep(25 / 1000)
+        self.print_to_outputs(self.proc.stdout, self.stdout,
+                              self.pipe_stdout_fp, sys.stdout)
 
     def print_stderr_worker(self):
-        while self.executing_:
+        while self.proc.poll() is None:
             self.print_to_outputs(self.proc.stderr, self.stderr,
                                   self.pipe_stderr_fp, sys.stderr)
             time.sleep(25 / 1000)
+        self.print_to_outputs(self.proc.stderr, self.stderr,
+                              self.pipe_stderr_fp, sys.stderr)
 
     def print_to_outputs(self, proc_sysout, self_sysout, file_sysout, sysout):
         # pylint: disable=W0702
@@ -138,13 +141,12 @@ class LocalExec(Executable):
                 if file_sysout is not None:
                     file_sysout.write(line)
             except:
-                pass
+                return
         # pylint: enable=W0702
 
     def join_print_worker(self):
-        if not self.executing_:
+        if isinstance(self.stdout, str):
             return
-        self.executing_ = False
         self.print_stdout_thread.join()
         self.print_stderr_thread.join()
         self.stdout = self.stdout.getvalue()
