@@ -192,7 +192,7 @@ class Executable(ABC):
             cmds = [cmds]
         if env is not None:
             cmds = [f'{env} {cmd}' for cmd in cmds]
-        return ' && '.join(cmds)
+        return ';'.join(cmds)
 
     def wait_list(self, nodes):
         for node in nodes:
