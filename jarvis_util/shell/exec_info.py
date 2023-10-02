@@ -82,7 +82,7 @@ class ExecInfo:
         self.exec_async = exec_async
         self.stdin = stdin
         self.keys = ['exec_type', 'nprocs', 'ppn', 'user', 'pkey', 'port',
-                     'hostfile', 'env', 'sleep_ms', 'sudo',
+                     'hostfile', 'env', 'sleep_ms', 'sudo', 'sudoenv',
                      'cwd', 'hosts', 'collect_output',
                      'pipe_stdout', 'pipe_stderr', 'hide_output',
                      'exec_async', 'stdin']
