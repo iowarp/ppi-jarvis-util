@@ -9,7 +9,7 @@ from jarvis_util.jutil_manager import JutilManager
 from jarvis_util.shell.local_exec import LocalExec
 from .exec_info import ExecInfo, ExecType
 
-class OpenMpiExec(LocalExec):
+class SlurmExec(LocalExec):
     """
     This class contains methods for executing a command in parallel
     using MPI.
@@ -23,7 +23,9 @@ class OpenMpiExec(LocalExec):
         :param exec_info: Information needed by MPI
         """
 
+        self.cmd = cmd
         self.job_name = cmd
+        self.num_nodes = exec_info.num_noodes
         self.nprocs = exec_info.nprocs
         self.ppn = exec_info.ppn
         self.hostfile = exec_info.hostfile
@@ -51,6 +53,14 @@ class OpenMpiExec(LocalExec):
         return cmd
 
 
-class MpiExecInfo(ExecInfo):
-    def __init__(self, **kwargs):
-        super().__init__(exec_type=ExecType.MPI, **kwargs)
+class SlurmExecInfo(ExecInfo):
+    def __init__(self, job_name=None, num_nodes=1, **kwargs):
+        super().__init__(exec_type=ExecType.SLURM, **kwargs)
+        allowed_options = ['cpus_per_task', 'time', 'partition', 'mail_type', 'mail_user', 'mem', 'gres', 'exclusive', 'pipeline_file']
+        self.job_name = job_name
+        self.num_nodes = num_nodes
+        self.keys.append(['job_name', 'num_nodes'])
+        for key, value in kwargs.items():
+            if key in allowed_options:
+                setattr(self, key, value)
+                self.append(key)
