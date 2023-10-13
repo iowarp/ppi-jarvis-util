@@ -24,16 +24,16 @@ class SlurmExec(LocalExec):
         """
 
         self.cmd = cmd
-        self.job_name = cmd
+        self.job_name = exec_info
         self.num_nodes = exec_info.num_noodes
         self.nprocs = exec_info.nprocs
         self.ppn = exec_info.ppn
         self.hostfile = exec_info.hostfile
         self.mpi_env = exec_info.env
-        super().__init__(self.mpicmd(),
+        super().__init__(self.slurmcmd(),
                          exec_info.mod(env=exec_info.basic_env))
 
-    def mpicmd(self):
+    def slurmcmd(self):
         params = [f'mpirun -n {self.nprocs}']
         params.append('--oversubscribe')
         if self.ppn is not None:
@@ -63,4 +63,4 @@ class SlurmExecInfo(ExecInfo):
         for key, value in kwargs.items():
             if key in allowed_options:
                 setattr(self, key, value)
-                self.append(key)
+                self.keys.append(key)
