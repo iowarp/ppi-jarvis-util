@@ -26,4 +26,5 @@ class JutilManager:
         self.debug_mpi_exec = False
         self.debug_local_exec = False
         self.debug_scp = False
+        self.debug_slurm = False
 
