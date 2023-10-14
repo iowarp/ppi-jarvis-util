@@ -19,11 +19,9 @@ class SlurmExec(LocalExec):
     def __init__(self, cmd, exec_info):
         """
         Execute a command through sbatch
-
         :param cmd: A command (string) to execute
         :param exec_info: Information needed by sbatch
         """
-
         self.cmd = cmd
         self.job_name = exec_info.job_name
         self.num_nodes = exec_info.num_noodes
@@ -35,7 +33,7 @@ class SlurmExec(LocalExec):
         self.output = exec_info.pipe_stdout
         self.error = exec_info.pipe_stderr
         self.memory = exec_info.memory
-        self.gres  = exec_info.gres
+        self.gres = exec_info.gres
         self.exclusive = exec_info.exclusive
 
         super().__init__(self.slurmcmd(),
