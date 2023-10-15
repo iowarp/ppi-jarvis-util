@@ -32,7 +32,7 @@ class SlurmExec(LocalExec):
         self.mail_type = exec_info.mail_type
         self.output = exec_info.pipe_stdout
         self.error = exec_info.pipe_stderr
-        self.memory = exec_info.memory
+        self.mem = exec_info.mem
         self.gres = exec_info.gres
         self.exclusive = exec_info.exclusive
 
@@ -53,7 +53,7 @@ class SlurmExec(LocalExec):
             'mail_type': 'mail-type',
             'output': 'output',
             'error': 'error',
-            'memory': 'mem',
+            'mem': 'mem',
             'gres': 'gres',
             'exclusive': 'exclusive'
         }
