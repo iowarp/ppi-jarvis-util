@@ -84,10 +84,10 @@ class SlurmExecInfo(ExecInfo):
                            'mail_user', 'mem', 'gres', 'exclusive']
         self.keys += allowed_options
         # We use ppn, and the output and error file from the base Exec Info
-        self.job_name = job_name
-        self.num_nodes = num_nodes
         for key in allowed_options:
             if key in kwargs:
                 setattr(self, key, kwargs[key])
             else:
                 setattr(self, key, None)
+        self.job_name = job_name
+        self.num_nodes = num_nodes
