@@ -24,7 +24,7 @@ class SlurmExec(LocalExec):
         """
         self.cmd = cmd
         self.job_name = exec_info.job_name
-        self.num_nodes = exec_info.num_noodes
+        self.num_nodes = exec_info.num_nodes
         self.ppn = exec_info.ppn
         self.cpus_per_task = exec_info.cpus_per_task
         self.time = exec_info.time
