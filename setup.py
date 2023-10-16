@@ -3,6 +3,7 @@ import setuptools
 setuptools.setup(
     name="jarvis_util",
     version="0.0.1",
+    scripts=['bin/pylsblk'],
     description='Utilities to aid with creating shell scripts within Python.',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
