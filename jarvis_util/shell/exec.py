@@ -7,7 +7,7 @@ from jarvis_util.shell.slurm_exec import SlurmExec
 from .local_exec import LocalExec
 from .pssh_exec import PsshExec
 from .pssh_exec import SshExec
-from .mpi_exec import MpiVersion, MpichExec, OpenMpiExec
+from .mpi_exec import MpiVersion, MpichExec, OpenMpiExec, CrayMpichExec
 from .exec_info import ExecInfo, ExecType, Executable
 
 
@@ -47,6 +47,8 @@ class Exec(Executable):
             self.exec_ = MpichExec(cmd, exec_info)
         elif exec_type == ExecType.OPENMPI:
             self.exec_ = OpenMpiExec(cmd, exec_info)
+        elif exec_type == Exectype.CRAY_MPICH:
+            self.exec_ = CrayMpichExec(cmd, exec_info)
 
         self.set_exit_code()
         self.set_output()

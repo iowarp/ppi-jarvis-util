@@ -25,6 +25,7 @@ class ExecType(Enum):
     INTEL_MPI = 'INTEL_MPI'
     SLURM = 'SLURM'
     PBS = 'PBS'
+    CRAY_MPICH = 'CRAY_MPICH'
 
 
 class ExecInfo:
