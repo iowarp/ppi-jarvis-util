@@ -19,14 +19,12 @@ class SlurmExec(LocalExec):
     def __init__(self, cmd, exec_info):
         """
         Execute a command through sbatch
-
         :param cmd: A command (string) to execute
         :param exec_info: Information needed by sbatch
         """
-
         self.cmd = cmd
         self.job_name = exec_info.job_name
-        self.num_nodes = exec_info.num_noodes
+        self.num_nodes = exec_info.num_nodes
         self.ppn = exec_info.ppn
         self.cpus_per_task = exec_info.cpus_per_task
         self.time = exec_info.time
@@ -34,8 +32,8 @@ class SlurmExec(LocalExec):
         self.mail_type = exec_info.mail_type
         self.output = exec_info.pipe_stdout
         self.error = exec_info.pipe_stderr
-        self.memory = exec_info.memory
-        self.gres  = exec_info.gres
+        self.mem = exec_info.mem
+        self.gres = exec_info.gres
         self.exclusive = exec_info.exclusive
 
         super().__init__(self.slurmcmd(),
@@ -55,7 +53,7 @@ class SlurmExec(LocalExec):
             'mail_type': 'mail-type',
             'output': 'output',
             'error': 'error',
-            'memory': 'mem',
+            'mem': 'mem',
             'gres': 'gres',
             'exclusive': 'exclusive'
         }
@@ -86,10 +84,10 @@ class SlurmExecInfo(ExecInfo):
                            'mail_user', 'mem', 'gres', 'exclusive']
         self.keys += allowed_options
         # We use ppn, and the output and error file from the base Exec Info
-        self.job_name = job_name
-        self.num_nodes = num_nodes
         for key in allowed_options:
             if key in kwargs:
                 setattr(self, key, kwargs[key])
             else:
                 setattr(self, key, None)
+        self.job_name = job_name
+        self.num_nodes = num_nodes
