@@ -2,6 +2,7 @@
 This module provides mechanisms to execute binaries either locally or
 remotely.
 """
+from jarvis_util.shell.pbs_exec import PbsExec
 from jarvis_util.shell.slurm_exec import SlurmExec
 from .local_exec import LocalExec
 from .pssh_exec import PsshExec
@@ -37,6 +38,8 @@ class Exec(Executable):
             exec_type = MpiVersion(exec_info).version
         elif exec_type == ExecType.SLURM:
             exec_type = SlurmExec(cmd, exec_info)
+        elif exec_type == ExecType.PBS:
+            exec_type = PbsExec(cmd, exec_info)
 
         if exec_type == ExecType.MPICH:
             self.exec_ = MpichExec(cmd, exec_info)
