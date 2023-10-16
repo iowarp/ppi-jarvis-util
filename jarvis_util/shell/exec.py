@@ -47,7 +47,7 @@ class Exec(Executable):
             self.exec_ = MpichExec(cmd, exec_info)
         elif exec_type == ExecType.OPENMPI:
             self.exec_ = OpenMpiExec(cmd, exec_info)
-        elif exec_type == Exectype.CRAY_MPICH:
+        elif exec_type == ExecType.CRAY_MPICH:
             self.exec_ = CrayMpichExec(cmd, exec_info)
 
         self.set_exit_code()
