@@ -1,8 +1,6 @@
 pyyaml
 pylint==2.15.0
 coverage==5.5
-# coverage
 coverage-lcov==0.2.4
-# coverage-lcov
 pytest==6.2.5
 tabulate

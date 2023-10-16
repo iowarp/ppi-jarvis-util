@@ -23,6 +23,8 @@ class ExecType(Enum):
     MPICH = 'MPICH'
     OPENMPI = 'OPENMPI'
     INTEL_MPI = 'INTEL_MPI'
+    SLURM = 'SLURM'
+    PBS = 'PBS'
 
 
 class ExecInfo:
@@ -36,7 +38,7 @@ class ExecInfo:
                  hostfile=None, hosts=None, env=None,
                  sleep_ms=0, sudo=False, sudoenv=True, cwd=None,
                  collect_output=None, pipe_stdout=None, pipe_stderr=None,
-                 hide_output=None, exec_async=False, stdin=None):
+                 hide_output=None, exec_async=False, stdin=None, **kwargs):
         """
 
         :param exec_type: How to execute a program. SSH, MPI, Local, etc.
