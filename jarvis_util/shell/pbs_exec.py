@@ -8,6 +8,7 @@ not by general users.
 from jarvis_util.jutil_manager import JutilManager
 from jarvis_util.shell.local_exec import LocalExec, LocalExecInfo
 from .exec_info import ExecInfo, ExecType
+from .. import Chmod
 
 
 class PbsExec(LocalExec):
@@ -85,8 +86,10 @@ class PbsExec(LocalExec):
         script = ['#!/bin/bash',
                  f'{self.cmd}']
 
-        with open(self.bash_script, encoding='utf-8') as f:
+        with open(self.bash_script, mode='w', encoding='utf-8') as f:
             f.write('\n'.join(script))
+
+        Chmod(self.bash_script, "+x")
 
         cmd = self.generate_qsub_command()
         jutil = JutilManager.get_instance()
