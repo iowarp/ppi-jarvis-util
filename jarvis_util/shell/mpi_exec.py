@@ -23,7 +23,7 @@ class MpiVersion(LocalExec):
                                        collect_output=True,
                                        hide_output=True))
         vinfo = self.stdout
-        print(f'MPI INFO: stdout={vinfo} stderr={self.stderr}')
+        # print(f'MPI INFO: stdout={vinfo} stderr={self.stderr}')
         if 'mpich' in vinfo.lower():
             self.version = ExecType.MPICH
         elif 'Open MPI' in vinfo:
@@ -157,6 +157,7 @@ class CrayMpichExec(LocalExec):
         jutil = JutilManager.get_instance()
         if jutil.debug_mpi_exec:
             print(cmd)
+        print(cmd)
         return cmd
 
 class MpiExecInfo(ExecInfo):
