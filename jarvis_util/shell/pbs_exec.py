@@ -55,7 +55,7 @@ class PbsExec(LocalExec):
         non_equal_map ={
             'account': 'A',
             'queue': 'q',
-            'env_vars' : '-v'
+            'env_vars' : 'v'
         }
 
         if self.nnodes and self.system:
