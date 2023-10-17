@@ -17,7 +17,7 @@ class MpiVersion(LocalExec):
     """
 
     def __init__(self, exec_info):
-        self.cmd = 'mpirun --version'
+        self.cmd = 'mpiexec --version'
         super().__init__(self.cmd,
                          exec_info.mod(env=exec_info.basic_env,
                                        collect_output=True,
@@ -60,7 +60,7 @@ class OpenMpiExec(LocalExec):
                          exec_info.mod(env=exec_info.basic_env))
 
     def mpicmd(self):
-        params = [f'mpirun -n {self.nprocs}']
+        params = [f'mpiexec -n {self.nprocs}']
         params.append('--oversubscribe')
         if self.ppn is not None:
             params.append(f'-ppn {self.ppn}')
@@ -102,7 +102,7 @@ class MpichExec(LocalExec):
                          exec_info.mod(env=exec_info.basic_env))
 
     def mpicmd(self):
-        params = [f'mpirun -n {self.nprocs}']
+        params = [f'mpiexec -n {self.nprocs}']
         if self.ppn is not None:
             params.append(f'-ppn {self.ppn}')
         if len(self.hostfile):
@@ -142,7 +142,7 @@ class CrayMpichExec(LocalExec):
                          exec_info.mod(env=exec_info.basic_env))
 
     def mpicmd(self):
-        params = [f'mpirun -n {self.nprocs}']
+        params = [f'mpiexec -n {self.nprocs}']
         if self.ppn is not None:
             params.append(f'-ppn {self.ppn}')
         if len(self.hostfile):
