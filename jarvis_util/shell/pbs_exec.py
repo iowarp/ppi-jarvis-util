@@ -39,9 +39,12 @@ class PbsExec(LocalExec):
         if self.interactive:
             cmd += ' -I'
 
-        options_map = {
+        equal_map = {
             'filesystems': 'l filesystems',
             'walltime': 'l walltime',
+        }
+
+        non_equal_map ={
             'account': 'A',
             'queue': 'q'
         }
@@ -53,10 +56,15 @@ class PbsExec(LocalExec):
         else:
             raise ValueError("System defined without select value.")
 
-        for attr, option in options_map.items():
+        for attr, option in equal_map.items():
             value = getattr(self, attr)
             if value is not None:
                 cmd += f' -{option}={value}'
+
+        for attr, option in non_equal_map.items():
+            value = getattr(self, attr)
+            if value is not None:
+                cmd += f' -{option} {value}'
 
         cmd += f' {self.cmd}'
         return cmd
