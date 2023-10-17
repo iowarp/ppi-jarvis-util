@@ -66,7 +66,7 @@ class PbsExec(LocalExec):
             if value is not None:
                 cmd += f' -{option} {value}'
 
-        cmd += f' {self.cmd}'
+        cmd += f' -- {self.cmd}'
         return cmd
 
     def pbscmd(self):
