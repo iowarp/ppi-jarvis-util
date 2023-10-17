@@ -33,40 +33,40 @@ class PbsExec(LocalExec):
         super().__init__(self.pbscmd(),
                          exec_info.mod(env=exec_info.basic_env))
 
-        def generate_qsub_command(self):
-            cmd = 'qsub'
+    def generate_qsub_command(self):
+        cmd = 'qsub'
 
-            if self.interactive:
-                cmd += ' -I'
+        if self.interactive:
+            cmd += ' -I'
 
-            options_map = {
-                'filesystems': 'l filesystems',
-                'walltime': 'l walltime',
-                'account': 'A',
-                'queue': 'q'
-            }
+        options_map = {
+            'filesystems': 'l filesystems',
+            'walltime': 'l walltime',
+            'account': 'A',
+            'queue': 'q'
+        }
 
-            if self.nnodes and self.system:
-                cmd += f' -l select={self.nnodes}:system={self.system}'
-            elif self.nnodes:
-                cmd += f' -l select={self.nnodes}'
-            else:
-                raise ValueError("System defined without select value.")
+        if self.nnodes and self.system:
+            cmd += f' -l select={self.nnodes}:system={self.system}'
+        elif self.nnodes:
+            cmd += f' -l select={self.nnodes}'
+        else:
+            raise ValueError("System defined without select value.")
 
-            for attr, option in options_map.items():
-                value = getattr(self, attr)
-                if value is not None:
-                    cmd += f' -{option}={value}'
+        for attr, option in options_map.items():
+            value = getattr(self, attr)
+            if value is not None:
+                cmd += f' -{option}={value}'
 
-            cmd += f' {self.cmd}'
-            return cmd
+        cmd += f' {self.cmd}'
+        return cmd
 
-        def pbscmd(self):
-            cmd = self.generate_qsub_command()
-            jutil = JutilManager.get_instance()
-            if jutil.debug_pbs:
-                print(cmd)
-            return cmd
+    def pbscmd(self):
+        cmd = self.generate_qsub_command()
+        jutil = JutilManager.get_instance()
+        if jutil.debug_pbs:
+            print(cmd)
+        return cmd
 
 
 class PbsExecInfo(ExecInfo):
