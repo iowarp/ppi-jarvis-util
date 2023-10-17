@@ -32,6 +32,8 @@ class PbsExec(LocalExec):
         self.queue = exec_info.queue
         self.env_vars = exec_info.env_vars
 
+        self.bash_script = exec_info.bash_script
+
         jarvis_comma_list = ','.join(exec_info.basic_env.keys())
         if self.env_vars:
             self.env_vars = f'{self.env_vars},{jarvis_comma_list}'
@@ -75,10 +77,17 @@ class PbsExec(LocalExec):
             if value is not None:
                 cmd += f' -{option} {value}'
 
-        cmd += f' -- \"{self.cmd}\"'
+        cmd += f' -- \"{self.bash_script}\"'
         return cmd
 
     def pbscmd(self):
+
+        script = ['#!/bin/bash',
+                 f'{self.cmd}']
+
+        with open(self.bash_script, encoding='utf-8') as f:
+            f.write('\n'.join(script))
+
         cmd = self.generate_qsub_command()
         jutil = JutilManager.get_instance()
         if jutil.debug_pbs:
@@ -90,7 +99,7 @@ class PbsExecInfo(ExecInfo):
     def __init__(self, **kwargs):
         super().__init__(exec_type=ExecType.PBS, **kwargs)
         allowed_options = ['interactive', 'nnodes', 'system', 'filesystems',
-                           'walltime', 'account', 'queue', 'env_vars']
+                           'walltime', 'account', 'queue', 'env_vars', 'bash_script']
         self.keys += allowed_options
         # We use output and error file from the base Exec Info
         for key in allowed_options:
