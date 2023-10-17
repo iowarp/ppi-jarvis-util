@@ -6,7 +6,7 @@ not by general users.
 """
 
 from jarvis_util.jutil_manager import JutilManager
-from jarvis_util.shell.local_exec import LocalExec
+from jarvis_util.shell.local_exec import LocalExec, LocalExecInfo
 from .exec_info import ExecInfo, ExecType
 
 
@@ -31,6 +31,13 @@ class PbsExec(LocalExec):
         self.account = exec_info.account
         self.queue = exec_info.queue
         self.env_vars = exec_info.env_vars
+
+        jarvis_comma_list = ','.join(exec_info.basic_env.keys())
+        if self.env_vars:
+            self.env_vars = f'{self.env_vars},{jarvis_comma_list}'
+        else:
+            self.env_vars = jarvis_comma_list
+
         super().__init__(self.pbscmd(),
                          exec_info.mod(env=exec_info.basic_env))
 
