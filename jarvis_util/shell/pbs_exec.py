@@ -4,12 +4,10 @@ Message Passing Interface (MPI). This module assumes MPI is installed
 on the system. This class is intended to be called from Exec,
 not by general users.
 """
-
+from jarvis_util.shell.filesystem import Chmod
 from jarvis_util.jutil_manager import JutilManager
 from jarvis_util.shell.local_exec import LocalExec, LocalExecInfo
 from .exec_info import ExecInfo, ExecType
-from .. import Chmod
-
 
 class PbsExec(LocalExec):
     """
