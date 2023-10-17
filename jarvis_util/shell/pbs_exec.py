@@ -99,7 +99,7 @@ class PbsExecInfo(ExecInfo):
     def __init__(self, **kwargs):
         super().__init__(exec_type=ExecType.PBS, **kwargs)
         allowed_options = ['interactive', 'nnodes', 'system', 'filesystems',
-                           'walltime', 'account', 'queue', 'env_vars']
+                           'walltime', 'account', 'queue', 'env_vars', 'bash_script']
         self.keys += allowed_options
         # We use output and error file from the base Exec Info
         for key in allowed_options:
