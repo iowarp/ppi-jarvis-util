@@ -159,7 +159,6 @@ class CrayMpichExec(LocalExec):
         jutil = JutilManager.get_instance()
         if jutil.debug_mpi_exec:
             print(cmd)
-        print(cmd)
         return cmd
 
 class MpiExecInfo(ExecInfo):
