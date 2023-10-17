@@ -23,6 +23,7 @@ class MpiVersion(LocalExec):
                                        collect_output=True,
                                        hide_output=True))
         vinfo = self.stdout
+        print(vinfo)
         if 'mpich' in vinfo.lower():
             self.version = ExecType.MPICH
         elif 'Open MPI' in vinfo:
