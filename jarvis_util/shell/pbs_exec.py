@@ -30,6 +30,7 @@ class PbsExec(LocalExec):
         self.walltime = exec_info.walltime
         self.account = exec_info.account
         self.queue = exec_info.queue
+        self.env_vars = exec_info.env_vars
         super().__init__(self.pbscmd(),
                          exec_info.mod(env=exec_info.basic_env))
 
@@ -46,7 +47,8 @@ class PbsExec(LocalExec):
 
         non_equal_map ={
             'account': 'A',
-            'queue': 'q'
+            'queue': 'q',
+            'env_vars' : '-v'
         }
 
         if self.nnodes and self.system:
@@ -80,7 +82,8 @@ class PbsExec(LocalExec):
 class PbsExecInfo(ExecInfo):
     def __init__(self, **kwargs):
         super().__init__(exec_type=ExecType.PBS, **kwargs)
-        allowed_options = ['interactive', 'nnodes', 'system', 'filesystems', 'walltime', 'account', 'queue']
+        allowed_options = ['interactive', 'nnodes', 'system', 'filesystems',
+                           'walltime', 'account', 'queue', 'env_vars']
         self.keys += allowed_options
         # We use output and error file from the base Exec Info
         for key in allowed_options:
