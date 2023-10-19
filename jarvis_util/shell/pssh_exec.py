@@ -22,7 +22,6 @@ class PsshExec(Executable):
         :param exec_info: Info needed to execute command with SSH
         """
         super().__init__()
-        self.cmd = self.smash_cmd(cmd)
         self.exec_async = exec_info.exec_async
         self.hosts = exec_info.hostfile.hosts
         self.execs_ = []
@@ -37,7 +36,7 @@ class PsshExec(Executable):
                 self.execs_.append(SshExec(cmd, ssh_exec_info))
         else:
             self.execs_.append(
-                LocalExec(cmd, exec_info))
+                LocalExec(cmd, exec_info.mod(exec_async=True)))
         if not self.exec_async:
             self.wait()
 

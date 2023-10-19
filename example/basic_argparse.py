@@ -34,6 +34,8 @@ class MyArgParse(ArgParse):
         print(self.kwargs['hello'])
         print(self.kwargs['hello_optional'])
         print(self.kwargs['hello_kwarg'])
+        print(self.kwargs)
+        print(self.real_kwargs)
 
 
 args = MyArgParse()

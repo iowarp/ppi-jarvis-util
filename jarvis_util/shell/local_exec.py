@@ -27,8 +27,6 @@ class LocalExec(Executable):
         """
 
         super().__init__()
-        jutil = JutilManager.get_instance()
-        cmd = self.smash_cmd(cmd)
 
         # Managing console output and collection
         self.collect_output = exec_info.collect_output
@@ -39,31 +37,30 @@ class LocalExec(Executable):
         self.hide_output = exec_info.hide_output
         # pylint: disable=R1732
         if self.collect_output is None:
-            self.collect_output = jutil.collect_output
+            self.collect_output = self.jutil.collect_output
         if self.pipe_stdout is not None:
             self.pipe_stdout_fp = open(self.pipe_stdout, 'wb')
         if self.pipe_stderr is not None:
             self.pipe_stderr_fp = open(self.pipe_stderr, 'wb')
         if self.hide_output is None:
-            self.hide_output = jutil.hide_output
+            self.hide_output = self.jutil.hide_output
         # pylint: enable=R1732
         self.stdout = io.StringIO()
         self.stderr = io.StringIO()
         self.last_stdout_size = 0
         self.last_stderr_size = 0
-        self.executing_ = True
         self.print_stdout_thread = None
         self.print_stderr_thread = None
         self.exit_code = 0
 
         # Copy ENV
+        self.basic_env = exec_info.basic_env.copy()
         self.env = exec_info.env.copy()
         for key, val in os.environ.items():
             if key not in self.env:
                 self.env[key] = val
 
         # Managing command execution
-        self.cmd = cmd
         self.sudo = exec_info.sudo
         self.stdin = exec_info.stdin
         self.exec_async = exec_info.exec_async
@@ -72,13 +69,15 @@ class LocalExec(Executable):
             self.cwd = os.getcwd()
         else:
             self.cwd = exec_info.cwd
-        if jutil.debug_local_exec:
+
+        # Create the command
+        cmd = self.smash_cmd(cmd, self.sudo, self.basic_env, exec_info.sudoenv)
+        self.cmd = cmd
+        if self.jutil.debug_local_exec:
             print(cmd)
         self._start_bash_processes()
 
     def _start_bash_processes(self):
-        if self.sudo:
-            self.cmd = f'sudo {self.cmd}'
         time.sleep(self.sleep_ms)
         # pylint: disable=R1732
         self.proc = subprocess.Popen(self.cmd,
@@ -99,7 +98,7 @@ class LocalExec(Executable):
             self.wait()
 
     def wait(self):
-        self.proc.wait()
+        # self.proc.wait()
         self.join_print_worker()
         self.set_exit_code()
         return self.exit_code
@@ -114,16 +113,20 @@ class LocalExec(Executable):
             return None
 
     def print_stdout_worker(self):
-        while self.executing_:
+        while self.proc.poll() is None:
             self.print_to_outputs(self.proc.stdout, self.stdout,
                                   self.pipe_stdout_fp, sys.stdout)
             time.sleep(25 / 1000)
+        self.print_to_outputs(self.proc.stdout, self.stdout,
+                              self.pipe_stdout_fp, sys.stdout)
 
     def print_stderr_worker(self):
-        while self.executing_:
+        while self.proc.poll() is None:
             self.print_to_outputs(self.proc.stderr, self.stderr,
                                   self.pipe_stderr_fp, sys.stderr)
             time.sleep(25 / 1000)
+        self.print_to_outputs(self.proc.stderr, self.stderr,
+                              self.pipe_stderr_fp, sys.stderr)
 
     def print_to_outputs(self, proc_sysout, self_sysout, file_sysout, sysout):
         # pylint: disable=W0702
@@ -138,13 +141,12 @@ class LocalExec(Executable):
                 if file_sysout is not None:
                     file_sysout.write(line)
             except:
-                pass
+                return
         # pylint: enable=W0702
 
     def join_print_worker(self):
-        if not self.executing_:
+        if isinstance(self.stdout, str):
             return
-        self.executing_ = False
         self.print_stdout_thread.join()
         self.print_stderr_thread.join()
         self.stdout = self.stdout.getvalue()

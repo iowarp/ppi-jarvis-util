@@ -19,18 +19,20 @@ class SshExec(LocalExec):
         :param exec_info: Info needed to execute command with SSH
         """
 
-        cmd = self.smash_cmd(cmd)
         self.addr = exec_info.hostfile.hosts[0]
         self.user = exec_info.user
         self.pkey = exec_info.pkey
         self.port = exec_info.port
         self.sudo = exec_info.sudo
         self.ssh_env = exec_info.env
+        self.basic_env = exec_info.env
+        cmd = self.smash_cmd(cmd, self.sudo, self.basic_env, exec_info.sudoenv)
         if not exec_info.hostfile.is_local():
             super().__init__(self.ssh_cmd(cmd),
-                             exec_info.mod(env=exec_info.basic_env))
+                             exec_info.mod(env=exec_info.basic_env,
+                                           sudo=False))
         else:
-            super().__init__(cmd, exec_info)
+            super().__init__(cmd, exec_info.mod(sudo=False))
 
     def ssh_cmd(self, cmd):
         lines = ['ssh']
@@ -50,7 +52,7 @@ class SshExec(LocalExec):
                 cmd_lines.append(f'{key}=\"{val}\"')
         cmd_lines.append(cmd)
         env_cmd = ' '.join(cmd_lines)
-        real_cmd = f'{ssh_cmd} \"{env_cmd}\"'
+        real_cmd = f'{ssh_cmd} {env_cmd}'
         return real_cmd
 
 

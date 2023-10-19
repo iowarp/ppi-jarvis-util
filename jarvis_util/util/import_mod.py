@@ -24,7 +24,10 @@ def load_class(import_str, path, class_name):
     """
     if len(path):
         sys.path.insert(0, path)
-    module = __import__(import_str, fromlist=[class_name])
+    try:
+        module = __import__(import_str, fromlist=[class_name])
+    except:
+        return None
     if len(path):
         sys.path.pop(0)
     return getattr(module, class_name)
