@@ -4,11 +4,10 @@ Message Passing Interface (MPI). This module assumes MPI is installed
 on the system. This class is intended to be called from Exec,
 not by general users.
 """
-
+from jarvis_util.shell.filesystem import Chmod
 from jarvis_util.jutil_manager import JutilManager
-from jarvis_util.shell.local_exec import LocalExec
+from jarvis_util.shell.local_exec import LocalExec, LocalExecInfo
 from .exec_info import ExecInfo, ExecType
-
 
 class PbsExec(LocalExec):
     """
@@ -30,6 +29,16 @@ class PbsExec(LocalExec):
         self.walltime = exec_info.walltime
         self.account = exec_info.account
         self.queue = exec_info.queue
+        self.env_vars = exec_info.env_vars
+
+        self.bash_script = exec_info.bash_script
+
+        jarvis_comma_list = ','.join(exec_info.basic_env.keys())
+        if self.env_vars:
+            self.env_vars = f'{self.env_vars},{jarvis_comma_list}'
+        else:
+            self.env_vars = jarvis_comma_list
+
         super().__init__(self.pbscmd(),
                          exec_info.mod(env=exec_info.basic_env))
 
@@ -46,7 +55,8 @@ class PbsExec(LocalExec):
 
         non_equal_map ={
             'account': 'A',
-            'queue': 'q'
+            'queue': 'q',
+            'env_vars' : 'v'
         }
 
         if self.nnodes and self.system:
@@ -66,10 +76,19 @@ class PbsExec(LocalExec):
             if value is not None:
                 cmd += f' -{option} {value}'
 
-        cmd += f' -- {self.cmd}'
+        cmd += f' -- \"{self.bash_script}\"'
         return cmd
 
     def pbscmd(self):
+
+        script = ['#!/bin/bash',
+                 f'{self.cmd}']
+
+        with open(self.bash_script, mode='w', encoding='utf-8') as f:
+            f.write('\n'.join(script))
+
+        Chmod(self.bash_script, "+x")
+
         cmd = self.generate_qsub_command()
         jutil = JutilManager.get_instance()
         if jutil.debug_pbs:
@@ -80,7 +99,8 @@ class PbsExec(LocalExec):
 class PbsExecInfo(ExecInfo):
     def __init__(self, **kwargs):
         super().__init__(exec_type=ExecType.PBS, **kwargs)
-        allowed_options = ['interactive', 'nnodes', 'system', 'filesystems', 'walltime', 'account', 'queue']
+        allowed_options = ['interactive', 'nnodes', 'system', 'filesystems',
+                           'walltime', 'account', 'queue', 'env_vars', 'bash_script']
         self.keys += allowed_options
         # We use output and error file from the base Exec Info
         for key in allowed_options:
