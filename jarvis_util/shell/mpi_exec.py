@@ -26,7 +26,7 @@ class MpiVersion(LocalExec):
         # print(f'MPI INFO: stdout={vinfo} stderr={self.stderr}')
         if 'mpich' in vinfo.lower():
             self.version = ExecType.MPICH
-        elif 'Open MPI' in vinfo:
+        elif 'Open MPI' in vinfo or 'OpenRTE' in vinfo:
             self.version = ExecType.OPENMPI
         elif 'Intel(R) MPI Library' in vinfo:
             # NOTE(llogan): similar to MPICH
