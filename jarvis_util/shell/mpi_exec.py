@@ -63,7 +63,7 @@ class OpenMpiExec(LocalExec):
         params = [f'mpiexec -n {self.nprocs}']
         params.append('--oversubscribe')
         if self.ppn is not None:
-            params.append(f'-ppn {self.ppn}')
+            params.append(f'-npernode {self.ppn}')
         if len(self.hostfile):
             if self.hostfile.is_subset() or self.hostfile.path is None:
                 params.append(f'--host {",".join(self.hostfile.hosts)}')
