@@ -81,7 +81,7 @@ class SlurmExecInfo(ExecInfo):
     def __init__(self, job_name=None, num_nodes=1, **kwargs):
         super().__init__(exec_type=ExecType.SLURM, **kwargs)
         allowed_options = ['job_name', 'num_nodes', 'cpus_per_task', 'time', 'partition', 'mail_type',
-                           'mail_user', 'mem', 'gres', 'exclusive']
+                           'mail_user', 'mem', 'gres', 'exclusive', 'host_suffix']
         self.keys += allowed_options
         # We use ppn, and the output and error file from the base Exec Info
         for key in allowed_options:
