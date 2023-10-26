@@ -366,6 +366,7 @@ class ResourceGraph:
         ]
         self.create()
         self.hosts = None
+        self.path = None
 
     """
     Build the resource graph
@@ -615,6 +616,7 @@ class ResourceGraph:
             'net': self.net.rows,
         }
         YamlFile(path).save(graph)
+        self.path = path
 
     def load(self, path):
         """
@@ -624,6 +626,7 @@ class ResourceGraph:
         :return: self
         """
         graph = YamlFile(path).load()
+        self.path = path
         self.hosts = graph['hosts']
         self.fs = sdf.SmallDf(graph['fs'], columns=self.fs_columns)
         self.net = sdf.SmallDf(graph['net'], columns=self.net_columns)
