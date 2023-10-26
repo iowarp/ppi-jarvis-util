@@ -6,7 +6,7 @@ not by general users.
 """
 
 from jarvis_util.jutil_manager import JutilManager
-from jarvis_util.shell.local_exec import LocalExec
+from jarvis_util.shell.local_exec import LocalExec, LocalExecInfo
 from .exec_info import ExecInfo, ExecType
 
 
