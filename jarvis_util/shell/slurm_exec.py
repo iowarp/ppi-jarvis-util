@@ -35,6 +35,7 @@ class SlurmExec(LocalExec):
         self.mem = exec_info.mem
         self.gres = exec_info.gres
         self.exclusive = exec_info.exclusive
+        self.host_suffix = exec_info.host_suffix
 
         super().__init__(self.slurmcmd(),
                          exec_info.mod(env=exec_info.basic_env))
@@ -91,3 +92,17 @@ class SlurmExecInfo(ExecInfo):
                 setattr(self, key, None)
         self.job_name = job_name
         self.num_nodes = num_nodes
+
+
+class SlurmHostfile(LocalExec):
+    def __init__(self, file_location, host_suffix=None):
+        self.file_location = file_location
+        self.host_suffix = host_suffix
+        cmd = f'scontrol show hostnames $SLURM_JOB_NODELIST > {file_location}'
+        super().__init__(cmd, LocalExecInfo())
+        if host_suffix is not None:
+            with open(file_location, 'r', encoding='utf-8') as fp:
+                lines = fp.readlines()
+                lines = [f'{line}{suffix}' for line in lines]
+            with open(file_location, 'w', encoding='utf-8') as fp:
+                fp.writelines(lines)
