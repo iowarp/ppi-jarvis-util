@@ -103,7 +103,7 @@ class SlurmHostfile(LocalExec):
         if host_suffix is not None:
             print(f'{host_suffix} is not None')
             with open(file_location, 'r', encoding='utf-8') as fp:
-                lines = fp.readlines()
+                lines = fp.read().splitlines()
                 lines = [f'{line}{host_suffix}' for line in lines]
                 print(lines)
             with open(file_location, 'w', encoding='utf-8') as fp:
