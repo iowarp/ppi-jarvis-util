@@ -105,5 +105,6 @@ class SlurmHostfile(LocalExec):
             with open(file_location, 'r', encoding='utf-8') as fp:
                 lines = fp.readlines()
                 lines = [f'{line}{host_suffix}' for line in lines]
+                print(lines)
             with open(file_location, 'w', encoding='utf-8') as fp:
                 fp.writelines(lines)
