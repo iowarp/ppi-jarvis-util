@@ -101,6 +101,7 @@ class SlurmHostfile(LocalExec):
         cmd = f'scontrol show hostnames $SLURM_JOB_NODELIST > {file_location}'
         super().__init__(cmd, LocalExecInfo())
         if host_suffix is not None:
+            print(f'{host_suffix} is not None')
             with open(file_location, 'r', encoding='utf-8') as fp:
                 lines = fp.readlines()
                 lines = [f'{line}{host_suffix}' for line in lines]
