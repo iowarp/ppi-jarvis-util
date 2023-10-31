@@ -72,6 +72,8 @@ class LocalExec(Executable):
 
         # Create the command
         cmd = self.smash_cmd(cmd, self.sudo, self.basic_env, exec_info.sudoenv)
+        if exec_info.dbg_port is not None:
+            cmd = f'gdbserver localhost:{exec_info.dbg_port} {cmd}'
         self.cmd = cmd
         if self.jutil.debug_local_exec:
             print(cmd)
