@@ -8,6 +8,7 @@ not by general users.
 from jarvis_util.jutil_manager import JutilManager
 from jarvis_util.shell.local_exec import LocalExec
 from .exec_info import ExecInfo, ExecType
+from abc import abstractmethod
 
 
 class MpiVersion(LocalExec):
@@ -26,7 +27,7 @@ class MpiVersion(LocalExec):
         # print(f'MPI INFO: stdout={vinfo} stderr={self.stderr}')
         if 'mpich' in vinfo.lower():
             self.version = ExecType.MPICH
-        elif 'Open MPI' in vinfo:
+        elif 'Open MPI' in vinfo or 'OpenRTE' in vinfo:
             self.version = ExecType.OPENMPI
         elif 'Intel(R) MPI Library' in vinfo:
             # NOTE(llogan): similar to MPICH
@@ -37,33 +38,33 @@ class MpiVersion(LocalExec):
             raise Exception(f'Could not identify MPI implementation: {vinfo}')
 
 
-class OpenMpiExec(LocalExec):
-    """
-    This class contains methods for executing a command in parallel
-    using MPI.
-    """
-
+class LocalMpiExec(LocalExec):
     def __init__(self, cmd, exec_info):
-        """
-        Execute a command using MPI
-
-        :param cmd: A command (string) to execute
-        :param exec_info: Information needed by MPI
-        """
-
         self.cmd = cmd
         self.nprocs = exec_info.nprocs
         self.ppn = exec_info.ppn
         self.hostfile = exec_info.hostfile
         self.mpi_env = exec_info.env
+        if exec_info.do_dbg:
+            self.cmd = self.get_dbg_cmd(cmd, exec_info.dbg_port)
         super().__init__(self.mpicmd(),
-                         exec_info.mod(env=exec_info.basic_env))
+                         exec_info.mod(env=exec_info.basic_env,
+                                       do_dbg=False))
 
+    @abstractmethod
+    def mpicmd(self):
+        pass
+
+class OpenMpiExec(LocalMpiExec):
+    """
+    This class contains methods for executing a command in parallel
+    using MPI.
+    """
     def mpicmd(self):
         params = [f'mpiexec -n {self.nprocs}']
         params.append('--oversubscribe')
         if self.ppn is not None:
-            params.append(f'-ppn {self.ppn}')
+            params.append(f'-npernode {self.ppn}')
         if len(self.hostfile):
             if self.hostfile.is_subset() or self.hostfile.path is None:
                 params.append(f'--host {",".join(self.hostfile.hosts)}')
@@ -79,27 +80,11 @@ class OpenMpiExec(LocalExec):
         return cmd
 
 
-class MpichExec(LocalExec):
+class MpichExec(LocalMpiExec):
     """
     This class contains methods for executing a command in parallel
     using MPI.
     """
-
-    def __init__(self, cmd, exec_info):
-        """
-        Execute a command using MPI
-
-        :param cmd: A command (string) to execute
-        :param exec_info: Information needed by MPI
-        """
-
-        self.cmd = cmd
-        self.nprocs = exec_info.nprocs
-        self.ppn = exec_info.ppn
-        self.hostfile = exec_info.hostfile
-        self.mpi_env = exec_info.env
-        super().__init__(self.mpicmd(),
-                         exec_info.mod(env=exec_info.basic_env))
 
     def mpicmd(self):
         params = [f'mpiexec -n {self.nprocs}']
@@ -119,28 +104,11 @@ class MpichExec(LocalExec):
             print(cmd)
         return cmd
 
-class CrayMpichExec(LocalExec):
+class CrayMpichExec(LocalMpiExec):
     """
     This class contains methods for executing a command in parallel
     using MPI.
     """
-
-    def __init__(self, cmd, exec_info):
-        """
-        Execute a command using MPI
-
-        :param cmd: A command (string) to execute
-        :param exec_info: Information needed by MPI
-        """
-
-        self.cmd = cmd
-        self.nprocs = exec_info.nprocs
-        self.ppn = exec_info.ppn
-        self.hostfile = exec_info.hostfile
-        self.mpi_env = exec_info.env
-        super().__init__(self.mpicmd(),
-                         exec_info.mod(env=exec_info.basic_env))
-
     def mpicmd(self):
         params = [f'mpiexec -n {self.nprocs}']
         if self.ppn is not None:

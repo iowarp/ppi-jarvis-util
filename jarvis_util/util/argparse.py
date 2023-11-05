@@ -354,7 +354,10 @@ class ArgParse(ABC):
                     arg = yaml.safe_load(arg)
                 else:
                     # Parse a simple type
-                    arg = opt_type(arg)
+                    if arg == '' and opt['default'] is None and not opt['required']:
+                        arg = None
+                    else:
+                        arg = opt_type(arg)
                 # Verify the opt matches the available choices
                 if opt_choices is not None and len(opt_choices):
                     if arg not in opt_choices:

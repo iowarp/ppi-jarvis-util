@@ -39,7 +39,8 @@ class ExecInfo:
                  hostfile=None, hosts=None, env=None,
                  sleep_ms=0, sudo=False, sudoenv=True, cwd=None,
                  collect_output=None, pipe_stdout=None, pipe_stderr=None,
-                 hide_output=None, exec_async=False, stdin=None, **kwargs):
+                 hide_output=None, exec_async=False, stdin=None,
+                 do_dbg=False, dbg_port=None, **kwargs):
         """
 
         :param exec_type: How to execute a program. SSH, MPI, Local, etc.
@@ -61,6 +62,8 @@ class ExecInfo:
         :param hide_output: Whether to print output to console
         :param exec_async: Whether to execute program asynchronously
         :param stdin: Any input needed by the program. Only local
+        :param do_dbg: Enable debugging
+        :param dbg_port: The port number
         """
 
         self.exec_type = exec_type
@@ -84,11 +87,13 @@ class ExecInfo:
         self.hide_output = hide_output
         self.exec_async = exec_async
         self.stdin = stdin
+        self.do_dbg = do_dbg
+        self.dbg_port = dbg_port
         self.keys = ['exec_type', 'nprocs', 'ppn', 'user', 'pkey', 'port',
                      'hostfile', 'env', 'sleep_ms', 'sudo', 'sudoenv',
                      'cwd', 'hosts', 'collect_output',
                      'pipe_stdout', 'pipe_stderr', 'hide_output',
-                     'exec_async', 'stdin']
+                     'exec_async', 'stdin', 'do_dbg', 'dbg_port']
 
     def _set_env(self, env):
         if env is None:
@@ -235,3 +240,14 @@ class Executable(ABC):
         for node in nodes:
             if node.exit_code:
                 self.exit_code = node.exit_code
+
+    def get_dbg_cmd(self, cmd, dbg_port):
+        """
+        Get the command to debug a program
+
+        :param cmd: the command to debug
+        :param dbg_port: the debugging port to use
+        :return:
+        """
+        return f'gdbserver localhost:{dbg_port} {cmd}'
+
