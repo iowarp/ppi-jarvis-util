@@ -46,6 +46,7 @@ class LocalMpiExec(LocalExec):
         self.hostfile = exec_info.hostfile
         self.mpi_env = exec_info.env
         if exec_info.do_dbg:
+            self.base_cmd = cmd # To append to the extra processes
             self.cmd = self.get_dbg_cmd(cmd, exec_info.dbg_port)
         super().__init__(self.mpicmd(),
                          exec_info.mod(env=exec_info.basic_env,
@@ -104,7 +105,7 @@ class MpichExec(LocalMpiExec):
         if self.cmd.startswith('gdbserver'):
             params.append(f'-n 1 {self.cmd}')
             if self.nprocs > 1:
-                params.append(f': -n {self.nprocs - 1} {self.cmd}')
+                params.append(f': -n {self.nprocs - 1} {self.base_cmd}')
         else:
             params.append(f'-n {self.nprocs}')
             params.append(self.cmd)
