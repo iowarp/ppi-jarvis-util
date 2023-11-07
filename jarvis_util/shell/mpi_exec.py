@@ -87,24 +87,6 @@ class MpichExec(LocalMpiExec):
     """
 
     def mpicmd(self):
-        params = [f'mpiexec -n {self.nprocs}']
-        if self.ppn is not None:
-            params.append(f'-ppn {self.ppn}')
-        if len(self.hostfile):
-            if self.hostfile.is_subset() or self.hostfile.path is None:
-                params.append(f'--host {",".join(self.hostfile.hosts)}')
-            else:
-                params.append(f'--hostfile {self.hostfile.path}')
-        params += [f'-genv {key}=\"{val}\"'
-                   for key, val in self.mpi_env.items()]
-        params.append(self.cmd)
-        cmd = ' '.join(params)
-        jutil = JutilManager.get_instance()
-        if jutil.debug_mpi_exec:
-            print(cmd)
-        return cmd
-
-    def mpicmd(self):
         params = ['mpiexec']
 
         if self.ppn is not None:
