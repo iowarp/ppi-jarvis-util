@@ -104,6 +104,37 @@ class MpichExec(LocalMpiExec):
             print(cmd)
         return cmd
 
+    def mpicmd(self):
+        params = ['mpiexec']
+
+        if self.ppn is not None:
+            params.append(f'-ppn {self.ppn}')
+
+        if len(self.hostfile):
+            if self.hostfile.is_subset() or self.hostfile.path is None:
+                params.append(f'--host {",".join(self.hostfile.hosts)}')
+            else:
+                params.append(f'--hostfile {self.hostfile.path}')
+
+        params += [f'-genv {key}=\"{val}\"'
+                   for key, val in self.mpi_env.items()]
+
+        if self.cmd.startswith('gdbserver'):
+            params.append(f'-n 1 {self.cmd}')
+            if self.nprocs > 1:
+                params.append(f': -n {self.nprocs - 1} {self.cmd}')
+        else:
+            params.append(f'-n {self.nprocs}')
+            params.append(self.cmd)
+
+        cmd = ' '.join(params)
+
+        jutil = JutilManager.get_instance()
+        if jutil.debug_mpi_exec:
+            print(cmd)
+
+        return cmd
+
 class CrayMpichExec(LocalMpiExec):
     """
     This class contains methods for executing a command in parallel
