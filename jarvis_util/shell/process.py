@@ -12,11 +12,12 @@ class Kill(Exec):
     Kill all processes which match the name regex.
     """
 
-    def __init__(self, cmd, exec_info):
+    def __init__(self, cmd, exec_info, partial=False):
         """
         Kill all processes which match the name regex.
 
         :param cmd: A regex for the command to kill
         :param exec_info: Info needed to execute the command
         """
-        super().__init__(f"pkill {cmd}", exec_info)
+        partial_cmd = "-f" if partial else ""
+        super().__init__(f"pkill {partial_cmd} {cmd}", exec_info)

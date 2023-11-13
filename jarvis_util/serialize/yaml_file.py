@@ -22,3 +22,7 @@ class YamlFile(Serializer):
     def save(self, data):
         with open(self.path, 'w', encoding='utf-8') as fp:
             yaml.dump(data, fp)
+
+    def append(self, data):
+        with open(self.path, 'a', encoding='utf-8') as fp:
+            yaml.dump(data, fp)
