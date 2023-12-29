@@ -29,14 +29,18 @@ class PsshExec(Executable):
         self.stderr = {}
         self.is_local = exec_info.hostfile.is_local()
         if not self.is_local:
+            dbg_cmd = cmd
             if exec_info.do_dbg:
-                cmd = self.get_dbg_cmd(cmd, exec_info.dbg_port)
-            for host in self.hosts:
+                dbg_cmd = self.get_dbg_cmd(cmd, exec_info.dbg_port)
+            for i, host in enumerate(self.hosts):
+                sshcmd = cmd
+                if i == 0:
+                    sshcmd = dbg_cmd
                 ssh_exec_info = exec_info.mod(hostfile=None,
                                               hosts=host,
                                               exec_async=True,
                                               do_dbg=False)
-                self.execs_.append(SshExec(cmd, ssh_exec_info))
+                self.execs_.append(SshExec(sshcmd, ssh_exec_info))
         else:
             self.execs_.append(
                 LocalExec(cmd, exec_info.mod(exec_async=True)))
