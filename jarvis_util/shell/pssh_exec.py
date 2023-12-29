@@ -36,6 +36,7 @@ class PsshExec(Executable):
                 sshcmd = cmd
                 if i == 0:
                     sshcmd = dbg_cmd
+                print(sshcmd)
                 ssh_exec_info = exec_info.mod(hostfile=None,
                                               hosts=host,
                                               exec_async=True,
