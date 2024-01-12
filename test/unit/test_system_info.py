@@ -53,49 +53,43 @@ class TestSystemInfo(TestCase):
             {
                 'device': '/dev/sda1',
                 'mount': '/',
-                'tran': 'sata',
-                'rota': True,
-                'size': SizeConv.to_int('10g'),
+                'dev_type': 'hdd',
+                'size': '10g',
                 'shared': False
             },
             {
                 'device': '/dev/sda2',
                 'mount': '/mnt/hdd/$USER',
-                'tran': 'sata',
-                'rota': True,
-                'size': SizeConv.to_int('200g'),
+                'dev_type': 'hdd',
+                'size': '200g',
                 'shared': False
             },
             {
                 'device': '/dev/sdb1',
                 'mount': '/mnt/ssd/$USER',
-                'tran': 'sata',
-                'rota': False,
-                'size': SizeConv.to_int('50g'),
+                'dev_type': 'ssd',
+                'size': '50g',
                 'shared': False
             },
             {
                 'device': '/dev/sdb2',
                 'mount': '/mnt/ssd2/$USER',
-                'tran': 'sata',
-                'rota': False,
-                'size': SizeConv.to_int('50g'),
+                'dev_type': 'ssd',
+                'size': '50g',
                 'shared': False
             },
             {
                 'device': '/dev/nvme0n1',
                 'mount': '/mnt/nvme/$USER',
-                'tran': 'nvme',
-                'rota': False,
-                'size': SizeConv.to_int('100g'),
+                'dev_type': 'nvme',
+                'size': '100g',
                 'shared': False
             },
             {
                 'device': '/dev/nvme0n3',
                 'mount': '/mnt/nvme3/$USER',
-                'tran': 'nvme',
-                'rota': False,
-                'size': SizeConv.to_int('100g'),
+                'dev_type': 'nvme',
+                'size': '100g',
                 'shared': False
             }
         ])
@@ -106,8 +100,7 @@ class TestSystemInfo(TestCase):
             {
                 'device': '/dev/nvme0n2',
                 'mount': '/mnt/nvme2/$USER',
-                'tran': 'nvme',
-                'rota': False,
+                'dev_type': 'nvme',
                 'size': SizeConv.to_int('10g'),
                 'shared': False
             }
@@ -120,16 +113,17 @@ class TestSystemInfo(TestCase):
 
         # Find all mounted NVMes
         df = rg.find_storage(dev_types=[StorageDeviceType.NVME])
-        self.assertEqual(7, len(df[lambda r: r['tran'] == 'nvme']))
-        self.assertEqual(0, len(df[lambda r: r['tran'] == 'sata']))
+        self.assertEqual(7, len(df[lambda r: r['dev_type'] == 'nvme']))
+        self.assertEqual(0, len(df[lambda r: r['dev_type'] == 'hdd']))
+        self.assertEqual(0, len(df[lambda r: r['dev_type'] == 'ssd']))
         self.assertEqual(7, len(df))
 
         # Find all mounted & common NVMes and SSDs
         df = rg.find_storage([StorageDeviceType.NVME,
                               StorageDeviceType.SSD],
                              common=True)
-        self.assertEqual(6, len(df[lambda r: r['tran'] == 'nvme']))
-        self.assertEqual(6, len(df[lambda r: r['tran'] == 'sata']))
+        self.assertEqual(6, len(df[lambda r: r['dev_type'] == 'nvme']))
+        self.assertEqual(6, len(df[lambda r: r['dev_type'] == 'ssd']))
         self.assertEqual(12, len(df))
 
         # Select a single nvme and ssd per-node
@@ -137,8 +131,8 @@ class TestSystemInfo(TestCase):
                               StorageDeviceType.SSD],
                              common=True,
                              count_per_dev=1)
-        self.assertEqual(3, len(df[lambda r: r['tran'] == 'nvme']))
-        self.assertEqual(3, len(df[lambda r: r['tran'] == 'sata']))
+        self.assertEqual(3, len(df[lambda r: r['dev_type'] == 'nvme']))
+        self.assertEqual(3, len(df[lambda r: r['dev_type'] == 'ssd']))
         self.assertEqual(6, len(df))
 
         # Get condensed output
@@ -147,8 +141,8 @@ class TestSystemInfo(TestCase):
                              common=True,
                              condense=True,
                              count_per_dev=1)
-        self.assertEqual(1, len(df[lambda r: str(r['tran']) == 'nvme']))
-        self.assertEqual(1, len(df[lambda r: str(r['tran']) == 'sata']))
+        self.assertEqual(1, len(df[lambda r: str(r['dev_type']) == 'nvme']))
+        self.assertEqual(1, len(df[lambda r: str(r['dev_type']) == 'ssd']))
         self.assertEqual(2, len(df))
         rg.print_df(df)
 
@@ -185,8 +179,7 @@ class TestSystemInfo(TestCase):
             {
                 'device': '/dev/sda1',
                 'mount': '/',
-                'tran': 'sata',
-                'rota': True,
+                'dev_type': 'ssd',
                 'size': SizeConv.to_int('10g'),
                 'shared': False
             }

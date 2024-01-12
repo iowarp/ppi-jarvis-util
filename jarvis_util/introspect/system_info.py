@@ -18,6 +18,15 @@ import copy
 # pylint: disable=C0121
 
 
+# Note, not using enum to avoid YAML serialization errors
+# YAML expects simple types
+class StorageDeviceType:
+    PMEM = 'pmem'
+    NVME = 'nvme'
+    SSD = 'ssd'
+    HDD = 'hdd'
+
+
 class SystemInfo:
     """
     This class queries information about the host machine, such as OS,
@@ -101,6 +110,7 @@ class Lsblk(Exec):
         model: the exact model of the device
         tran: the transport of the device (e.g., /dev/nvme)
         rota: whether or not the device is rotational
+        dev_type: the category of the device
         host: the host this record corresponds to
     """
 
@@ -135,6 +145,7 @@ class Lsblk(Exec):
                     'tran': dev['tran'].lower(),
                     'mount': dev['mountpoint'],
                     'rota': dev['rota'],
+                    'dev_type': self.GetDevType(dev),
                     'host': host
                 })
                 if 'children' not in dev:
@@ -150,10 +161,22 @@ class Lsblk(Exec):
                         'tran': dev['tran'].lower(),
                         'mount': partition['mountpoint'],
                         'rota': dev['rota'],
+                        'dev_type': self.GetDevType(dev),
                         'host': host
                     })
         self.df = sdf.SmallDf(rows=total)
         print(self.df)
+
+    def GetDevType(self, dev):
+        if dev['tran'] == 'sata':
+            if dev['rota']:
+                return str(StorageDeviceType.HDD)
+            else:
+                return str(StorageDeviceType.SSD)
+        elif dev['tran'] == 'nvme':
+            return str(StorageDeviceType.NVME)
+        elif dev['tran'] == 'dimm':
+            return str(StorageDeviceType.PMEM)
 
 
 class PyLsblk(Exec):
@@ -309,15 +332,6 @@ class FiInfo(Exec):
         self.df.drop_duplicates()
 
 
-# Note, not using enum to avoid YAML serialization errors
-# YAML expects simple types
-class StorageDeviceType:
-    PMEM = 'pmem'
-    NVME = 'nvme'
-    SSD = 'ssd'
-    HDD = 'hdd'
-
-
 class ResourceGraph:
     """
     Stores helpful information about storage and networking info for machines.
@@ -326,12 +340,9 @@ class ResourceGraph:
     fs:
         parent: the parent device of the partition (e.g., /dev/sda or NaN)
         device: the name of the device (e.g., /dev/sda1 or /dev/sda)
-        size: total size of the device (bytes)
         mount: where the device is mounted (if anywhere)
         model: the exact model of the device
-        rota: whether the device is rotational or not
-        tran: the transport of the device (e.g., /dev/nvme)
-        dev_type: type of device (derviced from rota + tran)
+        dev_type: type of device
         fs_type: the type of filesystem (e.g., ext4)
         uuid: filesystem-levle uuid from the FS metadata
         avail: total number of bytes remaining
@@ -356,9 +367,9 @@ class ResourceGraph:
         self.list_fs = None
         self.fi_info = None
         self.fs_columns = [
-            'parent', 'device', 'size', 'mount', 'model', 'rota',
-            'tran', 'fs_type', 'uuid',
-            'avail', 'shared', 'host'
+            'parent', 'device', 'mount', 'model', 'dev_type',
+            'fs_type', 'uuid',
+            'avail', 'shared', 'host',
         ]
         self.net_columns = [
             'provider', 'fabric', 'domain', 'host',
@@ -405,29 +416,26 @@ class ResourceGraph:
                              default='no')
         new_devs = []
         while x:
-            mount = self._ask_string('2.1.(1/7). Mount point')
+            mount = self._ask_string('2.1.(1/6). Mount point')
             mount = mount.replace(r'\$', '$')
-            tran = self._ask_choices('2.1.(2/7). What transport?',
-                                     choices=['sata', 'nvme', 'dimm'])
-            rota = self._ask_yes_no('2.1.(3/7). Is this device rotational. '
-                                    'I.e., is it a hard drive?')
-            shared = self._ask_yes_no('2.1.(4/7). Is this device shared? '
+            dev_type = self._ask_choices('2.1.(2/6). What transport?',
+                                     choices=['hdd', 'ssd', 'nvme', 'pmem'])
+            shared = self._ask_yes_no('2.1.(3/6). Is this device shared? '
                                       'I.e., a PFS?')
-            avail = self._ask_size('2.1.(5/7). How much capacity are you '
+            avail = self._ask_size('2.1.(4/6). How much capacity are you '
                                    'willing to use?')
-            y = self._ask_yes_no('2.1.(6/7). Are you sure this is accurate?',
+            y = self._ask_yes_no('2.1.(5/6). Are you sure this is accurate?',
                                  default='yes')
             if not y:
                 continue
             new_devs.append({
                 'mount': mount,
-                'tran': tran,
-                'rota': rota,
+                'dev_type': dev_type,
                 'shared': shared,
                 'avail': avail,
                 'size': avail,
             })
-            x = self._ask_yes_no('2.1.(7/7). Are there any other '
+            x = self._ask_yes_no('2.1.(6/6). Are there any other '
                                  'devices you would like to add?',
                                  default='no')
             if x is None:
@@ -637,12 +645,6 @@ class ResourceGraph:
         df = self.fs
         if df is None or len(df) == 0:
             return
-        df[lambda r: (r['tran'] == 'sata') and (r['rota'] == True),
-               'dev_type'] = str(StorageDeviceType.HDD)
-        df[lambda r: (r['tran'] == 'sata') and (r['rota'] == False),
-               'dev_type'] = str(StorageDeviceType.SSD)
-        df[lambda r: (r['tran'] == 'nvme'),
-               'dev_type'] = str(StorageDeviceType.NVME)
         df['mount'].fillna('')
         df['shared'].fillna(True)
         df['tran'].fillna('')
