@@ -36,6 +36,7 @@ class SlurmExec(LocalExec):
         self.gres = exec_info.gres
         self.exclusive = exec_info.exclusive
         self.host_suffix = exec_info.host_suffix
+        self.nodelist = exec_info.nodelist
 
         super().__init__(self.slurmcmd(),
                          exec_info.mod(env=exec_info.basic_env))
@@ -47,7 +48,7 @@ class SlurmExec(LocalExec):
         options_map = {
             'job_name': 'job-name',
             'num_nodes': 'nodes',
-            'ppn': 'ntasks',
+            'ppn': 'ntasks-per-node',
             'cpus_per_task': 'cpus-per-task',
             'time': 'time',
             'partition': 'partition',
@@ -56,7 +57,8 @@ class SlurmExec(LocalExec):
             'error': 'error',
             'mem': 'mem',
             'gres': 'gres',
-            'exclusive': 'exclusive'
+            'exclusive': 'exclusive',
+            'nodelist': 'nodelist',
         }
 
         for attr, option in options_map.items():
@@ -82,7 +84,7 @@ class SlurmExecInfo(ExecInfo):
     def __init__(self, job_name=None, num_nodes=1, **kwargs):
         super().__init__(exec_type=ExecType.SLURM, **kwargs)
         allowed_options = ['job_name', 'num_nodes', 'cpus_per_task', 'time', 'partition', 'mail_type',
-                           'mail_user', 'mem', 'gres', 'exclusive', 'host_suffix']
+                           'mail_user', 'mem', 'gres', 'exclusive', 'host_suffix', 'nodelist']
         self.keys += allowed_options
         # We use ppn, and the output and error file from the base Exec Info
         for key in allowed_options:
