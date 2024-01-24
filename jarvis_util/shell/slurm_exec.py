@@ -48,7 +48,7 @@ class SlurmExec(LocalExec):
         options_map = {
             'job_name': 'job-name',
             'num_nodes': 'nodes',
-            'ppn': 'ntasks',
+            'ppn': 'ntasks-per-node',
             'cpus_per_task': 'cpus-per-task',
             'time': 'time',
             'partition': 'partition',
