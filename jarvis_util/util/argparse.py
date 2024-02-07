@@ -270,10 +270,11 @@ class ArgParse(ABC):
             opt_val = args[i]
             if self._is_kw_value(i):
                 break
-            opt_val = self._convert_opt(menu['pos_opts'][i], opt_val)
+            opt = menu['pos_opts'][i]
+            opt_val = self._convert_opt(opt, opt_val)
 
             # Set the argument
-            self.kwargs[opt_name] = opt_val
+            self._set_opt(opt_name, opt_val)
             i += 1
         return i
 
@@ -326,8 +327,17 @@ class ArgParse(ABC):
             opt_val = self._convert_opt(opt, opt_val)
 
             # Set the argument
-            self.kwargs[opt_name] = opt_val
+            self._set_opt(opt_name, opt_val)
             i += 1
+
+    def _set_opt(self, opt_name, opt_val):
+        if isinstance(opt_val, list):
+            if opt_name not in self.kwargs or len(opt_val) == 0:
+                self.kwargs[opt_name] = opt_val
+            else:
+                self.kwargs[opt_name] += opt_val
+        else:
+            self.kwargs[opt_name] = opt_val
 
     def _convert_opt(self, opt, arg):
         opt_name = opt['name']
@@ -340,6 +350,13 @@ class ArgParse(ABC):
                 if opt_type is list:
                     if isinstance(arg, str):
                         arg = yaml.safe_load(arg)
+                    if not isinstance(arg, list):
+                        if arg is None:
+                            arg = []
+                        elif isinstance(arg, str) and len(arg) == 0:
+                            arg = []
+                        else:
+                            arg = [arg]
                 if isinstance(arg, list):
                     # Parse a list
                     # Verify each entry in the list matches opt_args
@@ -349,7 +366,8 @@ class ArgParse(ABC):
                                 entry[j] = self._convert_opt(opt_args[j],
                                                              sub_entry)
                         else:
-                            arg[i] = self._convert_opt(opt_args[0], entry)
+                            arg[i] = self._convert_opt(
+                                opt_args[0], entry)
                 elif opt_type is bool and isinstance(arg, str):
                     arg = yaml.safe_load(arg)
                 else:

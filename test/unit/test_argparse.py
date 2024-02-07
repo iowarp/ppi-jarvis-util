@@ -135,6 +135,16 @@ class TestArgparse(TestCase):
         self.assertEqual(['129.15', '1294.124'], args.kwargs['hosts'])
 
     def test_list_arg2(self):
+        args = MyArgParse(args='vpic run 15 --hosts=129.15 --hosts=1294.124')
+        self.assertEqual(15, args.kwargs['steps'])
+        self.assertEqual(['129.15', '1294.124'], args.kwargs['hosts'])
+
+    def test_list_arg3(self):
+        args = MyArgParse(args='vpic run 15 --hosts=129.15 --hosts=1294.124 --hosts=')
+        self.assertEqual(15, args.kwargs['steps'])
+        self.assertEqual([], args.kwargs['hosts'])
+
+    def test_list_arg4(self):
         args = MyArgParse(args='vpic run 15 --hosts=[]')
         self.assertEqual(15, args.kwargs['steps'])
         self.assertEqual([], args.kwargs['hosts'])
