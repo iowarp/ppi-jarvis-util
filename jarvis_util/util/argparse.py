@@ -518,7 +518,7 @@ class ArgParse(ABC):
         all_class_opts = {}
         for opt in all_opts:
             if opt['class'] is None:
-                opt['class'] = 'basic'
+                opt['class'] = ''
             if opt['class'] not in all_class_opts:
                 all_class_opts[opt['class']] = [opt]
             else:
