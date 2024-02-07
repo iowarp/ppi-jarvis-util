@@ -75,9 +75,17 @@ class ArgParse(ABC):
         func = getattr(self, func_name)
         func()
 
+    def _get_alias(self, name):
+        if name is not None:
+            name_toks = name.split()
+            name_str = ' '.join(name_toks)
+            return (name_str, name_toks)
+        return ('', [])
+
     def add_menu(self, name=None, msg=None,
                  keep_remainder=False,
-                 remainder_as_kv=False):
+                 remainder_as_kv=False,
+                 aliases=None):
         """
         A menu is a container of arguments.
 
@@ -91,21 +99,31 @@ class ArgParse(ABC):
         remaining arguments for further use later.
         :param remainder_as_kv: Automatically parse the remainder as string
         type entries.
+        :param rank: rank the importance of this argument to print
+        :param aliases: Alternative names for this menu
         :return:
         """
         toks = []
-        if name is not None:
-            toks = name.split()
-        self.menus.append({
-            'name_str': ' '.join(toks),
-            'name': toks,
-            'msg': msg,
-            'num_required': 0,
-            'pos_opts': [],
-            'kw_opts': {},
-            'keep_remainder': keep_remainder,
-            'remainder_as_kv': remainder_as_kv,
-        })
+        name_str, name_toks = self._get_alias(name)
+        full_aliases = []
+        if aliases is None:
+            aliases = []
+        for alias in aliases:
+            full_aliases.append(self._get_alias(alias))
+        full_aliases.append((name_str, name_toks))
+        for alias_str, alias_toks in full_aliases:
+            self.menus.append({
+                'name_str': name_str,
+                'name_toks': name_toks,
+                'alias_str': alias_str,
+                'alias_toks': alias_toks,
+                'msg': msg,
+                'num_required': 0,
+                'pos_opts': [],
+                'kw_opts': {},
+                'keep_remainder': keep_remainder,
+                'remainder_as_kv': remainder_as_kv,
+            })
         self.menu = self.menus[-1]
 
     @staticmethod
@@ -148,6 +166,9 @@ class ArgParse(ABC):
             default: The default value of the argument. Default None.
             args: For arguments of the 'list' types, represents the
             meaning of entries in the list
+            rank: The importance of this argument to print
+            class: The category of option
+            aliases: Alternative names for keyword arguments
 
         :param args: A list of argument dicts
         :return:
@@ -158,21 +179,28 @@ class ArgParse(ABC):
         self.menu['kw_opts'].update({arg['name']: arg for arg in args
                                      if 'pos' not in arg or
                                      arg['pos'] is False})
-        for arg in self.menu['pos_opts']:
-            if 'required' in arg and arg['required']:
+        for opt in self.menu['pos_opts']:
+            if 'required' in opt and opt['required']:
                 self.menu['num_required'] += 1
+            if 'rank' not in opt:
+                opt['rank'] = len(args)
+            if 'class' not in opt:
+                opt['class'] = None
         self.menu['kw_opts'].update({'help': {
             'name': 'help',
             'type': bool,
             'msg': 'Print help menu',
-            'default': False
+            'default': False,
+            'aliases': ['h']
         }})
-        self.menu['kw_opts'].update({'h': {
-            'name': 'h',
-            'type': bool,
-            'msg': 'Print help menu',
-            'default': False
-        }})
+        for opt_name, opt in list(self.menu['kw_opts'].items()):
+            if 'rank' not in opt:
+                opt['rank'] = len(args)
+            if 'class' not in opt:
+                opt['class'] = None
+            if 'aliases' in opt:
+                for alias in opt['aliases']:
+                    self.menu['kw_opts'][alias] = opt
         self._default_arg_list_params(self.menu['pos_opts'])
         self._default_arg_list_params(list(self.menu['kw_opts'].values()))
 
@@ -184,8 +212,6 @@ class ArgParse(ABC):
 
         :return: None.
         """
-        # Sort by longest menu length
-        self.menus.sort(key=lambda x: len(x['name']), reverse=True)
         # Parse the menu options
         self._parse_menu()
         default_args = self.default_kwargs(
@@ -222,22 +248,23 @@ class ArgParse(ABC):
         :return: Modify self.menu. No return value.
         """
 
+        # Sort by longest menu length
+        self.menus.sort(key=lambda x: len(x['alias_toks']), reverse=True)
         # Identify the menu we are currently under
         self.menu = None
         for menu in self.menus:
-            menu_name = menu['name']
-            if len(menu_name) > len(self.args):
+            menu_name_toks = menu['alias_toks']
+            if len(menu_name_toks) > len(self.args):
                 continue
-            if menu_name == self.args[0:len(menu_name)]:
+            if menu_name_toks == self.args[0:len(menu_name_toks)]:
                 self.menu = menu
+                self.args = self.args[len(menu_name_toks):]
                 break
         if self.menu is None:
             self._invalid_menu(menu_name)
         self.menu_name = self.menu['name_str']
-        menu_name = self.menu['name']
         self.keep_remainder = self.menu['keep_remainder']
         self.remainder_as_kv = self.menu['remainder_as_kv']
-        self.args = self.args[len(menu_name):]
         self._parse_args()
 
     def _parse_args(self):
@@ -462,6 +489,7 @@ class ArgParse(ABC):
             self._print_menu_help(True)
 
     def _print_menu_help(self, only_usage=False):
+        # Print usage menu
         pos_args = []
         for arg in self.menu['pos_opts']:
             if arg['required']:
@@ -480,14 +508,41 @@ class ArgParse(ABC):
         if only_usage:
             return
 
+        # Get pos + kw opts and filter out aliases
+        all_opts = (self.menu['pos_opts'] +
+                    [opt
+                     for name, opt in self.menu['kw_opts'].items()
+                     if name == opt['name']])
+
+        # Group options into classes
+        all_class_opts = {}
+        for opt in all_opts:
+            if opt['class'] is None:
+                opt['class'] = 'basic'
+            if opt['class'] not in all_class_opts:
+                all_class_opts[opt['class']] = [opt]
+            else:
+                all_class_opts[opt['class']] += [opt]
+        all_class_opts = list(all_class_opts.items())
+        all_class_opts.sort()
+
+        # Print each option class
         headers = ['Name', 'Default', 'Type', 'Description']
-        table = []
-        all_opts = self.menu['pos_opts'] + list(self.menu['kw_opts'].values())
-        for arg in all_opts:
-            default = arg['default'] if 'default' in arg else None
-            table.append(
-                [arg['name'], default, self._get_type(arg), arg['msg']])
-        print(tabulate(table, headers=headers))
+        for class_name, class_opts in all_class_opts:
+            table = []
+            print(f'Option Class: {class_name}')
+            class_opts.sort(key=lambda opt: opt['rank'])
+            for arg in class_opts:
+                default = arg['default'] if 'default' in arg else None
+                names = [arg['name']]
+                if 'aliases' in arg:
+                    names += list(arg['aliases'])
+                names.sort()
+                name_set = ','.join(names)
+                table.append(
+                    [name_set, default, self._get_type(arg), arg['msg']])
+            print(tabulate(table, headers=headers))
+            print()
 
     def _get_type(self, arg):
         if arg['type'] == list:

@@ -24,6 +24,8 @@ class MyArgParse(ArgParse):
                 'type': int,
                 'required': True,
                 'pos': True,
+                'class': 'sim',
+                'rank': 0
             },
             {
                 'name': 'x',
@@ -32,6 +34,8 @@ class MyArgParse(ArgParse):
                 'required': False,
                 'default': 256,
                 'pos': True,
+                'class': 'sim',
+                'rank': 1
             },
             {
                 'name': 'do_io',
@@ -63,7 +67,8 @@ class MyArgParse(ArgParse):
                         'msg': 'A string representing a host',
                         'type': str,
                     }
-                ]
+                ],
+                'aliases': ['x']
             },
             {
                 'name': 'devices',
