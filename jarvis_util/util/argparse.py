@@ -111,20 +111,19 @@ class ArgParse(ABC):
         for alias in aliases:
             full_aliases.append(self._get_alias(alias))
         full_aliases.append((name_str, name_toks))
-        for alias_str, alias_toks in full_aliases:
-            self.menus.append({
+        menu = {
                 'name_str': name_str,
                 'name_toks': name_toks,
-                'alias_str': alias_str,
-                'alias_toks': alias_toks,
                 'msg': msg,
                 'num_required': 0,
                 'pos_opts': [],
                 'kw_opts': {},
                 'keep_remainder': keep_remainder,
                 'remainder_as_kv': remainder_as_kv,
-            })
-        self.menu = self.menus[-1]
+            }
+        for alias in full_aliases:
+            self.menus.append((alias, menu))
+        self.menu = self.menus[-1][1]
 
     @staticmethod
     def _default_arg_list_params(args):
@@ -249,11 +248,11 @@ class ArgParse(ABC):
         """
 
         # Sort by longest menu length
-        self.menus.sort(key=lambda x: len(x['alias_toks']), reverse=True)
+        self.menus.sort(key=lambda x: len(x[0][1]), reverse=True)
         # Identify the menu we are currently under
         self.menu = None
-        for menu in self.menus:
-            menu_name_toks = menu['alias_toks']
+        for alias, menu in self.menus:
+            menu_name_toks = alias[1]
             if len(menu_name_toks) > len(self.args):
                 continue
             if menu_name_toks == self.args[0:len(menu_name_toks)]:
@@ -301,7 +300,7 @@ class ArgParse(ABC):
             opt_val = self._convert_opt(opt, opt_val)
 
             # Set the argument
-            self._set_opt(opt_name, opt_val)
+            self._set_opt(opt, opt_val)
             i += 1
         return i
 
@@ -354,10 +353,11 @@ class ArgParse(ABC):
             opt_val = self._convert_opt(opt, opt_val)
 
             # Set the argument
-            self._set_opt(opt_name, opt_val)
+            self._set_opt(opt, opt_val)
             i += 1
 
-    def _set_opt(self, opt_name, opt_val):
+    def _set_opt(self, opt, opt_val):
+        opt_name = opt['name']
         if isinstance(opt_val, list):
             if opt_name not in self.kwargs or len(opt_val) == 0:
                 self.kwargs[opt_name] = opt_val
