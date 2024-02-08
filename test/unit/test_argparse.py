@@ -5,7 +5,7 @@ import shlex
 
 class MyArgParse(ArgParse):
     def define_options(self):
-        self.add_menu(keep_remainder=True)
+        self.add_cmd(keep_remainder=True)
         self.add_args([
             {
                 'name': 'hi',
@@ -15,7 +15,7 @@ class MyArgParse(ArgParse):
             }
         ])
 
-        self.add_menu('vpic run',
+        self.add_cmd('vpic run',
                       keep_remainder=False,
                       aliases=['vpic r', 'vpic runner'])
         self.add_args([

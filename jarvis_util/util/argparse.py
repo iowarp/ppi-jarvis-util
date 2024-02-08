@@ -10,6 +10,20 @@ import yaml
 from tabulate import tabulate
 
 
+class MenuSequence:
+    def __init__(self, alias_toks):
+        self.alias = alias_toks
+        self.hash = 0
+        for tok in alias_toks:
+            self.hash += hash(tok)
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return other.alias == self.alias
+
+
 class ArgParse(ABC):
     """
     A class for parsing command line arguments.
@@ -44,6 +58,7 @@ class ArgParse(ABC):
         self.needed_help = False
         self.menu = None
         self.menu_name = None
+        self.menu_alias = None
         self.kwargs = {}
         self.real_kwargs = {}
         self.define_options()
@@ -82,10 +97,21 @@ class ArgParse(ABC):
             return (name_str, name_toks)
         return ('', [])
 
-    def add_menu(self, name=None, msg=None,
+    def add_cmd(self, name=None, msg=None,
                  keep_remainder=False,
                  remainder_as_kv=False,
                  aliases=None):
+        self.add_menu(name, msg,
+                      keep_remainder,
+                      remainder_as_kv,
+                      aliases,
+                      is_cmd=True)
+
+    def add_menu(self, name=None, msg=None,
+                 keep_remainder=False,
+                 remainder_as_kv=False,
+                 aliases=None,
+                 is_cmd=False):
         """
         A menu is a container of arguments.
 
@@ -101,6 +127,7 @@ class ArgParse(ABC):
         type entries.
         :param rank: rank the importance of this argument to print
         :param aliases: Alternative names for this menu
+        :param is_cmd: This menu represents a single command
         :return:
         """
         toks = []
@@ -120,6 +147,7 @@ class ArgParse(ABC):
                 'kw_opts': {},
                 'keep_remainder': keep_remainder,
                 'remainder_as_kv': remainder_as_kv,
+                'is_cmd': is_cmd,
             }
         for alias in full_aliases:
             self.menus.append((alias, menu))
@@ -255,12 +283,15 @@ class ArgParse(ABC):
             menu_name_toks = alias[1]
             if len(menu_name_toks) > len(self.args):
                 continue
+            if not menu['is_cmd']:
+                continue
             if menu_name_toks == self.args[0:len(menu_name_toks)]:
                 self.menu = menu
+                self.menu_alias = alias
                 self.args = self.args[len(menu_name_toks):]
                 break
         if self.menu is None:
-            self._invalid_menu(menu_name)
+            self._invalid_menu(self.args)
         self.menu_name = self.menu['name_str']
         self.keep_remainder = self.menu['keep_remainder']
         self.remainder_as_kv = self.menu['remainder_as_kv']
@@ -447,7 +478,8 @@ class ArgParse(ABC):
         return opt_name
 
     def _invalid_menu(self, menu_name):
-        self._print_error(f'Could not find a menu for {menu_name}')
+        self._print_error(f'Could not find a menu for {menu_name}',
+                          bad_menu=menu_name)
 
     def _invalid_choice(self, opt_name, arg):
         self._print_menu_error(f'{opt_name}={arg} is not a valid choice')
@@ -468,27 +500,60 @@ class ArgParse(ABC):
     def _print_menu_error(self, msg):
         self._print_error(f'In the menu {self.menu["name_str"]}, {msg}')
 
-    def _print_error(self, msg):
+    def _print_error(self, msg,
+                     bad_menu=None):
         print(f'{msg}')
-        self._print_help()
+        self._print_help(bad_menu)
         if self.exit_on_fail:
             sys.exit(1)
         else:
             raise Exception(msg)
 
-    def _print_help(self):
+    def _print_help(self,
+                    bad_menu=None):
         self.needed_help = True
         if self.menu is not None:
             self._print_menu_help()
         else:
-            self._print_menus()
+            self._print_menus(bad_menu)
 
-    def _print_menus(self):
-        for menu in self.menus:
-            self.menu = menu
-            self._print_menu_help(True)
+    def _lcs(self, bad_menu):
+        menus = {MenuSequence(alias[1]): len(alias[1])
+                 for alias, menu in self.menus}
+        for i in range(len(bad_menu)):
+            seq = MenuSequence(bad_menu[0:i+1])
+            if seq not in menus:
+                return i
+        return 1
+
+    def _print_menus(self, bad_menu):
+        # Longest matching subsequence
+        lcs_len = self._lcs(bad_menu)
+        menus = list(self.menus)
+        menus.sort(key=lambda x: len(x[0][1]))
+        if len(bad_menu) == 0:
+            for alias, menu in menus:
+                self.menu = menu
+                self.menu_alias = alias
+                if len(alias[1]) != 1:
+                    continue
+                self._print_menu_help(True)
+        else:
+            for alias, menu in menus:
+                self.menu = menu
+                self.menu_alias = alias
+                if len(alias[1]) < lcs_len or len(alias[1]) > lcs_len + 2:
+                    continue
+                if alias[1][0:lcs_len] == bad_menu[0:lcs_len]:
+                    self._print_menu_help(True)
 
     def _print_menu_help(self, only_usage=False):
+        if not self.menu['is_cmd']:
+            print(f'MENU: {self.binary_name} {self.menu_alias[0]}')
+            print(self.menu['msg'])
+            print()
+            return
+
         # Print usage menu
         pos_args = []
         for arg in self.menu['pos_opts']:
@@ -497,13 +562,16 @@ class ArgParse(ABC):
             else:
                 pos_args.append(f'[{arg["name"]} (opt)]')
         pos_args = ' '.join(pos_args)
-        menu_str = self.menu['name_str']
+        if self.menu is not None:
+            menu_str = self.menu_alias[0]
         if len(self.menu['kw_opts']):
-            print(f'USAGE: {self.binary_name} {menu_str} {pos_args} ...')
+            print(f'COMMAND: {self.binary_name} {menu_str} {pos_args} ...')
         else:
-            print(f'USAGE: {self.binary_name} {menu_str} {pos_args}')
+            print(f'COMMAND: {self.binary_name} {menu_str} {pos_args}')
         if self.menu['msg'] is not None:
             print(self.menu['msg'])
+        if self.menu['name_str'] != self.menu_alias[0]:
+            print(f'This is an alias to {self.menu["name_str"]}')
         print()
         if only_usage:
             return
