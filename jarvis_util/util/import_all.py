@@ -69,4 +69,5 @@ def build_global_import_from_bin(pkg_name):
     :return:
     """
     root_path = str(pathlib.Path(__file__).parent.parent.parent.resolve())
+    print(root_path)
     build_global_import_file(root_path, pkg_name)

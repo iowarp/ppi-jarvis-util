@@ -4,5 +4,5 @@ from jarvis_util.util.import_all import *
 import pathlib
 import os
 
-
-build_global_import_from_bin('jarvis_util')
+if __name__ == '__main__':
+    build_global_import_from_bin('jarvis_util')
