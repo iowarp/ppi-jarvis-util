@@ -585,7 +585,8 @@ class ArgParse(ABC):
                 for alias_str, alias_toks in self.menu['aliases']:
                     print(f'{title}: {self.binary_name} {alias_str}')
                     title = 'ALIAS'
-                print(self.menu['msg'])
+                if self.menu['msg'] is not None:
+                    print(f'BRIEF: {self.menu["msg"]}')
                 print()
             return
         else:
@@ -607,7 +608,7 @@ class ArgParse(ABC):
                         print(f'{title}: {self.binary_name} {menu_str} {pos_args}')
                     title = 'ALIAS'
                 if self.menu['msg'] is not None:
-                    print(self.menu['msg'])
+                    print(f'BRIEF: {self.menu["msg"]}')
                 print()
         if only_usage:
             return
