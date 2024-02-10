@@ -16,6 +16,9 @@ class PatternTree:
 
     def add_menu(self, menu):
         alias_to = None
+        if len(menu['name_toks']) == 0:
+            self.pattern['__menu'] = menu
+            return
         for alias_str, alias_toks in menu['aliases']:
             alias_to = self._add_menu(menu, self.pattern, alias_toks, alias_to)
 
@@ -32,11 +35,13 @@ class PatternTree:
         self._add_menu(menu, pattern[tok], toks[1:], alias_to)
 
     def get_default_menu(self):
-        if '' in self.pattern:
-            return self.pattern['']['__menu']
+        if '__menu' in self.pattern:
+            return self.pattern['__menu']
         return None
 
     def match_pattern(self, toks):
+        if len(toks) == 0 and '__menu' in self.pattern:
+            return (0, self.pattern)
         return self._match_pattern(toks, self.pattern, 0)
 
     def _match_pattern(self, toks, pattern, depth, last_match=(0, None)):
@@ -49,11 +54,16 @@ class PatternTree:
             last_match = self._match_pattern(
                 toks[1:], pattern[tok], depth + 1, last_match)
         return last_match
-    def __hash__(self):
-        return self.hash
 
-    def __eq__(self, other):
-        return other.alias == self.alias
+    @staticmethod
+    def get_matches(menus):
+        matches = {}
+        for tok, pattern in menus.items():
+            if tok != '__menu' and '__menu' in pattern:
+                menu = pattern['__menu']
+                matches[menu['name_str']] = menu
+        matches = list(matches.values())
+        return matches
 
 
 class ArgParse(ABC):
@@ -76,8 +86,6 @@ class ArgParse(ABC):
             args = shlex.split(args)
         self.binary_name = os.path.basename(sys.argv[0])
         self.args = args
-        if len(self.args) == 0:
-            self.args.append('')
         self.error = None
         self.exit_on_fail = exit_on_fail
         self.custom_info = custom_info
@@ -128,7 +136,7 @@ class ArgParse(ABC):
             name_toks = name.split()
             name_str = ' '.join(name_toks)
             return (name_str, name_toks)
-        return ('', [''])
+        return ('', [])
 
     def add_cmd(self, name=None, msg=None,
                  keep_remainder=False,
@@ -320,11 +328,9 @@ class ArgParse(ABC):
             self.args = self.args[depth:]
         # If there was nothing at all, error now
         if self.menu is None or not self.menu['is_cmd']:
-            if depth > 0:
+            if menus is not None:
                 matches = [self.menu]
-                matches += [pattern['__menu']
-                            for tok, pattern in menus.items()
-                            if tok != '__menu' and '__menu' in pattern]
+                matches += PatternTree.get_matches(menus)
             else:
                 matches = []
             self._invalid_menu(matches)
@@ -563,9 +569,7 @@ class ArgParse(ABC):
         if len(matches) == 0:
             menus = []
             if len(self.menus.pattern):
-                menus = [pattern['__menu']
-                         for tok, pattern in self.menus.pattern.items()
-                         if tok != '__menu' and '__menu' in pattern]
+                menus = PatternTree.get_matches(self.menus.pattern)
             for menu in menus:
                 self.menu = menu
                 self._print_menu_help(True, max_len=1)
@@ -577,39 +581,35 @@ class ArgParse(ABC):
     def _print_menu_help(self, only_usage=False, alias=None, max_len=100):
         if self.menu is None:
             return
-        min_len = min([len(alias_toks) for alias_str, alias_toks
-                       in self.menu['aliases']])
         if not self.menu['is_cmd']:
-            if min_len <= max_len:
-                title = 'MENU'
-                for alias_str, alias_toks in self.menu['aliases']:
-                    print(f'{title}: {self.binary_name} {alias_str}')
-                    title = 'ALIAS'
-                if self.menu['msg'] is not None:
-                    print(f'BRIEF: {self.menu["msg"]}')
-                print()
+            title = 'MENU'
+            for alias_str, alias_toks in self.menu['aliases']:
+                print(f'{title}: {self.binary_name} {alias_str}')
+                title = 'ALIAS'
+            if self.menu['msg'] is not None:
+                print(f'BRIEF: {self.menu["msg"]}')
+            print()
             return
         else:
-            if min_len <= max_len:
-                # Print usage menu
-                pos_args = []
-                for arg in self.menu['pos_opts']:
-                    if arg['required']:
-                        pos_args.append(f'[{arg["name"]}]')
-                    else:
-                        pos_args.append(f'[{arg["name"]} (opt)]')
-                pos_args = ' '.join(pos_args)
-                title = 'COMMAND'
-                for alias_str, alias_toks in self.menu['aliases']:
-                    menu_str = alias_str
-                    if len(self.menu['kw_opts']):
-                        print(f'{title}: {self.binary_name} {menu_str} {pos_args} ...')
-                    else:
-                        print(f'{title}: {self.binary_name} {menu_str} {pos_args}')
-                    title = 'ALIAS'
-                if self.menu['msg'] is not None:
-                    print(f'BRIEF: {self.menu["msg"]}')
-                print()
+            # Print usage menu
+            pos_args = []
+            for arg in self.menu['pos_opts']:
+                if arg['required']:
+                    pos_args.append(f'[{arg["name"]}]')
+                else:
+                    pos_args.append(f'[{arg["name"]} (opt)]')
+            pos_args = ' '.join(pos_args)
+            title = 'COMMAND'
+            for alias_str, alias_toks in self.menu['aliases']:
+                menu_str = alias_str
+                if len(self.menu['kw_opts']):
+                    print(f'{title}: {self.binary_name} {menu_str} {pos_args} ...')
+                else:
+                    print(f'{title}: {self.binary_name} {menu_str} {pos_args}')
+                title = 'ALIAS'
+            if self.menu['msg'] is not None:
+                print(f'BRIEF: {self.menu["msg"]}')
+            print()
         if only_usage:
             return
 
