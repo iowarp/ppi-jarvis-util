@@ -10,20 +10,6 @@ import yaml
 from tabulate import tabulate
 
 
-class MenuSequence:
-    def __init__(self, alias_toks):
-        self.alias = alias_toks
-        self.hash = 0
-        for tok in alias_toks:
-            self.hash += hash(tok)
-
-    def __hash__(self):
-        return self.hash
-
-    def __eq__(self, other):
-        return other.alias == self.alias
-
-
 class ArgParse(ABC):
     """
     A class for parsing command line arguments.
