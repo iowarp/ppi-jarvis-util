@@ -155,6 +155,12 @@ class TestArgparse(TestCase):
         self.assertEqual(15, args.kwargs['steps'])
         self.assertEqual([], args.kwargs['hosts'])
 
+    def test_list_arg5(self):
+        args = MyArgParse(
+            args='vpic run 15 --hosts="*.hdf5" --hosts="*.h5"')
+        self.assertEqual(15, args.kwargs['steps'])
+        self.assertEqual(['*.hdf5', '*.h5'], args.kwargs['hosts'])
+
     def test_list_list_arg(self):
         args = MyArgParse(args='vpic run 15 '
                                '--devices=\"[[nvme, 5], [sata, 25]]\"')

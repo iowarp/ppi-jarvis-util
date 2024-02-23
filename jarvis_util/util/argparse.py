@@ -449,7 +449,10 @@ class ArgParse(ABC):
             try:
                 if opt_type is list:
                     if isinstance(arg, str):
-                        arg = yaml.safe_load(arg)
+                        try:
+                            arg = yaml.safe_load(arg)
+                        except:
+                            pass
                     if not isinstance(arg, list):
                         if arg is None:
                             arg = []
