@@ -1,0 +1,69 @@
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/api/manager.h:78 181482 LoadServerConfig Loading server configuration: /home/llogan/.local/jarvis/jv-shared/mm_kmeans_mega/hermes_run/hermes_server.yaml
+/home/llogan/Documents/Projects/hermes/hrun/src/hrun_runtime.cc:35 181482 ServerInit Initializing shared memory
+/home/llogan/Documents/Projects/hermes/hrun/src/hrun_runtime.cc:37 181482 ServerInit Initializing RPC
+/home/llogan/Documents/Projects/hermes/hrun/src/hrun_runtime.cc:39 181482 ServerInit Initializing thallium
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/network/rpc_thallium.h:42 181482 ServerInit Initializing RPC server
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/network/rpc_thallium.h:44 181482 ServerInit Attempting to start server on: sockets://localhost:8080
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/network/rpc_thallium.h:52 181482 ServerInit Serving ofi+sockets://127.0.0.1:8080 (i.e., sockets://localhost:8080) with 32 RPC threads as node id 1
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/network/rpc_thallium.h:67 181482 ClientInit This client is on node 1 (i.e., localhost, proto: sockets)
+/home/llogan/Documents/Projects/hermes/hrun/src/hrun_runtime.cc:41 181482 ServerInit Initializing queues + workers
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: hermes_mdm
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: hermes_blob_mdm
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: hermes_bucket_mdm
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: hermes_data_op
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: data_stager
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: posix_bdev
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: ram_bdev
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/api/manager.h:78 181482 LoadServerConfig Loading server configuration: /home/llogan/.local/jarvis/jv-shared/mm_kmeans_mega/hermes_run/hermes_server.yaml
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/work_orchestrator/worker.h:281 181525 SetCpuAffinity Affining worker 0 (pid=181525) to 0
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/work_orchestrator/worker.h:281 181526 SetCpuAffinity Affining worker 1 (pid=181526) to 1
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/work_orchestrator/worker.h:281 181527 SetCpuAffinity Affining worker 2 (pid=181527) to 2
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/work_orchestrator/worker.h:281 181528 SetCpuAffinity Affining worker 3 (pid=181528) to 2
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/work_orchestrator/worker.h:281 181529 SetCpuAffinity Affining worker 4 (pid=181529) to 2
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/work_orchestrator/worker.h:281 181530 SetCpuAffinity Affining worker 5 (pid=181530) to 2
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/work_orchestrator/worker.h:281 181531 SetCpuAffinity Affining worker 6 (pid=181531) to 2
+/home/llogan/Documents/Projects/hermes/hrun/src/work_orchestrator.cc:84 181482 ServerInit Started 7 workers
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: hrun_admin
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:262 181482 CreateTaskState (node 1)  Created an instance of hrun_admin with name hrun_admin and ID 1.0
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: proc_queue
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:262 181482 CreateTaskState (node 1)  Created an instance of proc_queue with name proc_queue and ID 1.1
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: worch_queue_round_robin
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:262 181482 CreateTaskState (node 1)  Created an instance of worch_queue_round_robin with name worch_queue_round_robin and ID 1.2
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: worch_proc_round_robin
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:262 181482 CreateTaskState (node 1)  Created an instance of worch_proc_round_robin with name worch_proc_round_robin and ID 1.3
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:77 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 1, lane 0, worker 0)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 2, lane 0, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 2, lane 1, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 2, lane 2, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 2, lane 3, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:62 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 3, lane 0, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:62 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 3, lane 1, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:62 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 3, lane 2, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:62 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 3, lane 3, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 4, lane 0, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 4, lane 1, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 4, lane 2, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.0 (prio 4, lane 3, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:77 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 0, lane 0, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:77 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 1, lane 0, worker 2)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 2, lane 0, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 2, lane 1, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 2, lane 2, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 2, lane 3, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:62 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 3, lane 0, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:62 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 3, lane 1, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:62 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 3, lane 2, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:62 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 3, lane 3, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 4, lane 0, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 4, lane 1, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 4, lane 2, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/worch_queue_round_robin/src/worch_queue_round_robin.cc:70 181525 Schedule (node 1) Scheduling the queue 1.1 (prio 4, lane 3, worker 1)
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:181 181482 RegisterTaskLib Finished loading the lib: remote_queue
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/hrun_admin/src/hrun_admin.cc:75 181525 CreateTaskState (node 1) Creating task state remote_queue with id 1.6 (task_node=1.7/0)
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/remote_queue/src/remote_queue.cc:83 181525 Construct (node 1) Constructing remote queue (task_node=1.7/0, task_state=1.0, method=0)
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:262 181525 CreateTaskState (node 1)  Created an instance of remote_queue with name remote_queue and ID 1.6
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/network/rpc_thallium.h:73 181482 RunDaemon Starting the daemon on node: 1
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/hrun_admin/src/hrun_admin.cc:75 181525 CreateTaskState (node 1) Creating task state hermes_mdm with id 1.9 (task_node=1.8/0)
+/home/llogan/Documents/Projects/hermes/include/hermes/config_manager.h:85 181525 LoadServerConfig Loading server configuration: /home/llogan/.local/jarvis/jv-shared/mm_kmeans_mega/hermes_run/hermes_server.yaml
+/home/llogan/Documents/Projects/hermes/hrun/include/hrun/task_registry/task_registry.h:262 181525 CreateTaskState (node 1)  Created an instance of hermes_mdm with name hermes_mdm and ID 1.9
+/home/llogan/Documents/Projects/hermes/hrun/tasks_required/hrun_admin/src/hrun_admin.cc:75 181525 CreateTaskState (node 1) Creating task state hermes_blob_mdm with id 1.13 (task_node=1.11/0)
