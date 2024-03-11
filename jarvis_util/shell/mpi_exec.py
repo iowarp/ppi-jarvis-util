@@ -62,7 +62,7 @@ class OpenMpiExec(LocalMpiExec):
     using MPI.
     """
     def mpicmd(self):
-        params = [f'mpiexec -n {self.nprocs}']
+        params = [f'mpiexec']
         params.append('--oversubscribe')
         if self.ppn is not None:
             params.append(f'-npernode {self.ppn}')
@@ -73,6 +73,14 @@ class OpenMpiExec(LocalMpiExec):
                 params.append(f'--hostfile {self.hostfile.path}')
         params += [f'-x {key}=\"{val}\"'
                    for key, val in self.mpi_env.items()]
+        if self.cmd.startswith('gdbserver'):
+            params.append(f'-n 1 {self.cmd}')
+            if self.nprocs > 1:
+                params.append(f': -n {self.nprocs - 1} {self.base_cmd}')
+        else:
+            params.append(f'-n {self.nprocs}')
+            params.append(self.cmd)
+
         params.append(self.cmd)
         cmd = ' '.join(params)
         jutil = JutilManager.get_instance()
