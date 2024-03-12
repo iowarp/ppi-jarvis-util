@@ -22,7 +22,8 @@ class MpiVersion(LocalExec):
         super().__init__(self.cmd,
                          exec_info.mod(env=exec_info.basic_env,
                                        collect_output=True,
-                                       hide_output=True))
+                                       hide_output=True,
+                                       do_dbg=False))
         vinfo = self.stdout
         # print(f'MPI INFO: stdout={vinfo} stderr={self.stderr}')
         if 'mpich' in vinfo.lower():
