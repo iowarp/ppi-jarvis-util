@@ -12,7 +12,7 @@ class Kill(Exec):
     Kill all processes which match the name regex.
     """
 
-    def __init__(self, cmd, exec_info, partial=False):
+    def __init__(self, cmd, exec_info, partial=True):
         """
         Kill all processes which match the name regex.
 
