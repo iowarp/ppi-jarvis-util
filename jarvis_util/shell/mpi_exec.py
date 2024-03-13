@@ -81,8 +81,6 @@ class OpenMpiExec(LocalMpiExec):
         else:
             params.append(f'-n {self.nprocs}')
             params.append(self.cmd)
-
-        params.append(self.cmd)
         cmd = ' '.join(params)
         jutil = JutilManager.get_instance()
         if jutil.debug_mpi_exec:
