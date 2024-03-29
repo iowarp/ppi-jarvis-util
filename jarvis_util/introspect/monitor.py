@@ -1,6 +1,7 @@
 from jarvis_util.shell.exec import Exec
 from jarvis_util.serialize.yaml_file import YamlFile
 import os
+import yaml
 
 class Callgrind(Exec):
     def __init__(self, cmd, exec_info=None):
@@ -25,24 +26,29 @@ class MonitorParser:
         paths = os.listdir(self.monitor_dir)
         for hostname in paths:
             path = os.path.join(self.monitor_dir, hostname)
-            yaml_list = YamlFile(path).load()
-            for yaml_dict in yaml_list:
-                if yaml_dict['type'] == 'DSK':
-                    if hostname not in self.disk:
-                        self.disk[hostname] = []
-                    self.disk[hostname].append(yaml_dict)
-                elif yaml_dict['type'] == 'NET':
-                    if hostname not in self.net:
-                        self.net[hostname] = []
-                    self.net[hostname].append(yaml_dict)
-                elif yaml_dict['type'] == 'MEM':
-                    if hostname not in self.mem:
-                        self.mem[hostname] = []
-                    self.mem[hostname].append(yaml_dict)
-                elif yaml_dict['type'] == 'CPU':
-                    if hostname not in self.cpu:
-                        self.cpu[hostname] = []
-                    self.cpu[hostname].append(yaml_dict)
+            with open(path, 'r') as fp:
+                lines = fp.readlines()
+                for line in lines:
+                    try:
+                        yaml_dict = yaml.load(line, Loader=yaml.FullLoader)
+                    except yaml.YAMLError:
+                        continue
+                    if yaml_dict['type'] == 'DSK':
+                        if hostname not in self.disk:
+                            self.disk[hostname] = []
+                        self.disk[hostname].append(yaml_dict)
+                    elif yaml_dict['type'] == 'NET':
+                        if hostname not in self.net:
+                            self.net[hostname] = []
+                        self.net[hostname].append(yaml_dict)
+                    elif yaml_dict['type'] == 'MEM':
+                        if hostname not in self.mem:
+                            self.mem[hostname] = []
+                        self.mem[hostname].append(yaml_dict)
+                    elif yaml_dict['type'] == 'CPU':
+                        if hostname not in self.cpu:
+                            self.cpu[hostname] = []
+                        self.cpu[hostname].append(yaml_dict)
 
     def avg_memory(self):
         total = 0

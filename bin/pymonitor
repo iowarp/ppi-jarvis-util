@@ -20,7 +20,7 @@ Mkdir(parent)
 path = f'{parent}/{socket.gethostname()}.yaml'
 
 def disk_log_to_yaml(cur_time, disk, disk_counter):
-    return '-' + json.dumps({
+    return json.dumps({
         'type': 'DSK',
         'time': cur_time,
         'disk': disk,
@@ -33,7 +33,7 @@ def disk_log_to_yaml(cur_time, disk, disk_counter):
     }) + '\n'
 
 def net_log_to_yaml(cur_time, network_counter):
-    return '-' + json.dumps({
+    return json.dumps({
         'type': 'NET',
         'time': cur_time,
         'bytes_sent': network_counter.bytes_sent,
@@ -47,7 +47,7 @@ def net_log_to_yaml(cur_time, network_counter):
     }) + '\n'
 
 def mem_log_to_yaml(cur_time, mem_usage):
-    return '-' + json.dumps({
+    return json.dumps({
         'type': 'MEM',
         'time': cur_time,
         'total': mem_usage.total,
@@ -65,7 +65,7 @@ def mem_log_to_yaml(cur_time, mem_usage):
 
 
 def cpu_log_to_yaml(cur_time, cpu_usage):
-    return '-' + json.dumps({
+    return json.dumps({
         'type': 'CPU',
         'time': cur_time,
         'cpu': cpu_usage,
