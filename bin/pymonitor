@@ -13,6 +13,8 @@ import json
 import os
 
 os.environ['PYTHONBUFFERED'] = '0'
+
+
 if len(sys.argv) != 3:
     print('USAGE: pymonitor [frequency] [directory]')
     exit(1)
@@ -80,6 +82,7 @@ cur_time = 0
 with open(path, 'w') as fp:
     while True:
         print(f'Monitoring on {host} at {cur_time}')
+        sys.stdout.flush()
         cpu_usage = psutil.cpu_percent()
         mem_usage = psutil.virtual_memory()
         network_usage = psutil.net_io_counters()
@@ -99,6 +102,7 @@ with open(path, 'w') as fp:
         fp.write(net_log_to_yaml(cur_time, network_usage))
         fp.write(mem_log_to_yaml(cur_time, mem_usage))
         fp.write(cpu_log_to_yaml(cur_time, cpu_usage))
+        fp.flush()
         time.sleep(frequency)
         cur_time += frequency
 
