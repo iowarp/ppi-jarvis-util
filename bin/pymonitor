@@ -10,7 +10,9 @@ import socket
 import yaml
 from jarvis_util import *
 import json
+import os
 
+os.environ['PYTHONBUFFERED'] = '0'
 if len(sys.argv) != 3:
     print('USAGE: pymonitor [frequency] [directory]')
     exit(1)
