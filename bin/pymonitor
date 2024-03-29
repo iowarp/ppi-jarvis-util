@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""
+USAGE: pymonitor [frequency]
+"""
+
+import psutil
+import sys
+import time
+import socket
+import yaml
+from jarvis_util import *
+import json
+
+if len(sys.argv) != 3:
+    print('USAGE: pymonitor [frequency] [directory]')
+    exit(1)
+frequency = int(sys.argv[1])
+parent = sys.argv[2]
+Mkdir(parent)
+path = f'{parent}/{socket.gethostname()}.yaml'
+
+def disk_log_to_yaml(cur_time, disk, disk_counter):
+    return '-' + json.dumps({
+        'type': 'DSK',
+        'time': cur_time,
+        'disk': disk,
+        'read_count': disk_counter.read_count,
+        'write_count': disk_counter.write_count,
+        'read_bytes': disk_counter.read_bytes,
+        'write_bytes': disk_counter.write_bytes,
+        'read_time': disk_counter.read_time,
+        'write_time': disk_counter.write_time,
+    }) + '\n'
+
+def net_log_to_yaml(cur_time, network_counter):
+    return '-' + json.dumps({
+        'type': 'NET',
+        'time': cur_time,
+        'bytes_sent': network_counter.bytes_sent,
+        'bytes_recv': network_counter.bytes_recv,
+        'packets_sent': network_counter.packets_sent,
+        'packets_recv': network_counter.packets_recv,
+        'errin': network_counter.errin,
+        'errout': network_counter.errout,
+        'dropin': network_counter.dropin,
+        'dropout': network_counter.dropout,
+    }) + '\n'
+
+def mem_log_to_yaml(cur_time, mem_usage):
+    return '-' + json.dumps({
+        'type': 'MEM',
+        'time': cur_time,
+        'total': mem_usage.total,
+        'available': mem_usage.available,
+        'percent': mem_usage.percent,
+        'used': mem_usage.used,
+        'free': mem_usage.free,
+        'active': mem_usage.active,
+        'inactive': mem_usage.inactive,
+        'buffers': mem_usage.buffers,
+        'cached': mem_usage.cached,
+        'shared': mem_usage.shared,
+        'slab': mem_usage.slab,
+    }) + '\n'
+
+
+def cpu_log_to_yaml(cur_time, cpu_usage):
+    return '-' + json.dumps({
+        'type': 'CPU',
+        'time': cur_time,
+        'cpu': cpu_usage,
+    }) + '\n'
+
+
+cur_time = 0
+with open(path, 'w') as fp:
+    while True:
+        cpu_usage = psutil.cpu_percent()
+        mem_usage = psutil.virtual_memory()
+        network_usage = psutil.net_io_counters()
+
+        # Get stats per disk
+        mounted_disks = set([disk.device.replace('/dev/', '')
+                             for disk in psutil.disk_partitions()])
+        disks = psutil.disk_io_counters(perdisk=True)
+        totaldisks = psutil.disk_io_counters(perdisk=False)
+        for disk, counter in disks.items():
+            if disk not in mounted_disks:
+                continue
+            fp.write(disk_log_to_yaml(cur_time, disk, counter))
+        fp.write(disk_log_to_yaml(cur_time, 'total', totaldisks))
+
+        # Append all other counters
+        fp.write(net_log_to_yaml(cur_time, network_usage))
+        fp.write(mem_log_to_yaml(cur_time, mem_usage))
+        fp.write(cpu_log_to_yaml(cur_time, cpu_usage))
+        time.sleep(frequency)
+        cur_time += frequency
+
