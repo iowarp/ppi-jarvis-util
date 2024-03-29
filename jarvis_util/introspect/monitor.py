@@ -58,3 +58,10 @@ class MonitorParser:
                 total += mem['percent']
                 count += 1
         return total / count
+
+    def peak_memory(self):
+        peak = 0
+        for hostname in self.mem:
+            for mem in self.mem[hostname]:
+                peak = max(peak, mem['percent'])
+        return peak
