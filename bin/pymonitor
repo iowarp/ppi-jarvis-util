@@ -73,6 +73,7 @@ def cpu_log_to_yaml(cur_time, cpu_usage):
     }) + '\n'
 
 
+print('Starting monitor loop?')
 cur_time = 0
 with open(path, 'w') as fp:
     while True:
