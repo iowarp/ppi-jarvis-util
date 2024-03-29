@@ -81,11 +81,11 @@ print('Starting monitor loop?')
 cur_time = 0
 with open(path, 'w') as fp:
     while True:
-        print(f'Monitoring on {host} at {cur_time}')
-        sys.stdout.flush()
         cpu_usage = psutil.cpu_percent()
         mem_usage = psutil.virtual_memory()
         network_usage = psutil.net_io_counters()
+        print(f'Monitoring on {host} at {cur_time}: MEM={mem_usage.percent}, CPU={cpu_usage}')
+        sys.stdout.flush()
 
         # Get stats per disk
         mounted_disks = set([disk.device.replace('/dev/', '')
