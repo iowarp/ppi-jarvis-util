@@ -65,3 +65,12 @@ class MonitorParser:
             for mem in self.mem[hostname]:
                 peak = max(peak, mem['percent'])
         return peak
+
+    def avg_cpu(self):
+        total = 0
+        count = 0
+        for hostname in self.cpu:
+            for cpu in self.cpu[hostname]:
+                total += cpu['percent']
+                count += 1
+        return total / count
