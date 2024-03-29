@@ -17,7 +17,8 @@ if len(sys.argv) != 3:
 frequency = int(sys.argv[1])
 parent = sys.argv[2]
 Mkdir(parent)
-path = f'{parent}/{socket.gethostname()}.yaml'
+host = socket.gethostname()
+path = f'{parent}/{host}.yaml'
 
 def disk_log_to_yaml(cur_time, disk, disk_counter):
     return json.dumps({
@@ -75,6 +76,7 @@ def cpu_log_to_yaml(cur_time, cpu_usage):
 cur_time = 0
 with open(path, 'w') as fp:
     while True:
+        print(f'Monitoring on {host} at {cur_time}')
         cpu_usage = psutil.cpu_percent()
         mem_usage = psutil.virtual_memory()
         network_usage = psutil.net_io_counters()
