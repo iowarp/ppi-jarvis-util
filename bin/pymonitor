@@ -73,7 +73,7 @@ def cpu_log_to_yaml(cur_time, cpu_usage):
     return json.dumps({
         'type': 'CPU',
         'time': cur_time,
-        'cpu': cpu_usage,
+        'percent': cpu_usage,
     }) + '\n'
 
 
