@@ -26,5 +26,5 @@ class SparkExec(LocalExec):
             f'--conf spark.local.dir={scratch}',
             cmd
         ]
-        sparkcmd = ' '.join(cmd)
+        sparkcmd = ' '.join(sparkcmd)
         super().__init__(sparkcmd, exec_info)
