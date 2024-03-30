@@ -172,6 +172,9 @@ class Hostfile:
         sub.hosts_ip = self.hosts_ip[:count]
         return sub
 
+    def copy(self):
+        return self.subset(len(self))
+
     def is_subset(self):
         return len(self.hosts) != len(self.all_hosts)
 
