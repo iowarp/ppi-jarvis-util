@@ -32,7 +32,7 @@ class SshExec(LocalExec):
                              exec_info.mod(env=exec_info.basic_env,
                                            sudo=False))
         else:
-            super().__init__(cmd, exec_info.mod(sudo=False))
+            super().__init__(cmd.replace(';', '\;'), exec_info.mod(sudo=False))
 
     def ssh_cmd(self, cmd):
         lines = ['ssh']
