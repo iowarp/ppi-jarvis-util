@@ -50,9 +50,9 @@ class SshExec(LocalExec):
         if self.ssh_env is not None:
             for key, val in self.ssh_env.items():
                 cmd_lines.append(f'{key}=\'{val}\'')
-        cmd_lines.append(cmd)
+        cmd_lines.append(f'\"cmd\"')
         env_cmd = ' '.join(cmd_lines)
-        real_cmd = f'\"{ssh_cmd} {env_cmd}\"'
+        real_cmd = f'{ssh_cmd} {env_cmd}'
         return real_cmd
 
 
