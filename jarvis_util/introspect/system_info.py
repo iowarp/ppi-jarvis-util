@@ -372,7 +372,7 @@ class NetTest(FiInfo):
     """
     Determine whether a set of networks function across a set of hosts.
     """
-    def __init__(self, port, exec_info, exclusions=None, base_port=6040):
+    def __init__(self, port, exec_info, exclusions=None, base_port=6040, sleep=10):
         super().__init__(exec_info)
         self.working = []
         df = self.df[['provider', 'domain', 'fabric']].drop_duplicates()
@@ -385,7 +385,7 @@ class NetTest(FiInfo):
         self.results = [None] * len(df)
         for idx, net in enumerate(df.rows):
             # Start a new thread for each network test
-            thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info))
+            thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info, sleep))
             threads.append(thread)
             thread.start()
             port += 1
@@ -401,19 +401,19 @@ class NetTest(FiInfo):
         self.df = sdf.SmallDf(self.working)
         Kill('chi_net_ping', exec_info)
 
-    def _async_test(self, idx, net, port, exec_info):
+    def _async_test(self, idx, net, port, exec_info, sleep):
         provider = net['provider']
         domain = net['domain']
         fabric = net['fabric']
         # Test if the network works locally
-        ping = ChiNetPingTest(provider, domain, port, exec_info.mod(hostfile=None))
+        ping = ChiNetPingTest(provider, domain, port, exec_info.mod(hostfile=None), 2)
         net['shared'] = False
         if ping.exit_code != 0:
             print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: FAILED {ping.exit_code}')
             return
         self.results[idx] = net
         # Test if the network works across hosts
-        ping = ChiNetPingTest(provider, domain, port, exec_info)
+        ping = ChiNetPingTest(provider, domain, port, exec_info, sleep)
         if ping.exit_code == 0:
             net['shared'] = True
         print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: SUCCESS')
