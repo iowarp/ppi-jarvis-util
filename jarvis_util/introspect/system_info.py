@@ -12,6 +12,7 @@ from jarvis_util.util.size_conv import SizeConv
 from jarvis_util.serialize.yaml_file import YamlFile
 from jarvis_util.shell.process import Kill
 import jarvis_util.util.small_df as sdf
+import threading
 import json
 import yaml
 import shlex
@@ -359,19 +360,19 @@ class ChiNetPingTest:
     """
     Determine whether a network functions across a set of hosts
     """
-    def __init__(self, provider, domain, port, exec_info):
+    def __init__(self, provider, domain, port, exec_info, sleep=10):
         self.server = ChiNetPing(provider, domain, port, "server", exec_info.mod(exec_async=True))
-        time.sleep(1)
+        time.sleep(sleep)
         self.client = ChiNetPing(provider, domain, port, "client", exec_info)
-        Kill('chi_net_ping', exec_info)
         self.exit_code = self.client.exit_code
+        # Kill('chi_net_ping', exec_info)
 
 
 class NetTest(FiInfo):
     """
     Determine whether a set of networks function across a set of hosts.
     """
-    def __init__(self, port, exec_info, exclusions=None):
+    def __init__(self, port, exec_info, exclusions=None, base_port=6040):
         super().__init__(exec_info)
         self.working = []
         df = self.df[['provider', 'domain', 'fabric']].drop_duplicates()
@@ -379,23 +380,43 @@ class NetTest(FiInfo):
             exclusions = exclusions[['provider', 'domain', 'fabric']].drop_duplicates()
             df = df[lambda r: r not in exclusions]
         print(f'About to test {len(df)} networks')
-        for net in df.rows:
-            provider = net['provider']
-            domain = net['domain']
-            fabric = net['fabric']
-            print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}')
-            # Test if the network works locally
-            ping = ChiNetPingTest(provider, domain, port, exec_info.mod(hostfile=None))
-            net['shared'] = False
-            if ping.exit_code == 0:
-                self.working.append(net)
-            else:
-                continue
-            # Test if the network works across hosts
-            ping = ChiNetPingTest(provider, domain, port, exec_info)
-            if ping.exit_code == 0:
-                net['shared'] = True
+        port = base_port
+        threads = []
+        self.results = [None] * len(df)
+        for idx, net in enumerate(df.rows):
+            # Start a new thread for each network test
+            thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info))
+            threads.append(thread)
+            thread.start()
+            port += 1
+            # thread.join()
+
+        # Wait for all threads to complete    
+        for idx, thread in enumerate(threads):
+            thread.join()
+            result = self.results[idx]
+            if result is not None:
+                self.working.append(result)
+            
         self.df = sdf.SmallDf(self.working)
+        Kill('chi_net_ping', exec_info)
+
+    def _async_test(self, idx, net, port, exec_info):
+        provider = net['provider']
+        domain = net['domain']
+        fabric = net['fabric']
+        # Test if the network works locally
+        ping = ChiNetPingTest(provider, domain, port, exec_info.mod(hostfile=None))
+        net['shared'] = False
+        if ping.exit_code != 0:
+            print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: FAILED {ping.exit_code}')
+            return
+        self.results[idx] = net
+        # Test if the network works across hosts
+        ping = ChiNetPingTest(provider, domain, port, exec_info)
+        if ping.exit_code == 0:
+            net['shared'] = True
+        print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: SUCCESS')
         
 
 class ResourceGraph:
