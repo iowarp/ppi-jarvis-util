@@ -374,7 +374,7 @@ class NetTest(FiInfo):
     def __init__(self, port, exec_info):
         super().__init__(exec_info)
         self.working = []
-        df = self.df[['provider', 'domain']].drop_duplicates()
+        df = self.df[['provider', 'domain', 'fabric']].drop_duplicates()
         print(f'About to test {len(df)} networks')
         for net in df.rows:
             provider = net['provider']
@@ -391,7 +391,7 @@ class NetTest(FiInfo):
             ping = ChiNetPingTest(provider, domain, port, exec_info)
             if ping.exit_code == 0:
                 net['shared'] = True
-        self.working = sdf.SmallDf(self.working)
+        self.df = sdf.SmallDf(self.working)
         
 
 class ResourceGraph:
@@ -428,10 +428,10 @@ class ResourceGraph:
         self.fs_columns = [
             'parent', 'device', 'mount', 'model', 'dev_type',
             'fs_type', 'uuid',
-            'avail', 'shared', 'host',
+            'avail', 'shared', 'needs_root'
         ]
         self.net_columns = [
-            'provider', 'fabric', 'domain', 'host',
+            'provider', 'fabric', 'domain',
             'speed', 'shared'
         ]
         self.create()
@@ -668,13 +668,15 @@ class ResourceGraph:
         ]
         for path in paths:
             if self._try_user_access(fs, path, path == dev['mount']):
-                dev['needs_root'] = True
+                dev['needs_root'] = False
                 return path
-        dev['needs_root'] = False
+        dev['needs_root'] = True
         return dev['mount']
 
     def _try_user_access(self, fs, mount, known_mount=False):
         try:
+            if mount.startswith('/boot'):
+                print(mount)
             if not known_mount and self._check_if_mounted(fs, mount):
                 return False
             if os.access(mount, os.R_OK) and os.access(mount, os.W_OK):
@@ -975,17 +977,7 @@ class ResourceGraph:
 
     def print_df(self, df):
         if 'device' in df.columns:
-            if 'host' in df.columns:
-                col = ['host', 'mount', 'device', 'dev_type', 'shared',
-                       'avail', 'tran', 'rota', 'fs_type']
-                df = df[col]
-                df = df.sort_values('host')
-                print(df.to_string())
-            else:
-                col = ['device', 'mount', 'dev_type', 'shared',
-                       'avail', 'tran', 'rota', 'fs_type']
-                df = df[col]
-                print(df.to_string())
+            print(df.sort_values('mount').to_string())
         else:
             print(df.sort_values('provider').to_string())
 
