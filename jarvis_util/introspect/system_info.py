@@ -360,9 +360,9 @@ class ChiNetPingTest:
     """
     Determine whether a network functions across a set of hosts
     """
-    def __init__(self, provider, domain, port, exec_info, sleep=10):
+    def __init__(self, provider, domain, port, exec_info, net_sleep=10):
         self.server = ChiNetPing(provider, domain, port, "server", exec_info.mod(exec_async=True))
-        time.sleep(sleep)
+        time.sleep(net_sleep)
         self.client = ChiNetPing(provider, domain, port, "client", exec_info)
         self.exit_code = self.client.exit_code
         # Kill('chi_net_ping', exec_info)
@@ -372,7 +372,7 @@ class NetTest(FiInfo):
     """
     Determine whether a set of networks function across a set of hosts.
     """
-    def __init__(self, port, exec_info, exclusions=None, base_port=6040, sleep=10):
+    def __init__(self, port, exec_info, exclusions=None, base_port=6040, net_sleep=10):
         super().__init__(exec_info)
         self.working = []
         df = self.df[['provider', 'domain', 'fabric']].drop_duplicates()
@@ -385,7 +385,7 @@ class NetTest(FiInfo):
         self.results = [None] * len(df)
         for idx, net in enumerate(df.rows):
             # Start a new thread for each network test
-            thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info, sleep))
+            thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info, net_sleep))
             threads.append(thread)
             thread.start()
             port += 1
@@ -401,7 +401,7 @@ class NetTest(FiInfo):
         self.df = sdf.SmallDf(self.working)
         Kill('chi_net_ping', exec_info)
 
-    def _async_test(self, idx, net, port, exec_info, sleep):
+    def _async_test(self, idx, net, port, exec_info, net_sleep):
         provider = net['provider']
         domain = net['domain']
         fabric = net['fabric']
@@ -413,7 +413,7 @@ class NetTest(FiInfo):
             return
         self.results[idx] = net
         # Test if the network works across hosts
-        ping = ChiNetPingTest(provider, domain, port, exec_info, sleep)
+        ping = ChiNetPingTest(provider, domain, port, exec_info, net_sleep)
         if ping.exit_code == 0:
             net['shared'] = True
         print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: SUCCESS')
@@ -470,7 +470,7 @@ class ResourceGraph:
         self.fs = sdf.SmallDf(columns=self.fs_columns)
         self.net = sdf.SmallDf(columns=self.net_columns)
 
-    def build(self, exec_info, introspect=True):
+    def build(self, exec_info, introspect=True, net_sleep=10):
         """
         Build a resource graph.
 
@@ -482,7 +482,7 @@ class ResourceGraph:
         self.create()
         if introspect:
             self.introspect_fs(exec_info)
-            self.introspect_net(exec_info, prune_nets=True)
+            self.introspect_net(exec_info, prune_nets=True, net_sleep=net_sleep)
         self.apply()
         return self
     
@@ -573,11 +573,11 @@ class ResourceGraph:
     Introspect networks
     """
 
-    def introspect_net(self, exec_info, prune_nets=False, prune_port=4192):
+    def introspect_net(self, exec_info, prune_nets=False, prune_port=4192, net_sleep=10):
         if not prune_nets:
             fi_info = FiInfo(exec_info.mod(hide_output=True))
         else:
-            fi_info = NetTest(prune_port, exec_info.mod(hide_output=True), exclusions=self.net)
+            fi_info = NetTest(prune_port, exec_info.mod(hide_output=True), exclusions=self.net, net_sleep=net_sleep)
         net_df = fi_info.df
         net_df[:, 'speed'] = 0
         net_df.drop_columns(['version', 'type', 'protocol'])
