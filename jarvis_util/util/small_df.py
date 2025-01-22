@@ -370,6 +370,15 @@ class SmallDf:
             for col in df.columns:
                 row[col] = orow[col]
         return self
+    
+    def __contains__(self, row):
+        """
+        Check if a row is in the dataframe
+
+        :param row: The row to check
+        :return: bool
+        """
+        return row in self.rows
 
     def __add__(self, other):
         return self._op(other,

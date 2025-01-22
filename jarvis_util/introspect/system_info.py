@@ -371,15 +371,19 @@ class NetTest(FiInfo):
     """
     Determine whether a set of networks function across a set of hosts.
     """
-    def __init__(self, port, exec_info):
+    def __init__(self, port, exec_info, exclusions=None):
         super().__init__(exec_info)
         self.working = []
         df = self.df[['provider', 'domain', 'fabric']].drop_duplicates()
+        if exclusions:
+            exclusions = exclusions[['provider', 'domain', 'fabric']].drop_duplicates()
+            df = df[lambda r: r not in exclusions]
         print(f'About to test {len(df)} networks')
         for net in df.rows:
             provider = net['provider']
             domain = net['domain']
-            print(f'Testing the network {provider}://{domain}/[{exec_info.hostfile.path}]:{port}')
+            fabric = net['fabric']
+            print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}')
             # Test if the network works locally
             ping = ChiNetPingTest(provider, domain, port, exec_info.mod(hostfile=None))
             net['shared'] = False
@@ -460,154 +464,11 @@ class ResourceGraph:
             self.introspect_net(exec_info, prune_nets=True)
         self.apply()
         return self
-
-    def walkthrough_build(self, exec_info, introspect=True):
-        self.build(exec_info, introspect)
-        self.walkthrough_prune(exec_info)
-
-    def walkthrough_prune(self, exec_info):
-        print('(2/4). Finding mount points common across machines')
-        mounts = self.find_storage()
-        self.print_df(mounts)
-        # Add missing mountpoints
-        x = self._ask_yes_no('2.(1/3). Are there any mount points missing '
-                             'you would like to add?',
-                             default='no')
-        new_devs = []
-        while x:
-            mount = self._ask_string('2.1.(1/6). Mount point')
-            mount = mount.replace(r'\$', '$')
-            dev_type = self._ask_choices('2.1.(2/6). What transport?',
-                                     choices=['hdd', 'ssd', 'nvme', 'pmem'])
-            shared = self._ask_yes_no('2.1.(3/6). Is this device shared? '
-                                      'I.e., a PFS?')
-            avail = self._ask_size('2.1.(4/6). How much capacity are you '
-                                   'willing to use?')
-            y = self._ask_yes_no('2.1.(5/6). Are you sure this is accurate?',
-                                 default='yes')
-            if not y:
-                continue
-            new_devs.append({
-                'mount': mount,
-                'dev_type': dev_type,
-                'shared': shared,
-                'avail': avail,
-                'size': avail,
-            })
-            x = self._ask_yes_no('2.1.(6/6). Are there any other '
-                                 'devices you would like to add?',
-                                 default='no')
-            if x is None:
-                x = False
-        self.add_storage(exec_info.hostfile, new_devs)
-        # Correct discovered mount points
-        x = self._ask_yes_no('2.(2/3). Would you like to correct '
-                             'any mountpoints?',
-                             default='no')
-        while x:
-            regex = self._ask_re('2.2.(1/3). Enter a regex of mount '
-                                 'points to select',
-                                 default='.*').strip()
-            if regex is None:
-                regex = '.*'
-            if regex.endswith('*'):
-                regex = f'^{regex}'
-            else:
-                regex = f'^{regex}$'
-            matches = mounts[lambda r: re.match(regex, r['mount']), 'mount']
-            print(matches.to_string())
-            y = self._ask_yes_no('Is this correct?', default='yes')
-            if not y:
-                continue
-            suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
-                                      'append to these paths.',
-                                      default='${USER}')
-            y = self._ask_yes_no('Are you sure this is accurate?',
-                                 default='yes')
-            if not y:
-                continue
-            suffix = suffix.replace(r'\$', '$')
-            self.add_suffix(regex, mount_suffix=suffix)
-            x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
-                                 'mount points?',
-                                 default='no')
-        # Eliminate unneded mount points
-        x = self._ask_yes_no(
-            '2.(3/3). Would you like to remove any mount points?',
-            default='no')
-        mounts = self.fs['mount'].unique().list()
-        print(f'Mount points: {mounts}')
-        while x:
-            regex = self._ask_re('2.3.(1/3). Enter a regex of mount '
-                                 'points to remove.').strip()
-            if regex is None:
-                regex = '.*'
-            if regex.endswith('*'):
-                regex = f'^{regex}'
-            else:
-                regex = f'^{regex}$'
-            matches = self.fs[lambda r: re.match(regex, r['mount']), 'mount']
-            print(matches.to_string())
-            y = self._ask_yes_no('2.3.(2/3). Is this correct?', default='yes')
-            if not y:
-                continue
-            self.fs = self.fs[lambda r: not re.match(regex, r['mount'])]
-            mounts = self.fs['mount'].unique().list()
-            print(f'Mount points: {mounts}')
-            x = self._ask_yes_no('2.3.(3/3). Any more?', default='no')
-
-        # Fill in missing network information
-        print('(3/3). Finding valid networks')
+    
+    def modify(self, exec_info):
+        self.introspect_fs(exec_info)
         self.introspect_net(exec_info, prune_nets=True)
-        self.apply()
-
-    def _ask_string(self, msg, default=None):
-        if default is None:
-            x = input(f'{msg}: ')
-        else:
-            x = input(f'{msg} (Default: {default}): ')
-        if len(x) == 0:
-            x = default
-        return x
-
-    def _ask_re(self, msg, default=None):
-        if default is not None:
-            msg = f'{msg} (Default: {default})'
-        x = input(f'{msg}: ')
-        if len(x) == 0:
-            x = default
-        if x is None:
-            x = ''
-        return x
-
-    def _ask_yes_no(self, msg, default=None):
-        while True:
-            msg = f'{msg} (yes/no)'
-            if default is not None:
-                msg = f'{msg} (Default: {default})'
-            x = input(f'{msg}: ')
-            if x == '':
-                x = default
-            if x == 'yes':
-                return True
-            elif x == 'no':
-                return False
-            else:
-                print(f'{x} is not either yes or no')
-
-    def _ask_choices(self, msg, choices):
-        choices_str = '/'.join(choices)
-        while True:
-            x = input(f'{msg} ({choices_str}): ')
-            if x in choices:
-                return x
-            else:
-                print(f'{x} is not a valid choice')
-
-    def _ask_size(self, msg):
-        x = input(f'{msg} (kK,mM,gG,tT,pP): ')
-        size = SizeConv.to_int(x)
-        return size
+        pass
 
     """
     Introspect filesystems
@@ -695,12 +556,15 @@ class ResourceGraph:
         if not prune_nets:
             fi_info = FiInfo(exec_info.mod(hide_output=True))
         else:
-            fi_info = NetTest(prune_port, exec_info.mod(hide_output=True))
+            fi_info = NetTest(prune_port, exec_info.mod(hide_output=True), exclusions=self.net)
         net_df = fi_info.df
         net_df[:, 'speed'] = 0
         net_df.drop_columns(['version', 'type', 'protocol'])
         net_df.drop_duplicates()
-        self.net = net_df
+        if self.net:
+            self.net = sdf.concat([self.net, net_df])
+        else:
+            self.net = net_df
 
     """
     Update the resource graph
