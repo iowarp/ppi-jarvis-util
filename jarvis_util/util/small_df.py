@@ -60,7 +60,7 @@ class SmallDf:
         return self._mutable_dict(dedup)
 
     def _fixed_dict(self, rows):
-        return tuple((tuple(row.items()) for row in rows))
+        return tuple(tuple((key, row[key]) for key in self.columns) for row in rows)
 
     def _mutable_dict(self, rows):
         # return [{key:val for key, val in row} for row in rows]
@@ -370,6 +370,15 @@ class SmallDf:
             for col in df.columns:
                 row[col] = orow[col]
         return self
+    
+    def __contains__(self, row):
+        """
+        Check if a row is in the dataframe
+
+        :param row: The row to check
+        :return: bool
+        """
+        return row in self.rows
 
     def __add__(self, other):
         return self._op(other,
