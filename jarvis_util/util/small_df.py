@@ -60,7 +60,7 @@ class SmallDf:
         return self._mutable_dict(dedup)
 
     def _fixed_dict(self, rows):
-        return tuple((tuple(row.items()) for row in rows))
+        return tuple(tuple((key, row[key]) for key in self.columns) for row in rows)
 
     def _mutable_dict(self, rows):
         # return [{key:val for key, val in row} for row in rows]
