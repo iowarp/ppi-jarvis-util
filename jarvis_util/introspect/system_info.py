@@ -496,7 +496,7 @@ class ResourceGraph:
     """
 
     def introspect_fs(self, exec_info, sudo=False):
-        lsblk = PyLsblk(exec_info.mod(hide_output=True)) 
+        lsblk = Lsblk(exec_info.mod(hide_output=True)) 
         blkid = Blkid(exec_info.mod(hide_output=True))
         list_fs = ListFses(exec_info.mod(hide_output=True))
         fs = sdf.merge([lsblk.df, blkid.df],
