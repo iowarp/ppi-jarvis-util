@@ -118,6 +118,10 @@ class Lsblk(Exec):
         dev_type: the category of the device
         host: the host this record corresponds to
     """
+    columns = [
+        'parent', 'device', 'size', 'mount', 'model', 'tran',
+        'rota', 'dev_type', 'host'
+    ]
 
     def __init__(self, exec_info):
         cmd = 'lsblk -o NAME,SIZE,MODEL,TRAN,MOUNTPOINT,ROTA -J'
@@ -131,46 +135,48 @@ class Lsblk(Exec):
         super().wait()
         total = []
         for host, stdout in self.stdout.items():
-            lsblk_data = json.loads(stdout)['blockdevices']
-            if len(lsblk_data) == 0:
-                continue
-            for dev in lsblk_data:
-                parent = f'/dev/{dev["name"]}'
-                if dev['size'] is None:
-                    dev['size'] = '0'
-                if dev['tran'] is None:
-                    dev['tran'] = 'sata'
-                if dev['rota'] is None:
-                    dev['rota'] = False
-                total.append({
-                    'parent': None,
-                    'device': parent,
-                    'size': SizeConv.to_int(dev['size']),
-                    'model': dev['model'],
-                    'tran': dev['tran'].lower(),
-                    'mount': dev['mountpoint'],
-                    'rota': dev['rota'],
-                    'dev_type': self.GetDevType(dev),
-                    'host': host
-                })
-                if 'children' not in dev:
+            try:
+                lsblk_data = json.loads(stdout)['blockdevices']
+                if len(lsblk_data) == 0:
                     continue
-                for partition in dev['children']:
-                    if partition['size'] is None:
-                        partition['size'] = '0'
+                for dev in lsblk_data:
+                    parent = f'/dev/{dev["name"]}'
+                    if dev['size'] is None:
+                        dev['size'] = '0'
+                    if dev['tran'] is None:
+                        dev['tran'] = 'sata'
+                    if dev['rota'] is None:
+                        dev['rota'] = False
                     total.append({
-                        'parent': parent,
-                        'device': f'/dev/{partition["name"]}',
-                        'size': SizeConv.to_int(partition['size']),
+                        'parent': None,
+                        'device': parent,
+                        'size': SizeConv.to_int(dev['size']),
                         'model': dev['model'],
                         'tran': dev['tran'].lower(),
-                        'mount': partition['mountpoint'],
+                        'mount': dev['mountpoint'],
                         'rota': dev['rota'],
                         'dev_type': self.GetDevType(dev),
                         'host': host
                     })
-        self.df = sdf.SmallDf(rows=total)
-        print(self.df)
+                    if 'children' not in dev:
+                        continue
+                    for partition in dev['children']:
+                        if partition['size'] is None:
+                            partition['size'] = '0'
+                        total.append({
+                            'parent': parent,
+                            'device': f'/dev/{partition["name"]}',
+                            'size': SizeConv.to_int(partition['size']),
+                            'model': dev['model'],
+                            'tran': dev['tran'].lower(),
+                            'mount': partition['mountpoint'],
+                            'rota': dev['rota'],
+                            'dev_type': self.GetDevType(dev),
+                            'host': host
+                        })
+            except json.JSONDecodeError:
+                pass
+        self.df = sdf.SmallDf(rows=total, columns=self.columns)
 
     def GetDevType(self, dev):
         if dev['tran'] == 'sata':
@@ -496,7 +502,7 @@ class ResourceGraph:
     """
 
     def introspect_fs(self, exec_info, sudo=False):
-        lsblk = Lsblk(exec_info.mod(hide_output=True)) 
+        lsblk = PyLsblk(exec_info.mod(hide_output=True)) 
         blkid = Blkid(exec_info.mod(hide_output=True))
         list_fs = ListFses(exec_info.mod(hide_output=True))
         fs = sdf.merge([lsblk.df, blkid.df],
@@ -714,10 +720,10 @@ class ResourceGraph:
         df['shared'].fillna(True)
         df['tran'].fillna('')
         df['size'].fillna(0)
-        df['size'].apply(lambda r, c: SizeConv.to_int(r[c]))
         noavail = df[lambda r: r['avail'] == 0 or r['avail'] is None, :]
         noavail['avail'] = noavail['size']
         df['avail'].apply(lambda r, c: SizeConv.to_int(r[c]))
+        df['size'] = df['avail']
 
     def _derive_net_cols(self):
         self.net['domain'].fillna('')
