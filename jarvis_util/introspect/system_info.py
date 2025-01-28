@@ -528,6 +528,7 @@ class ResourceGraph:
                             on=['device', 'host'],
                             how='outer')
         fs['mount'] = fs['fs_mount'] 
+        print(fs)
         fs = self._find_common_mounts(fs, exec_info)
         fs = self._label_user_mounts(fs)
         fs = fs.drop_columns([
