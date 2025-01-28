@@ -220,13 +220,13 @@ class PyLsblk(Exec):
     def wait(self):
         super().wait()
         total = []
-        for host, stdout in self.stdout.items():
-            lsblk_data = yaml.load(stdout, Loader=yaml.FullLoader)
-            for dev in lsblk_data:
-                if dev['tran'] == 'pcie':
-                    dev['tran'] = 'nvme'
-                dev['host'] = host
-                total.append(dev)
+        # for host, stdout in self.stdout.items():
+        #     lsblk_data = yaml.load(stdout, Loader=yaml.FullLoader)
+        #     for dev in lsblk_data:
+        #         if dev['tran'] == 'pcie':
+        #             dev['tran'] = 'nvme'
+        #         dev['host'] = host
+        #         total.append(dev)
         self.df = sdf.SmallDf(rows=total, columns=self.columns)
 
 
@@ -505,16 +505,17 @@ class ResourceGraph:
     """
 
     def introspect_fs(self, exec_info, sudo=False):
-        lsblk = PyLsblk(exec_info.mod(hide_output=True)) 
+        lsblk = PyLsblk(exec_info.mod(hide_output=True))  
         blkid = Blkid(exec_info.mod(hide_output=True))
         list_fs = ListFses(exec_info.mod(hide_output=True))
         fs = sdf.merge([lsblk.df, blkid.df],
                           on=['device', 'host'],
-                          how='outer')
+                          how='outer') 
         fs[:, 'shared'] = False
         fs = sdf.merge([fs, list_fs.df],
                             on=['device', 'host'],
                             how='outer')
+        self.fs['mount'] = self.fs['fs_mount'] 
         fs = self._find_common_mounts(fs, exec_info)
         fs = self._label_user_mounts(fs)
         fs = fs.drop_columns([
@@ -526,7 +527,7 @@ class ResourceGraph:
     def _find_common_mounts(self, fs, exec_info):
         """
         Finds mount point points common across all hosts
-        """
+        """ 
         io_groups = fs.groupby(['mount', 'device'])
         common = []
         for name, group in io_groups.groups.items():
