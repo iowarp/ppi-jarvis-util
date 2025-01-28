@@ -205,7 +205,10 @@ class PyLsblk(Exec):
            rota: whether or not the device is rotational
            host: the host this record corresponds to
        """
-
+    columns = [
+        'parent', 'device', 'size', 'mount', 'model', 'tran',
+        'rota', 'dev_type', 'host'
+    ]
     def __init__(self, exec_info):
         cmd = 'pylsblk'
         super().__init__(cmd, exec_info.mod(collect_output=True))
@@ -222,9 +225,21 @@ class PyLsblk(Exec):
             for dev in lsblk_data:
                 if dev['tran'] == 'pcie':
                     dev['tran'] = 'nvme'
+                dev['dev_type'] = self.GetDevType(dev)
                 dev['host'] = host
                 total.append(dev)
-        self.df = sdf.SmallDf(rows=total)
+        self.df = sdf.SmallDf(rows=total, columns=self.columns)
+
+    def GetDevType(self, dev):
+        if dev['tran'] == 'sata':
+            if dev['rota']:
+                return str(StorageDeviceType.HDD)
+            else:
+                return str(StorageDeviceType.SSD)
+        elif dev['tran'] == 'nvme':
+            return str(StorageDeviceType.NVME)
+        elif dev['tran'] == 'dimm':
+            return str(StorageDeviceType.PMEM)
 
 
 class Blkid(Exec):
@@ -502,28 +517,31 @@ class ResourceGraph:
     """
 
     def introspect_fs(self, exec_info, sudo=False):
-        lsblk = PyLsblk(exec_info.mod(hide_output=True)) 
+        lsblk = PyLsblk(exec_info.mod(hide_output=True))  
         blkid = Blkid(exec_info.mod(hide_output=True))
         list_fs = ListFses(exec_info.mod(hide_output=True))
         fs = sdf.merge([lsblk.df, blkid.df],
                           on=['device', 'host'],
-                          how='outer')
+                          how='outer') 
         fs[:, 'shared'] = False
         fs = sdf.merge([fs, list_fs.df],
                             on=['device', 'host'],
                             how='outer')
+        fs['mount'] = fs['fs_mount'] 
+        print(fs)
         fs = self._find_common_mounts(fs, exec_info)
         fs = self._label_user_mounts(fs)
         fs = fs.drop_columns([
             'used', 'use%', 'fs_mount', 'partuuid', 'fs_size',
             'partlabel', 'label', 'host'])
         self.fs = fs
+        print(self.fs)
         return self.fs
     
     def _find_common_mounts(self, fs, exec_info):
         """
         Finds mount point points common across all hosts
-        """
+        """ 
         io_groups = fs.groupby(['mount', 'device'])
         common = []
         for name, group in io_groups.groups.items():
