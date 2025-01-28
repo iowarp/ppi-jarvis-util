@@ -527,13 +527,14 @@ class ResourceGraph:
         fs = sdf.merge([fs, list_fs.df],
                             on=['device', 'host'],
                             how='outer')
-        self.fs['mount'] = self.fs['fs_mount'] 
+        fs['mount'] = fs['fs_mount'] 
         fs = self._find_common_mounts(fs, exec_info)
         fs = self._label_user_mounts(fs)
         fs = fs.drop_columns([
             'used', 'use%', 'fs_mount', 'partuuid', 'fs_size',
             'partlabel', 'label', 'host'])
         self.fs = fs
+        print(self.fs)
         return self.fs
     
     def _find_common_mounts(self, fs, exec_info):
