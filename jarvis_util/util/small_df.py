@@ -165,9 +165,10 @@ class SmallDf:
         for row in rows:
             if '$#matched' in row:
                 del row['$#matched']
-            for col in self.columns:
-                if col not in row:
-                    row[col] = None
+            else:
+                for col in self.columns:
+                    if col not in row:
+                        row[col] = None
         return SmallDf(rows=rows)
 
     def _find_unmatched(self, orig_rows):
