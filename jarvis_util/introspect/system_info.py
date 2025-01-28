@@ -225,9 +225,21 @@ class PyLsblk(Exec):
             for dev in lsblk_data:
                 if dev['tran'] == 'pcie':
                     dev['tran'] = 'nvme'
+                dev['dev_type'] = self.GetDevType(dev)
                 dev['host'] = host
                 total.append(dev)
         self.df = sdf.SmallDf(rows=total, columns=self.columns)
+
+    def GetDevType(self, dev):
+        if dev['tran'] == 'sata':
+            if dev['rota']:
+                return str(StorageDeviceType.HDD)
+            else:
+                return str(StorageDeviceType.SSD)
+        elif dev['tran'] == 'nvme':
+            return str(StorageDeviceType.NVME)
+        elif dev['tran'] == 'dimm':
+            return str(StorageDeviceType.PMEM)
 
 
 class Blkid(Exec):
