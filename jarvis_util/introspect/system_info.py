@@ -205,7 +205,10 @@ class PyLsblk(Exec):
            rota: whether or not the device is rotational
            host: the host this record corresponds to
        """
-
+    columns = [
+        'parent', 'device', 'size', 'mount', 'model', 'tran',
+        'rota', 'dev_type', 'host'
+    ]
     def __init__(self, exec_info):
         cmd = 'pylsblk'
         super().__init__(cmd, exec_info.mod(collect_output=True))
@@ -224,7 +227,7 @@ class PyLsblk(Exec):
                     dev['tran'] = 'nvme'
                 dev['host'] = host
                 total.append(dev)
-        self.df = sdf.SmallDf(rows=total)
+        self.df = sdf.SmallDf(rows=total, columns=self.columns)
 
 
 class Blkid(Exec):
