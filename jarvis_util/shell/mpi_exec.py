@@ -48,7 +48,7 @@ class LocalMpiExec(LocalExec):
         self.mpi_env = exec_info.env
         if exec_info.do_dbg:
             self.base_cmd = cmd # To append to the extra processes
-            self.cmd = self.get_dbg_cmd(cmd, exec_info.dbg_port)
+            self.cmd = self.get_dbg_cmd(cmd, exec_info)
         super().__init__(self.mpicmd(),
                          exec_info.mod(env=exec_info.basic_env,
                                        do_dbg=False))

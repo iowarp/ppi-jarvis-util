@@ -241,13 +241,22 @@ class Executable(ABC):
             if node.exit_code:
                 self.exit_code = node.exit_code
 
-    def get_dbg_cmd(self, cmd, dbg_port):
+    def get_dbg_cmd(self, cmd, exec_info):
         """
         Get the command to debug a program
 
         :param cmd: the command to debug
-        :param dbg_port: the debugging port to use
-        :return:
+        :param exec_info: exec information
+        :return: the debug command
         """
-        return f'gdbserver localhost:{dbg_port} {cmd}'
+        dbg_port = exec_info.dbg_port
+        preload = ""
+        if 'LD_PRELOAD' in exec_info.env:
+            exec_info.env = exec_info.env.copy()
+            preload = exec_info.env['LD_PRELOAD']
+            del exec_info.env['LD_PRELOAD']
+        if len(preload):
+            return f'gdbserver localhost:{dbg_port} env LD_PRELOAD={preload} {cmd}'
+        else:
+            return f'gdbserver localhost:{dbg_port} {cmd}'
 

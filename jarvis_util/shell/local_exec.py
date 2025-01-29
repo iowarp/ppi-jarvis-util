@@ -53,13 +53,6 @@ class LocalExec(Executable):
         self.print_stderr_thread = None
         self.exit_code = 0
 
-        # Copy ENV
-        self.basic_env = exec_info.basic_env.copy()
-        self.env = exec_info.env.copy()
-        for key, val in os.environ.items():
-            if key not in self.env:
-                self.env[key] = val
-
         # Managing command execution
         self.sudo = exec_info.sudo
         self.stdin = exec_info.stdin
@@ -69,12 +62,21 @@ class LocalExec(Executable):
             self.cwd = os.getcwd()
         else:
             self.cwd = exec_info.cwd
+        self.basic_env = exec_info.basic_env.copy()
 
         # Create the command
         cmd = self.smash_cmd(cmd, self.sudo, self.basic_env, exec_info.sudoenv)
         if exec_info.do_dbg:
-            cmd = self.get_dbg_cmd(cmd, exec_info.dbg_port)
+            cmd = self.get_dbg_cmd(cmd, exec_info)
         self.cmd = cmd
+
+        # Copy ENV
+        self.env = exec_info.env.copy()
+        for key, val in os.environ.items():
+            if key not in self.env:
+                self.env[key] = val
+
+        # Execute the command
         if self.jutil.debug_local_exec:
             print(cmd)
         self._start_bash_processes()
