@@ -31,7 +31,7 @@ class PsshExec(Executable):
         if not self.is_local:
             dbg_cmd = cmd
             if exec_info.do_dbg:
-                dbg_cmd = self.get_dbg_cmd(cmd, exec_info.dbg_port)
+                dbg_cmd = self.get_dbg_cmd(cmd, exec_info)
             for i, host in enumerate(self.hosts):
                 sshcmd = cmd
                 if i == 0:
