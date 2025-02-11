@@ -362,7 +362,8 @@ class ChiNetPing(Exec):
     Determine whether a network functions across a set of hosts
     """
     def __init__(self, provider, domain, port, mode, exec_info):
-        print(f'Hostfile being used: ', exec_info.hostfile.path if exec_info.hostfile.path else '\"\"',)
+        hostfile = exec_info.hostfile.path if exec_info.hostfile.path else '\"\"'
+        print(f'Hostfile for {port} and {mode} (2): {hostfile}')
         self.cmd = [
             'chi_net_ping',
             exec_info.hostfile.path if exec_info.hostfile.path else '\"\"',
@@ -383,6 +384,7 @@ class ChiNetPingTest:
     Determine whether a network functions across a set of hosts
     """
     def __init__(self, provider, domain, port, exec_info, net_sleep=10):
+        print(f'Hostfile for {port} (1): {exec_info.hostfile.path}')
         self.server = ChiNetPing(provider, domain, port, "server", exec_info.mod(exec_async=True))
         time.sleep(net_sleep)
         self.client = ChiNetPing(provider, domain, port, "client", exec_info)
