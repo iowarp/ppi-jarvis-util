@@ -509,10 +509,14 @@ class ResourceGraph:
         self.apply()
         return self
     
-    def modify(self, exec_info):
+    def modify(self, exec_info, net_sleep):
+        """
+        Edit a resource graph with new information
+        
+        """
         self.introspect_fs(exec_info)
-        self.introspect_net(exec_info, prune_nets=True)
-        pass
+        self.introspect_net(exec_info, prune_nets=True, net_sleep=net_sleep)
+        self.apply()
 
     """
     Introspect filesystems
