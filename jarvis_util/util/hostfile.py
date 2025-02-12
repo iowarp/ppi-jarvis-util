@@ -43,6 +43,7 @@ class Hostfile:
 
         # From hostfile path
         elif hostfile is not None:
+            self.path = os.path.abspath(hostfile)
             self._load_hostfile(self.path)
 
         # From hostfile text
