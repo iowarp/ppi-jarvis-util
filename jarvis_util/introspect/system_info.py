@@ -361,16 +361,16 @@ class ChiNetPing(Exec):
     """
     Determine whether a network functions across a set of hosts
     """
-    def __init__(self, provider, domain, port, mode, exec_info):
+    def __init__(self, provider, domain, port, mode, local_only, exec_info):
         hostfile = exec_info.hostfile.path if exec_info.hostfile.path else '\"\"'
-        print(f'Hostfile for {port} and {mode} (2): {hostfile}')
         self.cmd = [
             'chi_net_ping',
-            exec_info.hostfile.path if exec_info.hostfile.path else '\"\"',
+            hostfile,
             provider,
             domain,
             str(port),
-            mode
+            mode,
+            local_only
         ]
         self.cmd = ' '.join(self.cmd)
         if mode == 'server':
@@ -383,11 +383,10 @@ class ChiNetPingTest:
     """
     Determine whether a network functions across a set of hosts
     """
-    def __init__(self, provider, domain, port, exec_info, net_sleep=10):
-        print(f'Hostfile for {port} (1): {exec_info.hostfile.path}')
-        self.server = ChiNetPing(provider, domain, port, "server", exec_info.mod(exec_async=True))
+    def __init__(self, provider, domain, port, local_only, exec_info, net_sleep=10):
+        self.server = ChiNetPing(provider, domain, port, "server", local_only, exec_info.mod(exec_async=True))
         time.sleep(net_sleep)
-        self.client = ChiNetPing(provider, domain, port, "client", exec_info)
+        self.client = ChiNetPing(provider, domain, port, "client", local_only, exec_info)
         self.exit_code = self.client.exit_code
         # Kill('chi_net_ping', exec_info)
 
@@ -430,14 +429,14 @@ class NetTest(FiInfo):
         domain = net['domain']
         fabric = net['fabric']
         # Test if the network works locally
-        ping = ChiNetPingTest(provider, domain, port, exec_info.mod(hostfile=None), 2)
+        ping = ChiNetPingTest(provider, domain, port, "local", exec_info, 2)
         net['shared'] = False
         if ping.exit_code != 0:
             print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: FAILED {ping.exit_code}')
             return
         self.results[idx] = net
         # Test if the network works across hosts
-        ping = ChiNetPingTest(provider, domain, port, exec_info, net_sleep)
+        ping = ChiNetPingTest(provider, domain, port, "all", exec_info, net_sleep)
         if ping.exit_code == 0:
             net['shared'] = True
         print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: SUCCESS')
