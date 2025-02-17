@@ -20,4 +20,4 @@ class Kill(Exec):
         :param exec_info: Info needed to execute the command
         """
         partial_cmd = "-f" if partial else ""
-        super().__init__(f"pkill {partial_cmd} {cmd}", exec_info)
+        super().__init__(f"pkill -9 {partial_cmd} {cmd}", exec_info)

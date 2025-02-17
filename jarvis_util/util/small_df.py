@@ -60,7 +60,7 @@ class SmallDf:
         return self._mutable_dict(dedup)
 
     def _fixed_dict(self, rows):
-        return tuple((tuple(row.items()) for row in rows))
+        return tuple(tuple((key, row[key]) for key in self.columns) for row in rows)
 
     def _mutable_dict(self, rows):
         # return [{key:val for key, val in row} for row in rows]
@@ -165,6 +165,10 @@ class SmallDf:
         for row in rows:
             if '$#matched' in row:
                 del row['$#matched']
+            else:
+                for col in self.columns:
+                    if col not in row:
+                        row[col] = None
         return SmallDf(rows=rows)
 
     def _find_unmatched(self, orig_rows):
@@ -370,6 +374,15 @@ class SmallDf:
             for col in df.columns:
                 row[col] = orow[col]
         return self
+    
+    def __contains__(self, row):
+        """
+        Check if a row is in the dataframe
+
+        :param row: The row to check
+        :return: bool
+        """
+        return row in self.rows
 
     def __add__(self, other):
         return self._op(other,

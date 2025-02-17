@@ -43,6 +43,7 @@ class Hostfile:
 
         # From hostfile path
         elif hostfile is not None:
+            self.path = os.path.abspath(hostfile)
             self._load_hostfile(self.path)
 
         # From hostfile text
@@ -80,6 +81,9 @@ class Hostfile:
         lines = text.strip().splitlines()
         hosts = []
         for line in lines:
+            line = line.strip()
+            if len(line) == 0 or line[0] == '#':
+                continue
             self._expand_line(hosts, line)
         self._set_hosts(hosts)
 

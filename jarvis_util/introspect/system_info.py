@@ -7,14 +7,19 @@ import socket
 import re
 import platform
 from jarvis_util.shell.exec import Exec
+from jarvis_util.shell.local_exec import LocalExec, LocalExecInfo
 from jarvis_util.util.size_conv import SizeConv
 from jarvis_util.serialize.yaml_file import YamlFile
+from jarvis_util.shell.process import Kill
 import jarvis_util.util.small_df as sdf
+import threading
 import json
 import yaml
 import shlex
 import ipaddress
 import copy
+import time
+import os
 # pylint: disable=C0121
 
 
@@ -113,6 +118,10 @@ class Lsblk(Exec):
         dev_type: the category of the device
         host: the host this record corresponds to
     """
+    columns = [
+        'parent', 'device', 'size', 'mount', 'model', 'tran',
+        'rota', 'dev_type', 'host'
+    ]
 
     def __init__(self, exec_info):
         cmd = 'lsblk -o NAME,SIZE,MODEL,TRAN,MOUNTPOINT,ROTA -J'
@@ -126,46 +135,48 @@ class Lsblk(Exec):
         super().wait()
         total = []
         for host, stdout in self.stdout.items():
-            lsblk_data = json.loads(stdout)['blockdevices']
-            if len(lsblk_data) == 0:
-                continue
-            for dev in lsblk_data:
-                parent = f'/dev/{dev["name"]}'
-                if dev['size'] is None:
-                    dev['size'] = '0'
-                if dev['tran'] is None:
-                    dev['tran'] = 'sata'
-                if dev['rota'] is None:
-                    dev['rota'] = False
-                total.append({
-                    'parent': None,
-                    'device': parent,
-                    'size': SizeConv.to_int(dev['size']),
-                    'model': dev['model'],
-                    'tran': dev['tran'].lower(),
-                    'mount': dev['mountpoint'],
-                    'rota': dev['rota'],
-                    'dev_type': self.GetDevType(dev),
-                    'host': host
-                })
-                if 'children' not in dev:
+            try:
+                lsblk_data = json.loads(stdout)['blockdevices']
+                if len(lsblk_data) == 0:
                     continue
-                for partition in dev['children']:
-                    if partition['size'] is None:
-                        partition['size'] = '0'
+                for dev in lsblk_data:
+                    parent = f'/dev/{dev["name"]}'
+                    if dev['size'] is None:
+                        dev['size'] = '0'
+                    if dev['tran'] is None:
+                        dev['tran'] = 'sata'
+                    if dev['rota'] is None:
+                        dev['rota'] = False
                     total.append({
-                        'parent': parent,
-                        'device': f'/dev/{partition["name"]}',
-                        'size': SizeConv.to_int(partition['size']),
+                        'parent': None,
+                        'device': parent,
+                        'size': SizeConv.to_int(dev['size']),
                         'model': dev['model'],
                         'tran': dev['tran'].lower(),
-                        'mount': partition['mountpoint'],
+                        'mount': dev['mountpoint'],
                         'rota': dev['rota'],
                         'dev_type': self.GetDevType(dev),
                         'host': host
                     })
-        self.df = sdf.SmallDf(rows=total)
-        print(self.df)
+                    if 'children' not in dev:
+                        continue
+                    for partition in dev['children']:
+                        if partition['size'] is None:
+                            partition['size'] = '0'
+                        total.append({
+                            'parent': parent,
+                            'device': f'/dev/{partition["name"]}',
+                            'size': SizeConv.to_int(partition['size']),
+                            'model': dev['model'],
+                            'tran': dev['tran'].lower(),
+                            'mount': partition['mountpoint'],
+                            'rota': dev['rota'],
+                            'dev_type': self.GetDevType(dev),
+                            'host': host
+                        })
+            except json.JSONDecodeError:
+                pass
+        self.df = sdf.SmallDf(rows=total, columns=self.columns)
 
     def GetDevType(self, dev):
         if dev['tran'] == 'sata':
@@ -194,7 +205,10 @@ class PyLsblk(Exec):
            rota: whether or not the device is rotational
            host: the host this record corresponds to
        """
-
+    columns = [
+        'parent', 'device', 'size', 'mount', 'model', 'tran',
+        'rota', 'dev_type', 'host'
+    ]
     def __init__(self, exec_info):
         cmd = 'pylsblk'
         super().__init__(cmd, exec_info.mod(collect_output=True))
@@ -211,10 +225,21 @@ class PyLsblk(Exec):
             for dev in lsblk_data:
                 if dev['tran'] == 'pcie':
                     dev['tran'] = 'nvme'
+                dev['dev_type'] = self.GetDevType(dev)
                 dev['host'] = host
                 total.append(dev)
-        self.df = sdf.SmallDf(rows=total)
-        print(self.df)
+        self.df = sdf.SmallDf(rows=total, columns=self.columns)
+
+    def GetDevType(self, dev):
+        if dev['tran'] == 'sata':
+            if dev['rota']:
+                return str(StorageDeviceType.HDD)
+            else:
+                return str(StorageDeviceType.SSD)
+        elif dev['tran'] == 'nvme':
+            return str(StorageDeviceType.NVME)
+        elif dev['tran'] == 'dimm':
+            return str(StorageDeviceType.PMEM)
 
 
 class Blkid(Exec):
@@ -332,6 +357,91 @@ class FiInfo(Exec):
         self.df.drop_duplicates()
 
 
+class ChiNetPing(Exec):
+    """
+    Determine whether a network functions across a set of hosts
+    """
+    def __init__(self, provider, domain, port, mode, local_only, exec_info):
+        hostfile = exec_info.hostfile.path if exec_info.hostfile.path else '\"\"'
+        self.cmd = [
+            'chi_net_ping',
+            hostfile,
+            provider,
+            domain,
+            str(port),
+            mode,
+            local_only
+        ]
+        self.cmd = ' '.join(self.cmd)
+        if mode == 'server':
+            super().__init__(self.cmd, exec_info.mod(exec_async=True, hide_output=True))
+        else:
+            super().__init__(self.cmd, LocalExecInfo(hide_output=True))
+
+
+class ChiNetPingTest:
+    """
+    Determine whether a network functions across a set of hosts
+    """
+    def __init__(self, provider, domain, port, local_only, exec_info, net_sleep=10):
+        self.server = ChiNetPing(provider, domain, port, "server", local_only, exec_info.mod(exec_async=True))
+        time.sleep(net_sleep)
+        self.client = ChiNetPing(provider, domain, port, "client", local_only, exec_info)
+        self.exit_code = self.client.exit_code
+        # Kill('chi_net_ping', exec_info)
+
+
+class NetTest(FiInfo):
+    """
+    Determine whether a set of networks function across a set of hosts.
+    """
+    def __init__(self, port, exec_info, exclusions=None, base_port=6040, net_sleep=10):
+        super().__init__(exec_info)
+        self.working = []
+        df = self.df[['provider', 'domain', 'fabric']].drop_duplicates()
+        if exclusions:
+            exclusions = exclusions[['provider', 'domain', 'fabric']].drop_duplicates()
+            df = df[lambda r: r not in exclusions]
+        print(f'About to test {len(df)} networks')
+        port = base_port
+        threads = []
+        self.results = [None] * len(df)
+        for idx, net in enumerate(df.rows):
+            # Start a new thread for each network test
+            thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info, net_sleep))
+            threads.append(thread)
+            thread.start()
+            port += 1
+            # thread.join()
+
+        # Wait for all threads to complete    
+        for idx, thread in enumerate(threads):
+            thread.join()
+            result = self.results[idx]
+            if result is not None:
+                self.working.append(result)
+            
+        self.df = sdf.SmallDf(self.working)
+        Kill('chi_net_ping', exec_info)
+
+    def _async_test(self, idx, net, port, exec_info, net_sleep):
+        provider = net['provider']
+        domain = net['domain']
+        fabric = net['fabric']
+        # Test if the network works locally
+        ping = ChiNetPingTest(provider, domain, port, "local", exec_info, 2)
+        net['shared'] = False
+        if ping.exit_code != 0:
+            print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: FAILED {ping.exit_code}')
+            return
+        self.results[idx] = net
+        # Test if the network works across hosts
+        ping = ChiNetPingTest(provider, domain, port, "all", exec_info, net_sleep)
+        if ping.exit_code == 0:
+            net['shared'] = True
+        print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: SUCCESS')
+        
+
 class ResourceGraph:
     """
     Stores helpful information about storage and networking info for machines.
@@ -344,6 +454,7 @@ class ResourceGraph:
         model: the exact model of the device
         dev_type: type of device
         fs_type: the type of filesystem (e.g., ext4)
+        needs_root: whether the user needs sudo to access the device
         uuid: filesystem-levle uuid from the FS metadata
         avail: total number of bytes remaining
         shared: whether the this is a shared service or not
@@ -362,21 +473,16 @@ class ResourceGraph:
     """
 
     def __init__(self):
-        self.lsblk = None
-        self.blkid = None
-        self.list_fs = None
-        self.fi_info = None
         self.fs_columns = [
             'parent', 'device', 'mount', 'model', 'dev_type',
             'fs_type', 'uuid',
-            'avail', 'shared', 'host',
+            'avail', 'shared', 'needs_root'
         ]
         self.net_columns = [
-            'provider', 'fabric', 'domain', 'host',
+            'provider', 'fabric', 'domain',
             'speed', 'shared'
         ]
         self.create()
-        self.hosts = None
         self.path = None
 
     """
@@ -387,7 +493,7 @@ class ResourceGraph:
         self.fs = sdf.SmallDf(columns=self.fs_columns)
         self.net = sdf.SmallDf(columns=self.net_columns)
 
-    def build(self, exec_info, introspect=True):
+    def build(self, exec_info, introspect=True, net_sleep=10):
         """
         Build a resource graph.
 
@@ -398,273 +504,116 @@ class ResourceGraph:
         """
         self.create()
         if introspect:
-            self._introspect(exec_info)
+            self.introspect_fs(exec_info)
+            self.introspect_net(exec_info, prune_nets=True, net_sleep=net_sleep)
         self.apply()
         return self
-
-    def walkthrough_build(self, exec_info, introspect=True):
-        self.build(exec_info, introspect)
-        self.walkthrough_prune(exec_info)
-
-    def walkthrough_prune(self, exec_info):
-        print('(2/4). Finding mount points common across machines')
-        mounts = self.find_storage(common=True, condense=True)
-        self.print_df(mounts)
-        # Add missing mountpoints
-        x = self._ask_yes_no('2.(1/3). Are there any mount points missing '
-                             'you would like to add?',
-                             default='no')
-        new_devs = []
-        while x:
-            mount = self._ask_string('2.1.(1/6). Mount point')
-            mount = mount.replace(r'\$', '$')
-            dev_type = self._ask_choices('2.1.(2/6). What transport?',
-                                     choices=['hdd', 'ssd', 'nvme', 'pmem'])
-            shared = self._ask_yes_no('2.1.(3/6). Is this device shared? '
-                                      'I.e., a PFS?')
-            avail = self._ask_size('2.1.(4/6). How much capacity are you '
-                                   'willing to use?')
-            y = self._ask_yes_no('2.1.(5/6). Are you sure this is accurate?',
-                                 default='yes')
-            if not y:
-                continue
-            new_devs.append({
-                'mount': mount,
-                'dev_type': dev_type,
-                'shared': shared,
-                'avail': avail,
-                'size': avail,
-            })
-            x = self._ask_yes_no('2.1.(6/6). Are there any other '
-                                 'devices you would like to add?',
-                                 default='no')
-            if x is None:
-                x = False
-        self.add_storage(exec_info.hostfile, new_devs)
-        # Correct discovered mount points
-        x = self._ask_yes_no('2.(2/3). Would you like to correct '
-                             'any mountpoints?',
-                             default='no')
-        while x:
-            regex = self._ask_re('2.2.(1/3). Enter a regex of mount '
-                                 'points to select',
-                                 default='.*').strip()
-            if regex is None:
-                regex = '.*'
-            if regex.endswith('*'):
-                regex = f'^{regex}'
-            else:
-                regex = f'^{regex}$'
-            matches = mounts[lambda r: re.match(regex, r['mount']), 'mount']
-            print(matches.to_string())
-            y = self._ask_yes_no('Is this correct?', default='yes')
-            if not y:
-                continue
-            suffix = self._ask_string('2.2.(2/3). Enter a suffix to '
-                                      'append to these paths.',
-                                      default='${USER}')
-            y = self._ask_yes_no('Are you sure this is accurate?',
-                                 default='yes')
-            if not y:
-                continue
-            suffix = suffix.replace(r'\$', '$')
-            self.add_suffix(regex, mount_suffix=suffix)
-            x = self._ask_yes_no('2.2.(3/3). Do you want to select more '
-                                 'mount points?',
-                                 default='no')
-        # Eliminate unneded mount points
-        x = self._ask_yes_no(
-            '2.(3/3). Would you like to remove any mount points?',
-            default='no')
-        mounts = self.fs['mount'].unique().list()
-        print(f'Mount points: {mounts}')
-        while x:
-            regex = self._ask_re('2.3.(1/3). Enter a regex of mount '
-                                 'points to remove.').strip()
-            if regex is None:
-                regex = '.*'
-            if regex.endswith('*'):
-                regex = f'^{regex}'
-            else:
-                regex = f'^{regex}$'
-            matches = self.fs[lambda r: re.match(regex, r['mount']), 'mount']
-            print(matches.to_string())
-            y = self._ask_yes_no('2.3.(2/3). Is this correct?', default='yes')
-            if not y:
-                continue
-            self.fs = self.fs[lambda r: not re.match(regex, r['mount'])]
-            mounts = self.fs['mount'].unique().list()
-            print(f'Mount points: {mounts}')
-            x = self._ask_yes_no('2.3.(3/3). Any more?', default='no')
-
-        # Fill in missing network information
-        print('(3/4). Finding network info')
-        net_info = self.find_net_info(exec_info.hostfile)
-        fabrics = net_info['fabric'].unique().list()
-        hostname = socket.gethostname()
-        ip_address = socket.gethostbyname(hostname)
-        print(f'This IP addr of this node ({hostname}) is: {ip_address}')
-        print(f'We detect the following {len(fabrics)} fabrics: {fabrics}')
-        x = False
-        # pylint: disable=W0640
-        for fabric in fabrics:
-            fabric_info = net_info[lambda r: r['fabric'] == fabric]
-            print(f'3.(1/4). Now modifying {fabric}:')
-            print(f'Providers: {fabric_info["provider"].unique().list()}')
-            print(f'Domains: {fabric_info["domain"].unique().list()}')
-            x = self._ask_yes_no('3.(2/4). Keep this fabric?', default='no')
-            if not x:
-                net_info = net_info[lambda r: r['fabric'] != fabric]
-                print()
-                continue
-            shared = self._ask_yes_no('3.(3/4). '
-                                      'Is this fabric shared across hosts?',
-                                      default='yes')
-            speed = self._ask_size('3.(4/4). '
-                                   'What is the speed of this network?')
-            fabric_info['speed'] = speed
-            fabric_info['shared'] = shared
-            print()
-        # pylint: enable=W0640
-        self.net = net_info
-        x = self._ask_yes_no('(4/4). Are all hosts symmetrical? I.e., '
-                             'the per-node resource graphs should all '
-                             'be the same.',
-                             default='yes')
-        if x:
-            self.make_common(exec_info.hostfile)
+    
+    def modify(self, exec_info, net_sleep):
+        """
+        Edit a resource graph with new information
+        
+        """
+        self.introspect_fs(exec_info)
+        self.introspect_net(exec_info, prune_nets=True, net_sleep=net_sleep)
         self.apply()
 
-    def _ask_string(self, msg, default=None):
-        if default is None:
-            x = input(f'{msg}: ')
-        else:
-            x = input(f'{msg} (Default: {default}): ')
-        if len(x) == 0:
-            x = default
-        return x
+    """
+    Introspect filesystems
+    """
 
-    def _ask_re(self, msg, default=None):
-        if default is not None:
-            msg = f'{msg} (Default: {default})'
-        x = input(f'{msg}: ')
-        if len(x) == 0:
-            x = default
-        if x is None:
-            x = ''
-        return x
-
-    def _ask_yes_no(self, msg, default=None):
-        while True:
-            msg = f'{msg} (yes/no)'
-            if default is not None:
-                msg = f'{msg} (Default: {default})'
-            x = input(f'{msg}: ')
-            if x == '':
-                x = default
-            if x == 'yes':
-                return True
-            elif x == 'no':
-                return False
-            else:
-                print(f'{x} is not either yes or no')
-
-    def _ask_choices(self, msg, choices):
-        choices_str = '/'.join(choices)
-        while True:
-            x = input(f'{msg} ({choices_str}): ')
-            if x in choices:
-                return x
-            else:
-                print(f'{x} is not a valid choice')
-
-    def _ask_size(self, msg):
-        x = input(f'{msg} (kK,mM,gG,tT,pP): ')
-        size = SizeConv.to_int(x)
-        return size
-
-    def _introspect(self, exec_info):
-        """
-        Introspect the cluster for resources.
-
-        :param exec_info: Where to collect resource information
-        :return: None
-        """
-        self.lsblk = PyLsblk(exec_info.mod(hide_output=True))
-        self.blkid = Blkid(exec_info.mod(hide_output=True))
-        self.list_fs = ListFses(exec_info.mod(hide_output=True))
-        self.fi_info = FiInfo(exec_info.mod(hide_output=True))
-        self.hosts = exec_info.hostfile.hosts
-        self.fs = sdf.merge([self.fs, self.lsblk.df, self.blkid.df],
+    def introspect_fs(self, exec_info, sudo=False):
+        lsblk = PyLsblk(exec_info.mod(hide_output=True))  
+        blkid = Blkid(exec_info.mod(hide_output=True))
+        list_fs = ListFses(exec_info.mod(hide_output=True))
+        fs = sdf.merge([lsblk.df, blkid.df],
+                          on=['device', 'host'],
+                          how='outer') 
+        fs[:, 'shared'] = False
+        fs = sdf.merge([fs, list_fs.df],
                             on=['device', 'host'],
                             how='outer')
-        self.fs[:, 'shared'] = False
-        self.fs = sdf.merge([self.fs, self.list_fs.df],
-                               on=['device', 'host'],
-                               how='outer')
-        self.fs.drop_columns([
+        fs['mount'] = fs['fs_mount'] 
+        fs = self._find_common_mounts(fs, exec_info)
+        fs = self._label_user_mounts(fs)
+        fs = fs.drop_columns([
             'used', 'use%', 'fs_mount', 'partuuid', 'fs_size',
-            'partlabel', 'label'])
-        net_df = self.fi_info.df
+            'partlabel', 'label', 'host'])
+        self.fs = fs
+        return self.fs
+    
+    def _find_common_mounts(self, fs, exec_info):
+        """
+        Finds mount point points common across all hosts
+        """ 
+        io_groups = fs.groupby(['mount', 'device'])
+        common = []
+        for name, group in io_groups.groups.items():
+            if len(group) != len(exec_info.hostfile.hosts):
+                continue
+            common.append(group.rows[0])
+        return sdf.SmallDf(common)
+
+    def _label_user_mounts(self, fs):
+        """
+        Try to find folders/directories the current user
+        can access without root priveleges in each mount
+        """
+        for dev in fs.rows:
+            dev['needs_root'] = True
+            if dev['mount'] is None:
+                continue
+            if not dev['mount'].startswith('/'):
+                continue
+            dev['mount'] = self._try_user_access_paths(dev, fs)
+        return sdf.SmallDf(fs.rows)
+
+    def _try_user_access_paths(self, dev, fs):
+        username = os.getenv('USER') or os.getenv('USERNAME')
+        paths = [
+            dev['mount'], 
+            os.path.join(dev["mount"], username),
+            os.path.join(dev["mount"], 'users', username),
+            os.path.join(dev["mount"], 'home', username),
+        ]
+        for path in paths:
+            if self._try_user_access(fs, path, path == dev['mount']):
+                dev['needs_root'] = False
+                return path
+        dev['needs_root'] = True
+        return dev['mount']
+
+    def _try_user_access(self, fs, mount, known_mount=False):
+        try:
+            if mount.startswith('/boot'):
+                print(mount)
+            if not known_mount and self._check_if_mounted(fs, mount):
+                return False
+            if os.access(mount, os.R_OK) and os.access(mount, os.W_OK):
+                return True
+        except (PermissionError, OSError):
+            return False
+
+    def _check_if_mounted(self, fs, mount):
+        return len(fs[lambda r: r['mount'] == mount]) > 0
+
+    """
+    Introspect networks
+    """
+
+    def introspect_net(self, exec_info, prune_nets=False, prune_port=4192, net_sleep=10):
+        if not prune_nets:
+            fi_info = FiInfo(exec_info.mod(hide_output=True))
+        else:
+            fi_info = NetTest(prune_port, exec_info.mod(hide_output=True), exclusions=self.net, net_sleep=net_sleep)
+        net_df = fi_info.df
         net_df[:, 'speed'] = 0
         net_df.drop_columns(['version', 'type', 'protocol'])
         net_df.drop_duplicates()
-        self.net = net_df
-
-    def save(self, path):
-        """
-        Save the resource graph YAML file
-
-        :param path: the path to save the file
-        :return: None
-        """
-        graph = {
-            'hosts': self.hosts,
-            'fs': self.fs.rows,
-            'net': self.net.rows,
-        }
-        YamlFile(path).save(graph)
-        self.path = path
-
-    def load(self, path):
-        """
-        Load resource graph from storage.
-
-        :param path: The path to the resource graph YAML file
-        :return: self
-        """
-        graph = YamlFile(path).load()
-        self.path = path
-        self.hosts = graph['hosts']
-        self.fs = sdf.SmallDf(graph['fs'], columns=self.fs_columns)
-        self.net = sdf.SmallDf(graph['net'], columns=self.net_columns)
-        self.apply()
-        return self
-
-    def _derive_storage_cols(self):
-        df = self.fs
-        if df is None or len(df) == 0:
-            return
-        df['mount'].fillna('')
-        df['shared'].fillna(True)
-        df['tran'].fillna('')
-        df['size'].fillna(0)
-        df['size'].apply(lambda r, c: SizeConv.to_int(r[c]))
-        noavail = df[lambda r: r['avail'] == 0 or r['avail'] is None, :]
-        noavail['avail'] = noavail['size']
-        df['avail'].apply(lambda r, c: SizeConv.to_int(r[c]))
-
-    def _derive_net_cols(self):
-        self.net['domain'].fillna('')
-
-    def set_hosts(self, hosts):
-        """
-        Set the set of hosts this resource graph covers
-
-        :param hosts: Hostfile()
-        :return: None
-        """
-        self.hosts = hosts.hosts_ip
+        if self.net:
+            self.net = sdf.concat([self.net, net_df])
+        else:
+            self.net = net_df
 
     """
     Update the resource graph
@@ -757,6 +706,50 @@ class ResourceGraph:
         self._derive_net_cols()
         self._derive_storage_cols()
 
+    def save(self, path):
+        """
+        Save the resource graph YAML file
+
+        :param path: the path to save the file
+        :return: None
+        """
+        graph = {
+            'fs': self.fs.rows,
+            'net': self.net.rows,
+        }
+        YamlFile(path).save(graph)
+        self.path = path
+
+    def load(self, path):
+        """
+        Load resource graph from storage.
+
+        :param path: The path to the resource graph YAML file
+        :return: self
+        """
+        graph = YamlFile(path).load()
+        self.path = path
+        self.fs = sdf.SmallDf(graph['fs'], columns=self.fs_columns)
+        self.net = sdf.SmallDf(graph['net'], columns=self.net_columns)
+        self.apply()
+        return self
+
+    def _derive_storage_cols(self):
+        df = self.fs
+        if df is None or len(df) == 0:
+            return
+        df['mount'].fillna('')
+        df['shared'].fillna(True)
+        df['tran'].fillna('')
+        df['size'].fillna(0)
+        noavail = df[lambda r: r['avail'] == 0 or r['avail'] is None, :]
+        noavail['avail'] = noavail['size']
+        df['avail'].apply(lambda r, c: SizeConv.to_int(r[c]))
+        df['size'] = df['avail']
+
+    def _derive_net_cols(self):
+        self.net['domain'].fillna('')
+
     """
     Query the resource graph
     """
@@ -770,11 +763,19 @@ class ResourceGraph:
         df = self.fs
         return df[lambda r: r['shared'] == True]
 
+    def find_user_storage(self):
+        """
+        Find the set of user-accessible storage services
+
+        :return: Dataframe
+        """
+        df = self.fs
+        return df[lambda r: r['needs_root'] == False]
+
     def find_storage(self,
                      dev_types=None,
                      is_mounted=True,
-                     common=False,
-                     condense=False,
+                     needs_root = None,
                      count_per_node=None,
                      count_per_dev=None,
                      min_cap=None,
@@ -788,9 +789,8 @@ class ResourceGraph:
         :param dev_types: Search for devices of type in order. Either a list
         or a string.
         :param is_mounted: Search only for mounted devices
-        :param common: Remove mount points that are not common across all hosts
-        :param condense: Used in conjunction with common. Will remove the 'host'
         column and will only contain one entry per mount point.
+        :param needs_root: Search for devices that do or don't need root access.
         :param count_per_node: Choose only a subset of devices matching query
         :param count_per_dev: Choose only a subset of devices matching query
         :param min_cap: Remove devices with too little overall capacity
@@ -811,15 +811,14 @@ class ResourceGraph:
                 mount_res = [mount_res]
             df = df[lambda r:
                     any(re.match(reg, str(r['mount'])) for reg in mount_res)]
+        # Filter devices by whether or not root is needed
+        if needs_root is not None:
+            df = df[lambda r: r['needs_root'] == needs_root]
         # Find devices of a particular type
         if dev_types is not None:
             if not isinstance(dev_types, (list, tuple, set)):
                 dev_types = [dev_types]
             df = df[lambda r: str(r['dev_type']) in dev_types]
-        # Get the set of mounts common between all hosts
-        if common:
-            df = df.groupby(['mount']).filter_groups(
-                lambda x: len(x) == len(self.hosts)).reset_index()
         # Remove storage with too little capacity
         if min_cap is not None:
             df = df[lambda r: r['size'] >= min_cap]
@@ -833,8 +832,6 @@ class ResourceGraph:
         # Take a certain number of matched devices per-host
         if count_per_node is not None:
             df = df.groupby('host').head(count_per_node).reset_index()
-        if common and condense:
-            df = df.groupby(['mount']).first().reset_index()
         #     df = df.drop_columns('host')
         if shared is not None:
             df = df[lambda r: r['shared'] == shared]
@@ -857,7 +854,6 @@ class ResourceGraph:
                       hosts=None,
                       strip_ips=False,
                       providers=None,
-                      condense=False,
                       shared=None,
                       df=None):
         """
@@ -867,7 +863,6 @@ class ResourceGraph:
         all hosts to find network information for
         :param strip_ips: remove IPs that are not compatible with the hostfile
         :param providers: The network protocols to search for.
-        :param condense: Only retain information for a single host
         :param df: The df to use for this query
         :param shared: Filter out local networks
         :return: Dataframe
@@ -879,11 +874,6 @@ class ResourceGraph:
             if strip_ips:
                 ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
                 df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
-            # Filter out protocols which are not common between these hosts
-            if condense:
-                grp = df.groupby(['provider', 'domain']).filter_groups(
-                   lambda x: len(x) >= len(hosts))
-                df = grp.first().reset_index()
         # Choose only a subset of providers
         if providers is not None:
             if not isinstance(providers, (list, set)):
@@ -900,17 +890,7 @@ class ResourceGraph:
 
     def print_df(self, df):
         if 'device' in df.columns:
-            if 'host' in df.columns:
-                col = ['host', 'mount', 'device', 'dev_type', 'shared',
-                       'avail', 'tran', 'rota', 'fs_type']
-                df = df[col]
-                df = df.sort_values('host')
-                print(df.to_string())
-            else:
-                col = ['device', 'mount', 'dev_type', 'shared',
-                       'avail', 'tran', 'rota', 'fs_type']
-                df = df[col]
-                print(df.to_string())
+            print(df.sort_values('mount').to_string())
         else:
             print(df.sort_values('provider').to_string())
 
