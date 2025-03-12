@@ -2,7 +2,7 @@
 This file contains helper methods to load a class dynamically from a file
 """
 
-import sys
+import sys, os
 
 # NOTE(llogan): To get the path of the directory this file is in, use
 # str(pathlib.Path(__file__).parent.resolve())
@@ -22,12 +22,16 @@ def load_class(import_str, path, class_name):
     :param class_name: The name of the class in the file
     :return: The class data type
     """
-    if len(path):
-        sys.path.insert(0, path)
-    try:
-        module = __import__(import_str, fromlist=[class_name])
-    except:
+    fullpath = path + '/' + import_str.replace('.', '/') + '.py'
+    if not os.path.exists(fullpath):
         return None
-    if len(path):
-        sys.path.pop(0)
-    return getattr(module, class_name)
+    sys.path.insert(0, path)
+    try:
+        module = None
+        cls = None
+        module = __import__(import_str, fromlist=[class_name])
+        cls = getattr(module, class_name)
+    except ImportError as e:
+        print(f'Error importing {import_str}: {e}')
+    sys.path.pop(0)
+    return cls
