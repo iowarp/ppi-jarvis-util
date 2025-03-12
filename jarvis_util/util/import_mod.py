@@ -26,12 +26,7 @@ def load_class(import_str, path, class_name):
     if not os.path.exists(fullpath):
         return None
     sys.path.insert(0, path)
-    try:
-        module = None
-        cls = None
-        module = __import__(import_str, fromlist=[class_name])
-        cls = getattr(module, class_name)
-    except ImportError as e:
-        print(f'Error importing {import_str}: {e}')
+    module = __import__(import_str, fromlist=[class_name])
+    cls = getattr(module, class_name)
     sys.path.pop(0)
     return cls
