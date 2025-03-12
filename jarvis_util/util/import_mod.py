@@ -22,7 +22,7 @@ def load_class(import_str, path, class_name):
     :param class_name: The name of the class in the file
     :return: The class data type
     """
-    fullpath = path + '/' + import_str.replace('.', '/') + '.py'
+    fullpath = os.path.join(path, import_str.replace('.', '/') + '.py')
     if not os.path.exists(fullpath):
         return None
     sys.path.insert(0, path)
