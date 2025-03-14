@@ -102,7 +102,7 @@ class ExecInfo:
             self.env = env
         basic_env = [
             'PATH', 'LD_LIBRARY_PATH', 'LIBRARY_PATH', 'CMAKE_PREFIX_PATH',
-            'PYTHON_PATH', 'CPATH', 'INCLUDE', 'JAVA_HOME'
+            'PYTHONPATH', 'CPATH', 'INCLUDE', 'JAVA_HOME'
         ]
         self.basic_env = {}
         for key in basic_env:
