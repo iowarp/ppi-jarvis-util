@@ -883,9 +883,10 @@ class ResourceGraph:
         # Test validitiy of networks for current hostfile
         if hosts is not None and strip_ips:
             # Perform a local net-test to see if we can start a server
-            NetTest(df, prune_port, 
+            fi_info = NetTest(df, prune_port, 
                     LocalExecInfo(hide_output=True), 
                     net_sleep=net_sleep, local_only=True)
+            df = fi_info.df
         return df
 
     def print_df(self, df):
