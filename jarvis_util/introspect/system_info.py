@@ -847,7 +847,8 @@ class ResourceGraph:
                       hosts=None,
                       strip_ips=False,
                       providers=None,
-                      shared=None,
+                      local=True,
+                      shared=True,
                       df=None,
                       prune_port=6040,
                       net_sleep=1):
@@ -859,7 +860,8 @@ class ResourceGraph:
         :param strip_ips: remove IPs that are not compatible with the hostfile
         :param providers: The network protocols to search for.
         :param df: The df to use for this query
-        :param shared: Filter out local networks
+        :param local: Filter local networks
+        :param shared: Filter shared networks
         :param prune_port: The port to use for network testing
         :param net_sleep: The time to sleep between network tests
         :return: Dataframe
@@ -873,11 +875,12 @@ class ResourceGraph:
             providers = set(providers)
             df = df[lambda r: r['provider'] in providers]
         # Choose only shared networks
-        if shared is not None:
-            if shared:
-                df = df[lambda r: r['shared']]
-            else:
-                df = df[lambda r: not r['shared']]
+        if not shared:
+            df = df[lambda r: r['shared'] != True]
+        # Choose only local networks
+        if not local:
+            df = df[lambda r: r['domain'] != False]
+        # Test validitiy of networks for current hostfile
         if hosts is not None and strip_ips:
             # Perform a local net-test to see if we can start a server
             NetTest(df, prune_port, 
