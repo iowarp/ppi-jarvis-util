@@ -391,16 +391,15 @@ class ChiNetPingTest:
         # Kill('chi_net_ping', exec_info)
 
 
-class NetTest(Exec):
+class NetTest:
     """
     Determine whether a set of networks function across a set of hosts.
     """
     def __init__(self, fi_info_df, port, exec_info, 
                  exclusions=None, base_port=6040, net_sleep=10, local_only=False):
-        super().__init__(exec_info)
         self.local_only = local_only
         self.working = []
-        df = fi_info_df.df[['provider', 'domain', 'fabric']].drop_duplicates()
+        df = fi_info_df[['provider', 'domain', 'fabric']].drop_duplicates()
         if exclusions:
             exclusions = exclusions[['provider', 'domain', 'fabric']].drop_duplicates()
             df = df[lambda r: r not in exclusions]
