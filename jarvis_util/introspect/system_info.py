@@ -436,7 +436,7 @@ class NetTest:
         provider = net['provider']
         domain = net['domain']
         fabric = net['fabric']
-        ping = ChiNetPing(provider, domain, port, "touchserver", exec_info, 2)
+        ping = ChiNetPing(provider, domain, port, "touchserver", "local", exec_info, 2)
         if ping.exit_code != 0:
             print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}')
         else:
