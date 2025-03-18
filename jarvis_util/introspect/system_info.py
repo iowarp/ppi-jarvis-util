@@ -398,7 +398,7 @@ class NetTest:
     def __init__(self, fi_info_df, port, exec_info, 
                  exclusions=None, base_port=6040, net_sleep=10, local_only=False):
         self.local_only = local_only
-        self.working = []
+        self.working = [] 
         df = fi_info_df[['provider', 'domain', 'fabric']].drop_duplicates()
         if exclusions:
             exclusions = exclusions[['provider', 'domain', 'fabric']].drop_duplicates()
@@ -885,7 +885,7 @@ class ResourceGraph:
             # Perform a local net-test to see if we can start a server
             NetTest(df, prune_port, 
                     LocalExecInfo(hide_output=True), 
-                    exclusions=self.net, net_sleep=net_sleep, local_only=True)
+                    net_sleep=net_sleep, local_only=True)
         return df
 
     def print_df(self, df):
