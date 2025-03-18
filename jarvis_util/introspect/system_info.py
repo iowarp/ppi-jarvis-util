@@ -897,7 +897,7 @@ class ResourceGraph:
             df = df[lambda r: r['shared'] != True]
         # Choose only local networks
         if not local:
-            df = df[lambda r: r['domain'] != False]
+            df = df[lambda r: r['shared'] != False]
         # Test validitiy of networks for current hostfile
         if hosts is not None and strip_ips:
             # Perform a local net-test to see if we can start a server
