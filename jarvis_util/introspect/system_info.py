@@ -391,14 +391,16 @@ class ChiNetPingTest:
         # Kill('chi_net_ping', exec_info)
 
 
-class NetTest(FiInfo):
+class NetTest(Exec):
     """
     Determine whether a set of networks function across a set of hosts.
     """
-    def __init__(self, port, exec_info, exclusions=None, base_port=6040, net_sleep=10):
+    def __init__(self, fi_info_df, port, exec_info, 
+                 exclusions=None, base_port=6040, net_sleep=10, local_only=False):
         super().__init__(exec_info)
+        self.local_only = local_only
         self.working = []
-        df = self.df[['provider', 'domain', 'fabric']].drop_duplicates()
+        df = fi_info_df.df[['provider', 'domain', 'fabric']].drop_duplicates()
         if exclusions:
             exclusions = exclusions[['provider', 'domain', 'fabric']].drop_duplicates()
             df = df[lambda r: r not in exclusions]
@@ -432,14 +434,15 @@ class NetTest(FiInfo):
         ping = ChiNetPingTest(provider, domain, port, "local", exec_info, 2)
         net['shared'] = False
         if ping.exit_code != 0:
-            print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: FAILED {ping.exit_code}')
+            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}')
             return
         self.results[idx] = net
-        # Test if the network works across hosts
-        ping = ChiNetPingTest(provider, domain, port, "all", exec_info, net_sleep)
-        if ping.exit_code == 0:
-            net['shared'] = True
-        print(f'Testing the network {provider}://{domain}/[{fabric}]:{port}: SUCCESS')
+        if not self.local_only:
+            # Test if the network works across hosts
+            ping = ChiNetPingTest(provider, domain, port, "all", exec_info, net_sleep)
+            if ping.exit_code == 0:
+                net['shared'] = True
+        print(f'INCLUDING the network {provider}://{domain}/[{fabric}]:{port}')
         
 
 class ResourceGraph:
@@ -607,10 +610,9 @@ class ResourceGraph:
     """
 
     def introspect_net(self, exec_info, prune_nets=False, prune_port=4192, net_sleep=10):
-        if not prune_nets:
-            fi_info = FiInfo(exec_info.mod(hide_output=True))
-        else:
-            fi_info = NetTest(prune_port, exec_info.mod(hide_output=True), exclusions=self.net, net_sleep=net_sleep)
+        fi_info = FiInfo(exec_info.mod(hide_output=True))
+        if prune_nets:
+            fi_info = NetTest(fi_info.df, prune_port, exec_info.mod(hide_output=True), exclusions=self.net, net_sleep=net_sleep)
         net_df = fi_info.df
         net_df[:, 'speed'] = 0
         net_df.drop_columns(['version', 'type', 'protocol'])
@@ -842,25 +844,14 @@ class ResourceGraph:
             df = df[lambda r: r['shared'] == shared]
         return df
 
-    @staticmethod
-    def _subnet_matches_hosts(subnet, ip_addrs):
-        # pylint: disable=W0702
-        try:
-            network = ipaddress.ip_network(subnet, strict=False)
-        except:
-            return True
-        # pylint: enable=W0702
-        for ip in ip_addrs:
-            if ip in network:
-                return True
-        return False
-
     def find_net_info(self,
                       hosts=None,
                       strip_ips=False,
                       providers=None,
                       shared=None,
-                      df=None):
+                      df=None,
+                      prune_port=6040,
+                      net_sleep=1):
         """
         Find the set of networks common between each host.
 
@@ -870,15 +861,12 @@ class ResourceGraph:
         :param providers: The network protocols to search for.
         :param df: The df to use for this query
         :param shared: Filter out local networks
+        :param prune_port: The port to use for network testing
+        :param net_sleep: The time to sleep between network tests
         :return: Dataframe
         """
         if df is None:
             df = self.net
-        if hosts is not None:
-            # Get the set of fabrics corresponding to these hosts
-            if strip_ips:
-                ips = [ipaddress.ip_address(ip) for ip in hosts.hosts_ip]
-                df = df[lambda r: self._subnet_matches_hosts(r['fabric'], ips)]
         # Choose only a subset of providers
         if providers is not None:
             if not isinstance(providers, (list, set)):
@@ -891,6 +879,11 @@ class ResourceGraph:
                 df = df[lambda r: r['shared']]
             else:
                 df = df[lambda r: not r['shared']]
+        if hosts is not None and strip_ips:
+            # Perform a local net-test to see if we can start a server
+            NetTest(df, prune_port, 
+                    LocalExecInfo(hide_output=True), 
+                    exclusions=self.net, net_sleep=net_sleep, local_only=True)
         return df
 
     def print_df(self, df):
