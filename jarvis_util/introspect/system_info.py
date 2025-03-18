@@ -396,8 +396,9 @@ class NetTest:
     Determine whether a set of networks function across a set of hosts.
     """
     def __init__(self, fi_info_df, port, exec_info, 
-                 exclusions=None, base_port=6040, net_sleep=10, local_only=False):
+                 exclusions=None, base_port=6040, net_sleep=10, local_only=False, server_start_only=False):
         self.local_only = local_only
+        self.server_start_only = server_start_only
         self.working = [] 
         df = fi_info_df[['provider', 'domain', 'fabric']].drop_duplicates()
         if exclusions:
@@ -426,6 +427,23 @@ class NetTest:
         Kill('chi_net_ping', exec_info)
 
     def _async_test(self, idx, net, port, exec_info, net_sleep):
+        if self.server_start_only:
+            self.touch_test(idx, net, port, exec_info)
+        else:
+            self.roundtrip_test(idx, net, port, exec_info, net_sleep)
+
+    def touch_test(self, idx, net, port, exec_info):
+        provider = net['provider']
+        domain = net['domain']
+        fabric = net['fabric']
+        ping = ChiNetPing(provider, domain, port, "touchserver", exec_info, 2)
+        if ping.exit_code != 0:
+            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}')
+        else:
+            print(f'INCLUDING the network {provider}://{domain}/[{fabric}]:{port}')
+            self.results[idx] = net
+
+    def roundtrip_test(self, idx, net, port, exec_info, net_sleep):
         provider = net['provider']
         domain = net['domain']
         fabric = net['fabric']
@@ -885,7 +903,7 @@ class ResourceGraph:
             # Perform a local net-test to see if we can start a server
             fi_info = NetTest(df, prune_port, 
                     LocalExecInfo(hide_output=True), 
-                    net_sleep=net_sleep, local_only=True)
+                    net_sleep=net_sleep, local_only=True, server_start_only=True)
             df = fi_info.df
         return df
 
