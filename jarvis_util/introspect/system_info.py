@@ -376,7 +376,7 @@ class ChiNetPing(Exec):
         if mode == 'server':
             super().__init__(self.cmd, exec_info.mod(exec_async=True, hide_output=True))
         else:
-            super().__init__(self.cmd, LocalExecInfo(hide_output=True))
+            super().__init__(self.cmd, LocalExecInfo(env=exec_info.env, hide_output=True))
 
 
 class ChiNetPingTest:
@@ -869,7 +869,7 @@ class ResourceGraph:
                       shared=True,
                       df=None,
                       prune_port=6040,
-                      net_sleep=1):
+                      exec_info=LocalExecInfo()):
         """
         Find the set of networks common between each host.
 
@@ -882,6 +882,7 @@ class ResourceGraph:
         :param shared: Filter shared networks
         :param prune_port: The port to use for network testing
         :param net_sleep: The time to sleep between network tests
+        :param exec_info: Used for the net ping tests
         :return: Dataframe
         """
         if df is None:
@@ -901,9 +902,11 @@ class ResourceGraph:
         # Test validitiy of networks for current hostfile
         if hosts is not None and strip_ips:
             # Perform a local net-test to see if we can start a server
+            if not exec_info:
+                exec_info = LocalExecInfo()
             fi_info = NetTest(df, prune_port, 
-                    LocalExecInfo(hide_output=True), 
-                    net_sleep=net_sleep, local_only=True, server_start_only=True)
+                    exec_info.mod(hide_output=True), 
+                    net_sleep=1, local_only=True, server_start_only=True)
             df = fi_info.df
         return df
 
