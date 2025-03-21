@@ -465,9 +465,17 @@ class ArgParse(ABC):
                     # Verify each entry in the list matches opt_args
                     for i, entry in enumerate(arg):
                         if isinstance(entry, list):
-                            for j, sub_entry in enumerate(entry):
-                                entry[j] = self._convert_opt(opt_args[j],
+                            new_entry = {}
+                            for j, sub_entry in enumerate(entry): 
+                                entry_key = opt_args[j]['name']
+                                new_entry[entry_key] = self._convert_opt(opt_args[j],
                                                              sub_entry)
+                            arg[i] = new_entry
+                        elif isinstance(entry, dict):
+                            for j, opt_arg in enumerate(opt_args):
+                                if opt_arg['name'] in entry:
+                                    entry[opt_arg['name']] = self._convert_opt(
+                                        opt_arg, entry[opt_arg['name']])
                         else:
                             arg[i] = self._convert_opt(
                                 opt_args[0], entry)
