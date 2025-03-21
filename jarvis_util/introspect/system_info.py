@@ -869,7 +869,7 @@ class ResourceGraph:
                       shared=True,
                       df=None,
                       prune_port=6040,
-                      exec_info=LocalExecInfo()):
+                      env=None):
         """
         Find the set of networks common between each host.
 
@@ -882,7 +882,7 @@ class ResourceGraph:
         :param shared: Filter shared networks
         :param prune_port: The port to use for network testing
         :param net_sleep: The time to sleep between network tests
-        :param exec_info: Used for the net ping tests
+        :param env: Environment for the net ping tests
         :return: Dataframe
         """
         if df is None:
@@ -901,11 +901,9 @@ class ResourceGraph:
             df = df[lambda r: r['shared'] != False]
         # Test validitiy of networks for current hostfile
         if hosts is not None and strip_ips:
-            # Perform a local net-test to see if we can start a server
-            if not exec_info:
-                exec_info = LocalExecInfo()
+            # Perform a local net-test to see if we can start a server 
             fi_info = NetTest(df, prune_port, 
-                    exec_info.mod(hide_output=True), 
+                    LocalExecInfo(env=env, hide_output=True),
                     net_sleep=1, local_only=True, server_start_only=True)
             df = fi_info.df
         return df
