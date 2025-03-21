@@ -903,7 +903,7 @@ class ResourceGraph:
         if hosts is not None and strip_ips:
             # Perform a local net-test to see if we can start a server 
             fi_info = NetTest(df, prune_port, 
-                    LocalExecInfo(env=env, hide_output=True),
+                    LocalExecInfo(hostfile=hosts, env=env, hide_output=True),
                     net_sleep=1, local_only=True, server_start_only=True)
             df = fi_info.df
         return df
