@@ -108,3 +108,118 @@ class PbsExecInfo(ExecInfo):
                 setattr(self, key, kwargs[key])
             else:
                 setattr(self, key, None)
+
+    @staticmethod
+    def pbs_args():
+        return [
+            {
+                'name': 'nnodes',
+                'msg': 'The number of nodes to execute the pipeline on',
+                'required': True,
+                'pos': False,
+                'default': 1,
+                'class': 'pbs',
+                'rank': 1
+            },
+            {
+                'name': 'pbs',
+                'msg': 'This is the pbs job submitter',
+                'type': bool,
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'pbs',
+                'rank': 1
+            },
+            {
+                'name': 'pbs_host',
+                'msg': 'This is the pbs job receiver (internal, never set manually)',
+                'type': bool,
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'pbs',
+                'rank': 10
+            },
+            {
+                'name': 'system',
+                'msg': 'The type of system to allocate the nodes on',
+                'required': False,
+                'pos': False,
+                'default': 'polaris',
+                'class': 'pbs'
+            },
+            {
+                'name': 'filesystems',
+                'msg': 'The filesystem to be used (e.g. home:grand)',
+                'required': False,
+                'pos': False,
+                'default': 'home:grand',
+                'class': 'pbs'
+            },
+            {
+                'name': 'time',
+                'msg': 'Maximum time allotted to the job',
+                'required': False,
+                'pos': False,
+                'default': '00:10:00',
+                'aliases': ['walltime'],
+                'class': 'pbs'
+            },
+            {
+                'name': 'account',
+                'msg': 'Account used for job submission',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'pbs'
+            },
+            {
+                'name': 'queue',
+                'msg': 'Queue in which to submit the job',
+                'required': False,
+                'pos': False,
+                'default': 'debug-scaling',
+                'class': 'pbs'
+            },
+            {
+                'name': 'interactive',
+                'msg': 'Submit the job in interactive mode',
+                'required': False,
+                'pos': False,
+                'default': False,
+                'type': bool,
+                'class': 'pbs'
+            },
+            {
+                'name': 'env_vars',
+                'msg': 'Environmental variables to pass through PBS. '
+                       'Comma separated list of strings of the form variable or variable=value',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'pbs'
+            },
+            {
+                'name': 'polaris',
+                'msg': 'Submit using polaris',
+                'required': False,
+                'pos': False,
+                'default': False,
+                'type': bool,
+                'class': 'pbs'
+            },
+        ]
+
+    @staticmethod
+    def from_kwargs(kwargs, script_location):
+        pbs_info = PbsExecInfo(
+            nnodes=kwargs['nnodes'],
+            system=kwargs['system'],
+            filesystems=kwargs['filesystems'],
+            walltime=kwargs['walltime'],
+            account=kwargs['account'],
+            queue=kwargs['queue'],
+            interactive=kwargs['interactive'],
+            bash_script=script_location
+        )

@@ -78,13 +78,13 @@ class SlurmExec(LocalExec):
         if jutil.debug_slurm:
             print(cmd)
         return cmd
-
+    
 
 class SlurmExecInfo(ExecInfo):
     def __init__(self, job_name=None, num_nodes=1, **kwargs):
         super().__init__(exec_type=ExecType.SLURM, **kwargs)
         allowed_options = ['job_name', 'num_nodes', 'cpus_per_task', 'time', 'partition', 'mail_type',
-                           'mail_user', 'mem', 'gres', 'exclusive', 'host_suffix', 'nodelist']
+                           'mail_user', 'mem', 'gres', 'exclusive', 'host_suffix', 'nodelist', 'account']
         self.keys += allowed_options
         # We use ppn, and the output and error file from the base Exec Info
         for key in allowed_options:
@@ -94,6 +94,184 @@ class SlurmExecInfo(ExecInfo):
                 setattr(self, key, None)
         self.job_name = job_name
         self.num_nodes = num_nodes
+
+    @staticmethod
+    def sbatch_args():
+        return [ 
+            {
+                'name': 'job_name',
+                'msg': 'The name given to this job',
+                'required': True,
+                'pos': False,
+                'default': None,
+                'class': 'slurm',
+                'rank': 1
+            },
+            {
+                'name': 'nnodes',
+                'msg': 'The number of nodes to execute the pipeline on',
+                'required': True,
+                'pos': False,
+                'default': None,
+                'class': 'slurm',
+                'rank': 1
+            },
+            {
+                'name': 'slurm',
+                'msg': 'This is the slurm job submitter',
+                'type': bool,
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm',
+                'rank': 1
+            },
+            {
+                'name': 'slurm_host',
+                'msg': 'This is the slurm job receiver (internal, never set manually)',
+                'type': bool,
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm',
+                'rank': 10
+            },
+            {
+                'name': 'account',
+                'msg': 'The account to use for the job',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'ppn',
+                'msg': 'The number of processes per node',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'cpus_per_task',
+                'msg': 'Advise the Slurm controller that ensuing job will require ncpus number of processors per task',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'time',
+                'msg': 'Maximum time aloted to the job',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'partition',
+                'msg': 'The partition in which to allocate the nodes',
+                'required': False,
+                'pos': False,
+                'default': 'compute',
+                'class': 'slurm'
+            },
+            {
+                'name': 'mail_type',
+                'msg': 'When to email users of the status of the job',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'choices': ['NONE', 'BEGIN', 'END', 'FAIL', 'REQUEUE', 'ALL'],
+                'class': 'slurm'
+            },
+            {
+                'name': 'mail_user',
+                'msg': 'What email to use',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'output_file',
+                'msg': 'File to write all output messages',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'error_file',
+                'msg': 'File to write all error messages',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'memory',
+                'msg': 'Amount of memory to request for the job',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'gres',
+                'msg': 'A comma-delimited list of generic consumable resources, like gpus',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'exclusive',
+                'msg': 'Request the nodes exclusively',
+                'required': False,
+                'pos': False,
+                'default': True,
+                'class': 'slurm'
+            },
+            {
+                'name': 'host_suffix',
+                'msg': 'Append suffix to all hosts in hostfile',
+                'required': False,
+                'pos': False,
+                'default': None,
+                'class': 'slurm'
+            },
+            {
+                'name': 'nodelist',
+                'msg': 'A list of nodes to run the job on, exp: ares-comp-[10-14],ares-comp-15',
+                'required': False,
+                'pos': False,
+                'type': str,
+                'default': None,
+                'class': 'slurm'
+            }
+        ]
+
+    @staticmethod
+    def from_kwargs(kwargs):
+        SlurmExecInfo(
+            account=kwargs['account'],
+            job_name=kwargs['job_name'],
+            num_nodes=kwargs['nnodes'],
+            ppn=kwargs['ppn'],
+            cpus_per_task=kwargs['cpus_per_task'],
+            time=kwargs['time'],
+            partition=kwargs['partition'],
+            mail_type=kwargs['mail_type'],
+            mail_user=kwargs['mail_user'],
+            pipe_stdout=kwargs['output_file'],
+            pipe_stderr=kwargs['error_file'],
+            mem=kwargs['memory'],
+            gres=kwargs['gres'],
+            exclusive=kwargs['exclusive'],
+            host_suffix=kwargs['host_suffix'],
+            nodelist=kwargs['nodelist']
+        )
 
 
 class SlurmHostfile(LocalExec):

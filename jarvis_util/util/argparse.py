@@ -105,6 +105,16 @@ class ArgParse(ABC):
         self.define_options()
         self._parse()
 
+    @staticmethod
+    def merge(*arglists):
+        final = {}
+        for arglist in arglists:
+            for arg in arglist:
+                if arg['name'] in final:
+                    continue
+                final[arg['name']] = arg
+        return list(final.values())
+
     @abstractmethod
     def define_options(self):
         """
