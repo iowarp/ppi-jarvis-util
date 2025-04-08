@@ -96,7 +96,7 @@ class SlurmExecInfo(ExecInfo):
         self.num_nodes = num_nodes
 
     @staticmethod
-    def sbatch_args():
+    def get_args():
         return [ 
             {
                 'name': 'job_name',

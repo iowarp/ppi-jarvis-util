@@ -110,7 +110,7 @@ class PbsExecInfo(ExecInfo):
                 setattr(self, key, None)
 
     @staticmethod
-    def pbs_args():
+    def get_args():
         return [
             {
                 'name': 'nnodes',
@@ -213,7 +213,7 @@ class PbsExecInfo(ExecInfo):
 
     @staticmethod
     def from_kwargs(kwargs, script_location):
-        pbs_info = PbsExecInfo(
+        return PbsExecInfo(
             nnodes=kwargs['nnodes'],
             system=kwargs['system'],
             filesystems=kwargs['filesystems'],
