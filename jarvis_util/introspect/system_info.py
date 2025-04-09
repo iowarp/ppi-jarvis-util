@@ -369,7 +369,8 @@ class ChiNetPing(Exec):
     """
     def __init__(self, provider, domain, port, mode, local_only, exec_info, hostfile=None):
         if hostfile is None:
-            hostfile = exec_info.hostfile.path if exec_info.hostfile.path else '\"\"'
+            hostfile = exec_info.hostfile
+        hostfile = hostfile.path if hostfile.path else '\"\"'
         self.cmd = [
             'chi_net_ping',
             hostfile,
