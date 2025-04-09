@@ -20,6 +20,7 @@ import ipaddress
 import copy
 import time
 import os
+from pathlib import Path
 # pylint: disable=C0121
 
 
@@ -436,7 +437,13 @@ class NetTest:
         provider = net['provider']
         domain = net['domain']
         fabric = net['fabric']
-        ping = ChiNetPing(provider, domain, port, "touchserver", "local", exec_info)
+        # Create the output hostfile
+        out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}.{net}.{port}')
+        os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
+        compile = CompileHostfile(LocalExecInfo().hostfile, provider, domain, fabric, env=exec_info.env)
+        exec_info = exec_info.mod(hostfile=compile.hostfile)
+        # Run the ping test
+        ping = ChiNetPing(provider, domain, port, "touchserver", "local", exec_info.mod(hostfile=compile.hostfile))
         if ping.exit_code != 0:
             print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}')
         else:
@@ -447,6 +454,11 @@ class NetTest:
         provider = net['provider']
         domain = net['domain']
         fabric = net['fabric']
+        # Create the output hostfile
+        out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}.{net}.{port}')
+        os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
+        compile = CompileHostfile(exec_info.hostfile, provider, domain, fabric, env=exec_info.env)
+        exec_info = exec_info.mod(hostfile=compile.hostfile)
         # Test if the network works locally
         ping = ChiNetPingTest(provider, domain, port, "local", exec_info, 2)
         net['shared'] = False
@@ -461,6 +473,20 @@ class NetTest:
                 net['shared'] = True
         print(f'INCLUDING the network {provider}://{domain}/[{fabric}]:{port}')
         
+
+class CompileHostfile(Exec):
+    def __init__(self, cur_hosts, provider, domain, fabric, out_hostfile, env=None):
+        cmd = [
+            'chi_net_find',
+            provider,
+            domain,
+            fabric,
+            out_hostfile
+        ]
+        cmd = ' '.join(cmd)
+        super().__init__(cmd, MpiExecInfo(env=env, hosts=cur_hosts, ppn=1, nprocs=len(cur_hosts)))
+        self.hostfile = Hostfile(path=out_hostfile)
+
 
 class ResourceGraph:
     """
