@@ -40,7 +40,7 @@ class ExecInfo:
                  sleep_ms=0, sudo=False, sudoenv=True, cwd=None,
                  collect_output=None, pipe_stdout=None, pipe_stderr=None,
                  hide_output=None, exec_async=False, stdin=None,
-                 do_dbg=False, dbg_port=None, **kwargs):
+                 do_dbg=False, dbg_port=None, strict_ssh=False, **kwargs):
         """
 
         :param exec_type: How to execute a program. SSH, MPI, Local, etc.
@@ -64,6 +64,7 @@ class ExecInfo:
         :param stdin: Any input needed by the program. Only local
         :param do_dbg: Enable debugging
         :param dbg_port: The port number
+        :param strict_ssh: Strict ssh host key verification
         """
 
         self.exec_type = exec_type
@@ -89,11 +90,12 @@ class ExecInfo:
         self.stdin = stdin
         self.do_dbg = do_dbg
         self.dbg_port = dbg_port
+        self.strict_ssh = strict_ssh
         self.keys = ['exec_type', 'nprocs', 'ppn', 'user', 'pkey', 'port',
                      'hostfile', 'env', 'sleep_ms', 'sudo', 'sudoenv',
                      'cwd', 'hosts', 'collect_output',
                      'pipe_stdout', 'pipe_stderr', 'hide_output',
-                     'exec_async', 'stdin', 'do_dbg', 'dbg_port']
+                     'exec_async', 'stdin', 'do_dbg', 'dbg_port', 'strict_ssh']
 
     def _set_env(self, env):
         if env is None:

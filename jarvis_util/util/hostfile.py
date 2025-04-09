@@ -13,12 +13,13 @@ class Hostfile:
     Parse a hostfile or store a set of hosts passed in manually.
     """
 
-    def __init__(self, hostfile=None, all_hosts=None, all_hosts_ip=None,
+    def __init__(self, hostfile=None, path=None, all_hosts=None, all_hosts_ip=None,
                  text=None, find_ips=True):
         """
         Constructor. Parse hostfile or store existing host list.
 
         :param hostfile: The path to the hostfile
+        :param path: The path to the hostfile (alias to the above)
         :param all_hosts: a list of strings representing all hostnames
         :param all_hosts_ip: a list of strings representing all host IPs
         :param text: Text of a hostfile
@@ -28,7 +29,11 @@ class Hostfile:
         self.hosts = []
         self.all_hosts = []
         self.all_hosts_ip = []
-        self.path = hostfile
+        self.path = None
+        if hostfile:
+            self.path = hostfile
+        elif path:
+            self.path = path
         self.find_ips = find_ips
 
         # Set the host ips directly
@@ -42,8 +47,8 @@ class Hostfile:
             self._set_hosts(all_hosts)
 
         # From hostfile path
-        elif hostfile is not None:
-            self.path = os.path.abspath(hostfile)
+        elif self.path is not None:
+            self.path = os.path.abspath(self.path)
             self._load_hostfile(self.path)
 
         # From hostfile text
@@ -190,7 +195,15 @@ class Hostfile:
         """
         if len(self) == 0:
             return True
-        return len(self) == 1 and self.hosts[0] == 'localhost'
+        if len(self.hosts) == 1:
+            if self.hosts[0] == 'localhost':
+                return True
+            if self.hosts[0] == socket.gethostbyname('localhost'):
+                return True
+        if len(self.hosts_ip) == 1:
+            if self.hosts_ip[0] == socket.gethostbyname('localhost'):
+                return True
+        return False
 
     def save(self, path):
         self.all_hosts = self.hosts

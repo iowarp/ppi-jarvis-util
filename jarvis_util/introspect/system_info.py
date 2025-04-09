@@ -8,9 +8,11 @@ import re
 import platform
 from jarvis_util.shell.exec import Exec
 from jarvis_util.shell.local_exec import LocalExec, LocalExecInfo
+from jarvis_util.shell.mpi_exec import MpiExecInfo
 from jarvis_util.util.size_conv import SizeConv
 from jarvis_util.serialize.yaml_file import YamlFile
 from jarvis_util.shell.process import Kill
+from jarvis_util.util.hostfile import Hostfile
 import jarvis_util.util.small_df as sdf
 import threading
 import json
@@ -438,9 +440,9 @@ class NetTest:
         domain = net['domain']
         fabric = net['fabric']
         # Create the output hostfile
-        out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}.{net}.{port}')
+        out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}.{port}')
         os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
-        compile = CompileHostfile(LocalExecInfo().hostfile, provider, domain, fabric, env=exec_info.env)
+        compile = CompileHostfile(LocalExecInfo().hostfile, provider, domain, fabric, out_hostfile, env=exec_info.env)
         exec_info = exec_info.mod(hostfile=compile.hostfile)
         # Run the ping test
         ping = ChiNetPing(provider, domain, port, "touchserver", "local", exec_info.mod(hostfile=compile.hostfile))
@@ -455,15 +457,15 @@ class NetTest:
         domain = net['domain']
         fabric = net['fabric']
         # Create the output hostfile
-        out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}.{net}.{port}')
+        out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}.{port}')
         os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
-        compile = CompileHostfile(exec_info.hostfile, provider, domain, fabric, env=exec_info.env)
+        compile = CompileHostfile(exec_info.hostfile, provider, domain, fabric, out_hostfile, env=exec_info.env)
         exec_info = exec_info.mod(hostfile=compile.hostfile)
         # Test if the network works locally
         ping = ChiNetPingTest(provider, domain, port, "local", exec_info, 2)
         net['shared'] = False
         if ping.exit_code != 0:
-            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}')
+            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port} (hostfile={out_hostfile}): {ping.exit_code}')
             return
         self.results[idx] = net
         if not self.local_only:
@@ -478,9 +480,9 @@ class CompileHostfile(Exec):
     def __init__(self, cur_hosts, provider, domain, fabric, out_hostfile, env=None):
         cmd = [
             'chi_net_find',
-            provider,
-            domain,
-            fabric,
+            f'"{provider}"',
+            f'"{domain}"',
+            f'"{fabric}"',
             out_hostfile
         ]
         cmd = ' '.join(cmd)

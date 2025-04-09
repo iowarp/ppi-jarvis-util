@@ -26,6 +26,8 @@ class SshExec(LocalExec):
         self.sudo = exec_info.sudo
         self.ssh_env = exec_info.env
         self.basic_env = exec_info.env
+        self.strict_ssh = exec_info.strict_ssh
+        self.password = False
         cmd = self.smash_cmd(cmd, self.sudo, self.basic_env, exec_info.sudoenv)
         if not exec_info.hostfile.is_local():
             super().__init__(self.ssh_cmd(cmd),
@@ -40,6 +42,10 @@ class SshExec(LocalExec):
             lines.append(f'-i {self.pkey}')
         if self.port is not None:
             lines.append(f'-p {self.port}')
+        if not self.password:
+            lines.append(f'-o PasswordAuthentication=no')
+        if not self.strict_ssh:
+            lines.append(f'-o StrictHostKeyChecking=no')
         if self.user is not None:
             lines.append(f'{self.user}@{self.addr}')
         else:
