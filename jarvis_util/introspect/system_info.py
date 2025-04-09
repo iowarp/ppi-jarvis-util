@@ -496,7 +496,8 @@ class CompileHostfile(Exec):
             out_hostfile
         ]
         cmd = ' '.join(cmd)
-        super().__init__(cmd, MpiExecInfo(env=env, hosts=cur_hosts, ppn=1, nprocs=len(cur_hosts)))
+        super().__init__(cmd, MpiExecInfo(env=env, hosts=cur_hosts, ppn=1, 
+                                          nprocs=len(cur_hosts), hide_output=True))
         self.hostfile = Hostfile(path=out_hostfile)
 
 
