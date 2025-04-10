@@ -402,8 +402,7 @@ class ChiNetPingTest:
                   exec_info, net_sleep=10, hostfile=None, timeout=None):
         self.server = ChiNetPing(provider, domain, port, "server", local_only,
                                  exec_info.mod(exec_async=True),
-                                   hostfile=hostfile,
-                                   timeout=timeout)
+                                   hostfile=hostfile)
         time.sleep(net_sleep)
         self.client = ChiNetPing(provider, domain, port, "client", local_only, 
                                  exec_info, hostfile=hostfile,
