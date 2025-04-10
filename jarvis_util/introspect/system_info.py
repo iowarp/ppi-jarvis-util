@@ -367,7 +367,9 @@ class ChiNetPing(Exec):
     """
     Determine whether a network functions across a set of hosts
     """
-    def __init__(self, provider, domain, port, mode, local_only, exec_info, hostfile=None):
+    def __init__(self, provider, domain, port, mode, 
+                 local_only, exec_info, hostfile=None, 
+                 timeout=None):
         if hostfile is None:
             hostfile = exec_info.hostfile
         hostfile = hostfile.path if hostfile.path else '\"\"'
@@ -382,21 +384,25 @@ class ChiNetPing(Exec):
         ]
         self.cmd = ' '.join(self.cmd)
         if mode == 'server':
-            super().__init__(self.cmd, exec_info.mod(exec_async=True, hide_output=True))
+            super().__init__(self.cmd, exec_info.mod(exec_async=True, hide_output=True, timeout=timeout))
         else:
-            super().__init__(self.cmd, LocalExecInfo(env=exec_info.env, hide_output=True))
+            super().__init__(self.cmd, LocalExecInfo(env=exec_info.env, hide_output=True, timeout=timeout))
 
 
 class ChiNetPingTest:
     """
     Determine whether a network functions across a set of hosts
     """
-    def __init__(self, provider, domain, port, local_only, exec_info, net_sleep=10, hostfile=None):
+    def __init__(self, provider, domain, port, local_only,
+                  exec_info, net_sleep=10, hostfile=None, timeout=None):
         self.server = ChiNetPing(provider, domain, port, "server", local_only,
-                                 exec_info.mod(exec_async=True), hostfile=hostfile)
+                                 exec_info.mod(exec_async=True),
+                                   hostfile=hostfile,
+                                   timeout=timeout)
         time.sleep(net_sleep)
         self.client = ChiNetPing(provider, domain, port, "client", local_only, 
-                                 exec_info, hostfile=hostfile)
+                                 exec_info, hostfile=hostfile,
+                                 timeout=timeout)
         self.exit_code = self.client.exit_code
         # Kill('chi_net_ping', exec_info)
 
@@ -426,7 +432,6 @@ class NetTest:
             threads.append(thread)
             thread.start()
             port += 1
-            # thread.join()
 
         # Wait for all threads to complete    
         for idx, thread in enumerate(threads): 
@@ -455,7 +460,7 @@ class NetTest:
                                   fabric, out_hostfile, env=exec_info.env)
         # Run the ping test
         ping = ChiNetPing(provider, domain, port, "touchserver", "local",
-                           exec_info, hostfile=compile.hostfile)
+                           exec_info, hostfile=compile.hostfile, timeout=self.max_time)
         if ping.exit_code != 0:
             print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}')
         else:
@@ -473,7 +478,7 @@ class NetTest:
                                   fabric, out_hostfile, env=exec_info.env)
         # Test if the network works locally
         ping = ChiNetPingTest(provider, domain, port, "local", 
-                              exec_info, 2, hostfile=compile.hostfile)
+                              exec_info, 2, hostfile=compile.hostfile, timeout=self.max_time)
         net['shared'] = False
         if ping.exit_code != 0:
             print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port} (hostfile={out_hostfile}): {ping.exit_code}')
@@ -482,7 +487,7 @@ class NetTest:
         if not self.local_only:
             # Test if the network works across hosts
             ping = ChiNetPingTest(provider, domain, port, "all", 
-                                  exec_info, net_sleep, hostfile=compile.hostfile)
+                                  exec_info, net_sleep, hostfile=compile.hostfile, timeout=self.max_time)
             if ping.exit_code == 0:
                 net['shared'] = True
         print(f'INCLUDING the network {provider}://{domain}/[{fabric}]:{port}')
