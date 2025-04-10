@@ -228,7 +228,7 @@ class PyLsblk(Exec):
             if not lsblk_data:
                 print('Warning: no storage devices found')
                 print(f'STDOUT: \n{stdout}')
-                return
+                continue
             for dev in lsblk_data:
                 if dev['tran'] == 'pcie':
                     dev['tran'] = 'nvme'
