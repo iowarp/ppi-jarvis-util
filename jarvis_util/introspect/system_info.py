@@ -378,8 +378,8 @@ class ChiNetPing(Exec):
         self.cmd = [
             'chi_net_ping',
             hostfile,
-            f'"{provider}"',
-            f'"{domain}"',
+            f'\'{provider}\'',
+            f'\'{domain}\'',
             str(port),
             mode,
             local_only
@@ -438,7 +438,7 @@ class NetTest:
             # thread.start()
             # port += 2
             # thread.join()
-            target=self._async_test(idx, net, port, exec_info, net_sleep)
+            self._async_test(idx, net, port, exec_info, net_sleep)
             print('\n\n')
             print('\n\n', file=sys.stderr)
 
