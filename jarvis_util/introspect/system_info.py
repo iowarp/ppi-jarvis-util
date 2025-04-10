@@ -439,6 +439,7 @@ class NetTest:
             # port += 2
             # thread.join()
             self._async_test(idx, net, port, exec_info, net_sleep)
+            port += 2
             print('\n\n')
             print('\n\n', file=sys.stderr)
 
