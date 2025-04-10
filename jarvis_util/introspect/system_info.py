@@ -432,16 +432,19 @@ class NetTest:
         self.timeout = timeout
         for idx, net in enumerate(df.rows):
             # Start a new thread for each network test
-            thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info, net_sleep))
-            threads.append(thread)
-            thread.start()
-            port += 2
-            thread.join()
+            # thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info, net_sleep))
+            # threads.append(thread)
+            # thread.start()
+            # port += 2
+            # thread.join()
+            target=self._async_test(idx, net, port, exec_info, net_sleep)
             print('\n\n')
+            print('\n\n', file=sys.stderr)
 
         # Wait for all threads to complete    
-        for idx, thread in enumerate(threads): 
-            thread.join()
+        for idx in range(len(df)): 
+            # thread = threads[idx]
+            # thread.join()
             result = self.results[idx]
             if result is not None:
                 self.working.append(result)
@@ -469,6 +472,7 @@ class NetTest:
                            exec_info, hostfile=compile.hostfile)
         if ping.exit_code != 0:
             print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}')
+            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}', file=sys.stderr)
         else:
             print(f'INCLUDING the network {provider}://{domain}/[{fabric}]:{port}')
             self.results[idx] = net
@@ -488,9 +492,8 @@ class NetTest:
         net['shared'] = False
         shared = 'local'
         if ping.exit_code != 0:
-            # if provider == 'tcp' and domain == 'lo' and fabric =='127.0.0.1/32':
-                
             print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port} (hostfile={out_hostfile}): {ping.exit_code}')
+            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port} (hostfile={out_hostfile}): {ping.exit_code}', file=sys.stderr)
             return
         self.results[idx] = net
         port += 1
@@ -502,7 +505,7 @@ class NetTest:
                 net['shared'] = True
                 shared = 'shared'
         print(f'INCLUDING the {shared} network {provider}://{domain}/[{fabric}]:{port}')
-        
+             
 
 class CompileHostfile(Exec):
     def __init__(self, cur_hosts, provider, domain, fabric, out_hostfile, env=None):
