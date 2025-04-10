@@ -428,7 +428,10 @@ class NetTest:
 
         # Wait for all threads to complete    
         for idx, thread in enumerate(threads):
-            thread.join()
+            thread.join(timeout=8)
+            if thread.is_alive():
+                print(f"Thread {idx} timed out after 8 seconds")
+                continue
             result = self.results[idx]
             if result is not None:
                 self.working.append(result)
