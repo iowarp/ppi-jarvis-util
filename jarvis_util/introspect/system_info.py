@@ -226,7 +226,7 @@ class PyLsblk(Exec):
         for host, stdout in self.stdout.items():
             lsblk_data = yaml.load(stdout, Loader=yaml.FullLoader)
             if not lsblk_data:
-                print('Warning: no storage devices found')
+                print(f'Warning: no storage devices found on host {host}')
                 print(f'STDOUT: \n{stdout}')
                 continue
             for dev in lsblk_data:
