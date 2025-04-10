@@ -227,6 +227,7 @@ class PyLsblk(Exec):
             lsblk_data = yaml.load(stdout, Loader=yaml.FullLoader)
             if not lsblk_data:
                 print('Warning: no storage devices found')
+                print(f'STDOUT: \n{stdout}')
                 return
             for dev in lsblk_data:
                 if dev['tran'] == 'pcie':
