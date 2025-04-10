@@ -406,7 +406,8 @@ class NetTest:
     Determine whether a set of networks function across a set of hosts.
     """
     def __init__(self, fi_info_df, port, exec_info, 
-                 exclusions=None, base_port=6040, net_sleep=10, local_only=False, server_start_only=False):
+                 exclusions=None, base_port=6040, net_sleep=10, local_only=False, 
+                 server_start_only=False, max_time=15):
         self.local_only = local_only
         self.server_start_only = server_start_only
         self.working = [] 
@@ -419,7 +420,7 @@ class NetTest:
         threads = []
         self.results = [None] * len(df)
         self.start_time = time.time()
-        self.max_time = 10
+        self.max_time = max_time
         for idx, net in enumerate(df.rows):
             # Start a new thread for each network test
             thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info, net_sleep))
@@ -435,7 +436,7 @@ class NetTest:
             timeout = self.max_time - time_diff
             thread.join(timeout=timeout)
             if thread.is_alive():
-                print(f"Thread {idx} timed out after 8 seconds")
+                print(f"Thread {idx} timed out after {self.max_time} seconds")
                 continue
             result = self.results[idx]
             if result is not None:
