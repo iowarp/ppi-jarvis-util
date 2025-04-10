@@ -419,7 +419,6 @@ class NetTest:
         port = base_port
         threads = []
         self.results = [None] * len(df)
-        self.start_time = time.time()
         self.max_time = max_time
         for idx, net in enumerate(df.rows):
             # Start a new thread for each network test
@@ -430,14 +429,8 @@ class NetTest:
             # thread.join()
 
         # Wait for all threads to complete    
-        for idx, thread in enumerate(threads):
-            end_time = time.time()
-            time_diff = end_time - self.start_time
-            timeout = self.max_time - time_diff
-            thread.join(timeout=timeout)
-            if thread.is_alive():
-                print(f"Thread {idx} timed out after {self.max_time} seconds")
-                continue
+        for idx, thread in enumerate(threads): 
+            thread.join()
             result = self.results[idx]
             if result is not None:
                 self.working.append(result)

@@ -54,6 +54,8 @@ class LocalExec(Executable):
         self.exit_code = 0
 
         # Managing command execution
+        self.start_time = time.time()
+        self.timeout = exec_info.timeout
         self.sudo = exec_info.sudo
         self.stdin = exec_info.stdin
         self.exec_async = exec_info.exec_async
@@ -120,6 +122,11 @@ class LocalExec(Executable):
         while self.proc.poll() is None:
             self.print_to_outputs(self.proc.stdout, self.stdout,
                                   self.pipe_stdout_fp, sys.stdout)
+            if self.timeout:
+                cur_time = time.time()
+                time_diff = cur_time - self.start_time
+                if time_diff > self.timeout:
+                    break
             time.sleep(25 / 1000)
         self.print_to_outputs(self.proc.stdout, self.stdout,
                               self.pipe_stdout_fp, sys.stdout)
@@ -128,6 +135,11 @@ class LocalExec(Executable):
         while self.proc.poll() is None:
             self.print_to_outputs(self.proc.stderr, self.stderr,
                                   self.pipe_stderr_fp, sys.stderr)
+            if self.timeout:
+                cur_time = time.time()
+                time_diff = cur_time - self.start_time
+                if time_diff > self.timeout:
+                    break
             time.sleep(25 / 1000)
         self.print_to_outputs(self.proc.stderr, self.stderr,
                               self.pipe_stderr_fp, sys.stderr)
