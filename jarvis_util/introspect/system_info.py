@@ -941,10 +941,10 @@ class ResourceGraph:
                 providers = [providers]
             providers = set(providers)
             df = df[lambda r: r['provider'] in providers]
-        # Choose only shared networks
+        # Remove shared networks
         if not shared:
             df = df[lambda r: r['shared'] != True]
-        # Choose only local networks
+        # Remove local networks
         if not local:
             df = df[lambda r: r['shared'] != False]
         # Test validitiy of networks for current hostfile
