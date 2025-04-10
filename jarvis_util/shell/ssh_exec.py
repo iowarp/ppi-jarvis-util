@@ -42,8 +42,8 @@ class SshExec(LocalExec):
             lines.append(f'-i {self.pkey}')
         if self.port is not None:
             lines.append(f'-p {self.port}')
-        # if not self.password:
-        #     lines.append(f'-o PasswordAuthentication=no')
+        if not self.password:
+            lines.append(f'-o PasswordAuthentication=no')
         if not self.strict_ssh:
             lines.append(f'-o StrictHostKeyChecking=no')
         if self.user is not None:
