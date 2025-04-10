@@ -418,6 +418,8 @@ class NetTest:
         port = base_port
         threads = []
         self.results = [None] * len(df)
+        self.start_time = time.time()
+        self.max_time = 10
         for idx, net in enumerate(df.rows):
             # Start a new thread for each network test
             thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info, net_sleep))
@@ -428,7 +430,10 @@ class NetTest:
 
         # Wait for all threads to complete    
         for idx, thread in enumerate(threads):
-            thread.join(timeout=8)
+            end_time = time.time()
+            time_diff = end_time - self.start_time
+            timeout = self.max_time - time_diff
+            thread.join(timeout=timeout)
             if thread.is_alive():
                 print(f"Thread {idx} timed out after 8 seconds")
                 continue
