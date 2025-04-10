@@ -3,6 +3,7 @@ This module provides methods for querying the information of the host
 system. This can be used to make scripts more portable.
 """
 
+import sys
 import socket
 import re
 import platform
@@ -505,7 +506,7 @@ class NetTest:
                 net['shared'] = True
                 shared = 'shared'
         print(f'INCLUDING the {shared} network {provider}://{domain}/[{fabric}]:{port}')
-             
+
 
 class CompileHostfile(Exec):
     def __init__(self, cur_hosts, provider, domain, fabric, out_hostfile, env=None):
