@@ -214,7 +214,7 @@ class PyLsblk(Exec):
     ]
     def __init__(self, exec_info):
         cmd = 'pylsblk'
-        super().__init__(cmd, exec_info.mod(collect_output=True))
+        super().__init__(cmd, exec_info.mod(collect_output=True, hide_output=False))
         self.exec_async = exec_info.exec_async
         self.df = None
         if not self.exec_async:
