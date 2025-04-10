@@ -607,7 +607,7 @@ class ResourceGraph:
             'partlabel', 'label', 'host'])
         # Filter out all devices that begin with /run
         exclusions = ['/run', '/sys', '/proc', '/dev/shm', '/boot']
-        fs = fs.loc(lambda r: r['mount']
+        fs = fs.loc(lambda r: r['mount'] and not r['needs_root']
                      and not any(r['mount'].startswith(ex) for ex in exclusions)
                      and not r['device'] == 'tmpfs')
         self.fs = fs
