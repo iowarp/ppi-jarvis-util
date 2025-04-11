@@ -489,7 +489,7 @@ class NetTest:
                                   fabric, out_hostfile, env=exec_info.env)
         # Test if the network works locally
         ping = ChiNetPingTest(provider, domain, port, "local", 
-                              exec_info, 2, hostfile=compile.hostfile, timeout=5)
+                              exec_info, hostfile=compile.hostfile, timeout=5, net_sleep=8)
         net['shared'] = False
         shared = 'local'
         if ping.exit_code != 0:
