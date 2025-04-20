@@ -9,4 +9,5 @@ gfortran \
 libtool \
 libtool-bin \
 automake \
-autoconf
+autoconf \
+pylint     

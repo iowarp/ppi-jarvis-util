@@ -21,15 +21,6 @@ jobs:
       - name: Get Sources
         uses: actions/checkout@v4
 
-      - name: Setup python
-        uses: actions/setup-python@v4
-
-      - name: Install Jarvis
-        run: bash ci/install_jarvis.sh
-
-      - name: Run pylint
-        run: bash ci/lint.sh
-
       - name: Cache Spack packages
         uses: actions/cache@v3
         id: spack-cache
@@ -45,6 +36,15 @@ jobs:
       - name: Install Spack Dependencies
         if: steps.spack-cache.outputs.cache-hit != 'true'
         run: bash ci/install_spack.sh
+
+      - name: Setup python
+        uses: actions/setup-python@v4
+
+      - name: Install Jarvis
+        run: bash ci/install_jarvis.sh
+
+      - name: Run pylint
+        run: bash ci/lint.sh
 
       - name: Test
         run: bash ci/run_tests.sh
