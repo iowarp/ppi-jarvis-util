@@ -5,7 +5,8 @@ readme = "README.md"
 requires-python = ">=3.7"
 dynamic = ["version"]
 authors = [
-  {name = "H. Joe Lee", email = "hyoklee@hdfgroup.org"},
+  {name = "Luke Logan", email = "llogan@hawk.iit.edu"},
+  {name = "H. Joe Lee", email = "hyoklee@hdfgroup.org"},  
 ]
 classifiers = [
   "Operating System :: OS Independent",
@@ -33,5 +34,5 @@ requires = [
 ]
 
 [tool.setuptools]
-packages = ["jarvis_util"]
+packages = ["jarvis_util", "jarvis_util.serialize", "jarvis_util.shell", "jarvis_util.util"]
 include-package-data = true

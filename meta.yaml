@@ -18,11 +18,12 @@ files:
 
 test:
   requires:
-    - pip
-  commands:
-    - pip --help
+    - pyaml
+    - tabulate
+  imports:
+    - jarvis_util
 
 about:
   home: https://grc.iit.edu/research/projects/iowarp/
   license: BSD
-  summary: IOWarp Jarvis Util Conda Package
+  summary: IOWarp Jarvis Utility Conda Package
