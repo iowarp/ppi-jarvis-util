@@ -65,6 +65,7 @@ class OpenMpiExec(LocalMpiExec):
     def mpicmd(self):
         params = [f'mpiexec']
         params.append('--oversubscribe')
+        params.append('--allow-run-as-root')  # For docker
         if self.ppn is not None:
             params.append(f'-npernode {self.ppn}')
         if len(self.hostfile):
