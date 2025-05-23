@@ -681,6 +681,7 @@ class ResourceGraph:
             with open(test_file, 'r') as f:
                 pass
             os.remove(test_file)
+            return True
         except (PermissionError, OSError):
             return False
 
