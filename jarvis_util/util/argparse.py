@@ -453,7 +453,7 @@ class ArgParse(ABC):
         opt_name = opt['name']
         opt_type = opt['type']
         opt_choices = opt['choices']
-        opt_args = opt['args']
+        opt_args = opt['args'] 
         if opt_type is not None:
             # pylint: disable=W0702
             try:
@@ -465,9 +465,9 @@ class ArgParse(ABC):
                             pass
                     if not isinstance(arg, list):
                         if arg is None:
-                            arg = []
+                            arg = ''
                         elif isinstance(arg, str) and len(arg) == 0:
-                            arg = []
+                            arg = ''
                         else:
                             arg = [arg]
                 if isinstance(arg, list):
