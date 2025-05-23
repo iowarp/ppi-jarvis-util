@@ -675,8 +675,12 @@ class ResourceGraph:
                 print(mount)
             if not known_mount and self._check_if_mounted(fs, mount):
                 return False
-            if os.access(mount, os.R_OK) and os.access(mount, os.W_OK):
-                return True
+            test_file = os.path.join(mount, '.jarvis_access')
+            with open(test_file, 'w') as f:
+                pass
+            with open(test_file, 'r') as f:
+                pass
+            os.remove(test_file)
         except (PermissionError, OSError):
             return False
 
