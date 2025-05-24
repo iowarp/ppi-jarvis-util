@@ -21,3 +21,20 @@ class Kill(Exec):
         """
         partial_cmd = "-f" if partial else ""
         super().__init__(f"pkill -9 {partial_cmd} {cmd}", exec_info)
+
+
+class SetAffinity(Exec):
+    """
+    Set CPU affinity for a process.
+    """
+
+    def __init__(self, pid, cpu_list, exec_info):
+        """
+        Set CPU affinity for a specific process.
+
+        :param pid: Process ID
+        :param cpu_list: List of CPU cores to set affinity to
+        :param exec_info: Info needed to execute the command
+        """
+        cpu_string = ",".join(map(str, cpu_list))
+        super().__init__(f"taskset -pc {cpu_string} {pid}", exec_info)
