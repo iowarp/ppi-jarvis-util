@@ -20,8 +20,8 @@ class Color(Enum):
 
 class ColorPrinter:
     @staticmethod
-    def print(msg, color=None):
+    def print(msg, color=None, file=None):
         if color is not None:
-            print(color.value.format(msg))
+            print(color.value.format(msg), file=file)
         else:
-            print(msg)
+            print(msg, file=file)

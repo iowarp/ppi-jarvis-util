@@ -7,6 +7,7 @@ import sys
 import socket
 import re
 import platform
+from jarvis_util.util.logging import ColorPrinter, Color
 from jarvis_util.shell.exec import Exec
 from jarvis_util.shell.local_exec import LocalExec, LocalExecInfo
 from jarvis_util.shell.mpi_exec import MpiExecInfo
@@ -472,10 +473,10 @@ class NetTest:
         ping = ChiNetPing(provider, domain, port, "touchserver", "local",
                            exec_info, hostfile=compile.hostfile)
         if ping.exit_code != 0:
-            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}')
-            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}', file=sys.stderr)
+            ColorPrinter.print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}', Color.YELLOW)
+            ColorPrinter.print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port}: {ping.exit_code}', Color.YELLOW, file=sys.stderr)
         else:
-            print(f'INCLUDING the network {provider}://{domain}/[{fabric}]:{port}')
+            ColorPrinter.print(f'INCLUDING the network {provider}://{domain}/[{fabric}]:{port}', Color.GREEN)
             self.results[idx] = net
 
     def roundtrip_test(self, idx, net, port, exec_info, net_sleep):
@@ -493,8 +494,8 @@ class NetTest:
         net['shared'] = False
         shared = 'local'
         if ping.exit_code != 0:
-            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port} (hostfile={out_hostfile}): {ping.exit_code}')
-            print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port} (hostfile={out_hostfile}): {ping.exit_code}', file=sys.stderr)
+            ColorPrinter.print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port} (hostfile={out_hostfile}): {ping.exit_code}', Color.YELLOW)
+            ColorPrinter.print(f'EXCLUDING the network {provider}://{domain}/[{fabric}]:{port} (hostfile={out_hostfile}): {ping.exit_code}', Color.YELLOW, file=sys.stderr)
             return
         self.results[idx] = net
         port += 1
@@ -505,7 +506,8 @@ class NetTest:
             if ping.exit_code == 0:
                 net['shared'] = True
                 shared = 'shared'
-        print(f'INCLUDING the {shared} network {provider}://{domain}/[{fabric}]:{port}')
+        ColorPrinter.print(f'INCLUDING the {shared} network {provider}://{domain}/[{fabric}]:{port}', Color.GREEN)
+        ColorPrinter.print(f'INCLUDING the {shared} network {provider}://{domain}/[{fabric}]:{port}', Color.GREEN, file=sys.stderr)
 
 
 class CompileHostfile(Exec):
