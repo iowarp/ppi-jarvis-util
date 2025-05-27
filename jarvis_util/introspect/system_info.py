@@ -464,7 +464,7 @@ class NetTest:
         domain = net['domain']
         fabric = net['fabric']
         # Create the output hostfile
-        ColorPrinter.print(f'Testing {idx + 1}/{self.net_count} {provider}://{domain}/[{fabric}]:{port}', Color.YELLOW)
+        ColorPrinter.print(f'Testing {idx + 1}/{self.net_count} {provider}://{domain}/[{fabric}]:{port}', Color.CYAN)
         out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}')
         os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
         compile = CompileHostfile(LocalExecInfo().hostfile, provider, domain, 
@@ -483,7 +483,7 @@ class NetTest:
         provider = net['provider']
         domain = net['domain']
         fabric = net['fabric']
-        ColorPrinter.print(f'Testing {idx + 1}/{self.net_count} {provider}://{domain}/[{fabric}]:{port}', Color.YELLOW)
+        ColorPrinter.print(f'Testing {idx + 1}/{self.net_count} {provider}://{domain}/[{fabric}]:{port}', Color.CYAN)
         # Create the output hostfile
         out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}')
         os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
