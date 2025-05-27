@@ -498,7 +498,7 @@ class NetTest:
             return
         self.results[idx] = net
         port += 1
-        if not self.local_only:
+        if not self.local_only and domain != 'lo':
             # Test if the network works across hosts
             ping = ChiNetPingTest(provider, domain, port, "all", 
                                   exec_info, net_sleep, hostfile=compile.hostfile, timeout=self.timeout)
