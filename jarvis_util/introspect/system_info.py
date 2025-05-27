@@ -482,6 +482,7 @@ class NetTest:
         provider = net['provider']
         domain = net['domain']
         fabric = net['fabric']
+        ColorPrinter.print(f'Testing {provider}://{domain}/[{fabric}]:{port}', Color.YELLOW)
         # Create the output hostfile
         out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}')
         os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
