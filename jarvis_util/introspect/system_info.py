@@ -426,7 +426,7 @@ class NetTest:
         if exclusions:
             exclusions = exclusions[['provider', 'domain', 'fabric']].drop_duplicates()
             df = df[lambda r: r not in exclusions]
-        print(f'About to test {len(df)} networks')
+        ColorPrinter.print(f'About to test {len(df)} networks', Color.YELLOW)
         port = base_port
         threads = []
         self.results = [None] * len(df)
@@ -440,8 +440,6 @@ class NetTest:
             # thread.join()
             self._async_test(idx, net, port, exec_info, net_sleep)
             port += 2
-            print('\n\n')
-            print('\n\n', file=sys.stderr)
 
         # Wait for all threads to complete    
         for idx in range(len(df)): 
@@ -465,6 +463,7 @@ class NetTest:
         domain = net['domain']
         fabric = net['fabric']
         # Create the output hostfile
+        ColorPrinter.print(f'Testing {provider}://{domain}/[{fabric}]:{port}', Color.YELLOW)
         out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}')
         os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
         compile = CompileHostfile(LocalExecInfo().hostfile, provider, domain, 
