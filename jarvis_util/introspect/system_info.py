@@ -426,7 +426,8 @@ class NetTest:
         if exclusions:
             exclusions = exclusions[['provider', 'domain', 'fabric']].drop_duplicates()
             df = df[lambda r: r not in exclusions]
-        ColorPrinter.print(f'About to test {len(df)} networks', Color.YELLOW)
+        self.net_count = len(df)
+        ColorPrinter.print(f'About to test {self.net_count} networks', Color.YELLOW)
         port = base_port
         threads = []
         self.results = [None] * len(df)
@@ -463,7 +464,7 @@ class NetTest:
         domain = net['domain']
         fabric = net['fabric']
         # Create the output hostfile
-        ColorPrinter.print(f'Testing {provider}://{domain}/[{fabric}]:{port}', Color.YELLOW)
+        ColorPrinter.print(f'Testing {idx + 1}/{self.net_count} {provider}://{domain}/[{fabric}]:{port}', Color.YELLOW)
         out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}')
         os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
         compile = CompileHostfile(LocalExecInfo().hostfile, provider, domain, 
@@ -482,7 +483,7 @@ class NetTest:
         provider = net['provider']
         domain = net['domain']
         fabric = net['fabric']
-        ColorPrinter.print(f'Testing {provider}://{domain}/[{fabric}]:{port}', Color.YELLOW)
+        ColorPrinter.print(f'Testing {idx + 1}/{self.net_count} {provider}://{domain}/[{fabric}]:{port}', Color.YELLOW)
         # Create the output hostfile
         out_hostfile = os.path.join(Path.home(), '.jarvis', 'hostfiles', f'hosts.{idx}')
         os.makedirs(os.path.dirname(out_hostfile), exist_ok=True)
