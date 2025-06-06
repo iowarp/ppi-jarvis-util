@@ -1,0 +1,29 @@
+package:
+  name: jarvis_util
+  version: 0.0.0
+
+source:
+  git_url: https://github.com/iowarp/ppi-jarvis-util
+  git_depth: 1
+
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python
+
+files:
+  - README.md
+
+test:
+  requires:
+    - pyaml
+    - tabulate
+  imports:
+    - jarvis_util
+
+about:
+  home: https://grc.iit.edu/research/projects/iowarp/
+  license: BSD
+  summary: IOWarp Jarvis Utility Conda Package
