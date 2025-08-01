@@ -67,7 +67,8 @@ class Hostfile:
         :return:
         """
         if not os.path.exists(path):
-            raise Exception('hostfile not found')
+            print(f'Warning: hostfile not found: {path}')
+            return self
         self.path = path
         with open(path, 'r', encoding='utf-8') as fp:
             text = fp.read()
