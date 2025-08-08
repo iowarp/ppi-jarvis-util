@@ -1,4 +1,4 @@
-# PPI Jarvis Utilities
+# PPI Jarvis Util
 
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![IoWarp](https://img.shields.io/badge/IoWarp-GitHub-blue.svg)](http://github.com/iowarp)
@@ -11,7 +11,7 @@ A Python library containing various utilities to aid with creating shell scripts
 
 ## Purpose
 
-PPI Jarvis Utilities simplifies the creation of shell scripts within Python by providing comprehensive wrappers for command execution, remote operations, and system management tasks. It enables seamless integration between Python applications and system-level operations.
+PPI Jarvis Util simplifies the creation of shell scripts within Python by providing comprehensive wrappers for command execution, remote operations, and system management tasks. It enables seamless integration between Python applications and system-level operations.
 
 ## Dependencies
 
