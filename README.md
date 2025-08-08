@@ -1,13 +1,22 @@
-# Jarvis UTIL
+# PPI Jarvis Utilities
 
-Jarvis-util is a library which contains various utilities to aid with
-creating shell scripts within Python. This library contains wrappers
-for executing shell commands locally, SSH, SCP, MPI, argument parsing, 
-and various other random utilities.
-
+[![IoWarp](https://img.shields.io/badge/IoWarp-GitHub-blue.svg)](http://github.com/iowarp)
+[![GRC](https://img.shields.io/badge/GRC-Website-blue.svg)](https://grc.iit.edu/)
+[![Python](https://img.shields.io/badge/Python-3.7+-yellow.svg)](https://www.python.org/)
 ![Build](https://github.com/lukemartinlogan/jarvis-util/workflows/GitHub%20Actions/badge.svg)
-
 [![Coverage Status](https://coveralls.io/repos/github/lukemartinlogan/jarvis-util/badge.svg?branch=master)](https://coveralls.io/github/lukemartinlogan/jarvis-util?branch=master)
+
+A Python library containing various utilities to aid with creating shell scripts within Python. This library provides wrappers for executing shell commands locally, SSH, SCP, MPI, argument parsing, and various other utilities.
+
+## Purpose
+
+PPI Jarvis Utilities simplifies the creation of shell scripts within Python by providing comprehensive wrappers for command execution, remote operations, and system management tasks. It enables seamless integration between Python applications and system-level operations.
+
+## Dependencies
+
+### Python Dependencies
+- `pyyaml` - YAML parsing and generation
+- `tabulate` - Pretty-print tabular data
 
 ## Installation
 
@@ -100,6 +109,18 @@ ares-comp-[05-09,11,12-14]-40g
 
 These will be expanded internally by PSSH and MPI.
 
+## Project Structure
+
+- `bin/` - Command-line utilities (pylsblk, pymonitor)
+- `jarvis_util/` - Core Python library
+  - `shell/` - Command execution wrappers (local, SSH, MPI, etc.)
+  - `util/` - Utility modules (argparse, hostfile, logging, etc.)
+  - `serialize/` - File serialization modules (YAML, JSON, INI, etc.)
+  - `introspect/` - System monitoring and information modules
+- `example/` - Usage examples and demonstrations
+- `test/unit/` - Unit tests
+- `ci/` - CI/CD configuration and Docker setup
+
 # Unit tests
 
 We run our unit tests in a docker container, which is located underneath
@@ -116,3 +137,9 @@ without having multiple nodes. To setup unit testing, perform the following:
 # Contributing
 
 We use the Google Python Style guide (pylintrc).
+
+## Support
+
+For issues, questions, or contributions, please:
+- Open an issue on the [GitHub repository](https://github.com/scs-lab/jarvis-util)
+- Contact the Gnosis Research Center at Illinois Institute of Technology
