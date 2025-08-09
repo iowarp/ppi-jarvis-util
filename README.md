@@ -10,7 +10,6 @@
 A Python library containing various utilities to aid with creating shell scripts within Python. This library provides wrappers for executing shell commands locally, SSH, SCP, MPI, argument parsing, and various other utilities.
 
 ## Purpose
-
 PPI Jarvis Util simplifies the creation of shell scripts within Python by providing comprehensive wrappers for command execution, remote operations, and system management tasks. It enables seamless integration between Python applications and system-level operations.
 
 ## Dependencies
@@ -141,7 +140,9 @@ We use the Google Python Style guide (pylintrc).
 
 ## License
 
-PPI Jarvis Util is licensed under the BSD 3-Clause License. You can find the full license text in the source files.
+BSD 3-Clause License
+
+Copyright (c) 2024, Gnosis Research Center, Illinois Institute of Technology. See the [LICENSE](LICENSE) file for details.
 
 ## Support
 
