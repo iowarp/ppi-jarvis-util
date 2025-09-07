@@ -1,0 +1,38 @@
+[project]
+name = "jarvis_util"
+description = "IOWarp Platform Plugins Interface Utility"
+readme = "README.md"
+requires-python = ">=3.7"
+dynamic = ["version"]
+authors = [
+  {name = "Luke Logan", email = "llogan@hawk.iit.edu"},
+  {name = "H. Joe Lee", email = "hyoklee@hdfgroup.org"},  
+]
+classifiers = [
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python",
+  "Topic :: Scientific/Engineering",
+  "Development Status :: 3 - Alpha",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "pyyaml",
+  "tabulate",
+]
+
+[project.urls]
+Documentation = "https://iowarp.github.io/"
+issue-tracker = "https://github.com/iowarp/ppi-jarvis-util/issues"
+source-code = "https://github.com/iowarp/ppi-jarvis-util"
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=42",
+  "setuptools-scm>=7",
+]
+
+[tool.setuptools]
+packages = ["jarvis_util", "jarvis_util.serialize", "jarvis_util.shell", "jarvis_util.util"]
+include-package-data = true
