@@ -4,8 +4,6 @@
 [![IoWarp](https://img.shields.io/badge/IoWarp-GitHub-blue.svg)](http://github.com/iowarp)
 [![GRC](https://img.shields.io/badge/GRC-Website-blue.svg)](https://grc.iit.edu/)
 [![Python](https://img.shields.io/badge/Python-3.7+-yellow.svg)](https://www.python.org/)
-![Build](https://github.com/lukemartinlogan/jarvis-util/workflows/GitHub%20Actions/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/lukemartinlogan/jarvis-util/badge.svg?branch=master)](https://coveralls.io/github/lukemartinlogan/jarvis-util?branch=master)
 
 A Python library containing various utilities to aid with creating shell scripts within Python. This library provides wrappers for executing shell commands locally, SSH, SCP, MPI, argument parsing, and various other utilities.
 
@@ -121,19 +119,6 @@ These will be expanded internally by PSSH and MPI.
 - `test/unit/` - Unit tests
 - `ci/` - CI/CD configuration and Docker setup
 
-# Unit tests
-
-We run our unit tests in a docker container, which is located underneath
-the CI directory. This is because we need to test multi-node functionality,
-without having multiple nodes. To setup unit testing, perform the following:
-
-1. Install Docker
-2. Setup our "ci" container
-3. Run the unit tests
-
-```
-```
-
 # Contributing
 
 We use the Google Python Style guide (pylintrc).
@@ -147,5 +132,5 @@ Copyright (c) 2024, Gnosis Research Center, Illinois Institute of Technology. Se
 ## Support
 
 For issues, questions, or contributions, please:
-- Open an issue on the [GitHub repository](https://github.com/scs-lab/jarvis-util)
+- Open an issue on the [GitHub repository](https://github.com/iowarp/ppi-jarvis-util)
 - Contact the Gnosis Research Center at Illinois Institute of Technology
