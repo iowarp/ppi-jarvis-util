@@ -4,19 +4,16 @@
         {
             "name": "Debug jarvis rg build",
             "type": "python",
-            "python": "/home/llogan/.venv/bin/python",
+            "python": "/mnt/home/Projects/spack/opt/spack/linux-linuxmint22-zen4/gcc-13.3.0/python-venv-1.0-tzvqu62oy27sdmj2dl5y5mrlyeacoval/bin/python",
             "request": "launch",
-            "program": "/home/llogan/.venv/bin/jarvis",
+            "program": "/mnt/home/Projects/spack/opt/spack/linux-linuxmint22-zen4/gcc-13.3.0/py-ppi-jarvis-cd-main-bon4ichnwrob2uov45qndn53oj4r7h5j/bin/jarvis",
             "args": [
-                "ppl",
-                "append",
-                "chimaera_run"
+                "rg",
+                "build"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
-            "env": {
-                "PATH": "/home/llogan/.scspkg/packages/iowarp_runtime/sbin:/home/llogan/.scspkg/packages/iowarp_runtime/bin:/usr/local/cuda/bin:/usr/local/cuda/gds/tools:/home/llogan/Documents/Projects/scspkg/packages/cuda/sbin:/home/llogan/Documents/Projects/scspkg/packages/cuda/bin:/opt/rocm/bin:/home/llogan/Documents/Projects/scspkg/packages/rocm/sbin:/home/llogan/Documents/Projects/scspkg/packages/rocm/bin:/home/llogan/.venv/bin:/home/llogan/.local/bin:/mnt/home/Projects/spack/bin:/home/llogan/.vscode-server/cli/servers/Stable-848b80aeb52026648a8ff9f7c45a9b0a80641e2e/server/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/llogan/.vscode-server/extensions/ms-python.debugpy-2025.8.0-linux-x64/bundled/scripts/noConfigScripts:/home/llogan/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand"
-            }
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }
