@@ -4,9 +4,9 @@
         {
             "name": "Debug jarvis rg build",
             "type": "python",
-            "python": "/mnt/home/Projects/spack/opt/spack/linux-linuxmint22-zen4/gcc-13.3.0/python-venv-1.0-tzvqu62oy27sdmj2dl5y5mrlyeacoval/bin/python",
+            "python": "/home/llogan/.venv/bin/python",
             "request": "launch",
-            "program": "/mnt/home/Projects/spack/opt/spack/linux-linuxmint22-zen4/gcc-13.3.0/py-ppi-jarvis-cd-main-bon4ichnwrob2uov45qndn53oj4r7h5j/bin/jarvis",
+            "program": "/home/llogan/.venv/bin/jarvis",
             "args": [
                 "rg",
                 "build"

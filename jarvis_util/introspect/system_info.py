@@ -400,16 +400,23 @@ class ChiNetPingTest:
     Determine whether a network functions across a set of hosts
     """
     def __init__(self, provider, domain, port, local_only,
-                  exec_info, net_sleep=10, hostfile=None, timeout=None):
+                  exec_info, net_sleep=10, hostfile=None, timeout=5): 
+        netping_timeout = net_sleep + timeout + 1
         self.server = ChiNetPing(provider, domain, port, "server", local_only,
                                  exec_info.mod(exec_async=True),
-                                   hostfile=hostfile)
+                                   hostfile=hostfile, timeout=netping_timeout)
+        print(f'Server timeout: {net_sleep}')
         time.sleep(net_sleep)
+        print(f'Client timeout: {timeout}') 
         self.client = ChiNetPing(provider, domain, port, "client", local_only, 
-                                 exec_info, hostfile=hostfile,
-                                 timeout=timeout)
+                                 exec_info.mod(exec_async=True),
+                                 hostfile=hostfile,
+                                 timeout=timeout)  
+        time.sleep(timeout)
+        print(f'Timeout finished')
+        self.client.wait()
         self.exit_code = self.client.exit_code
-        # Kill('chi_net_ping', exec_info)
+        print(f'Client finished: {self.client.exit_code}')
 
 
 class NetTest:
@@ -418,7 +425,7 @@ class NetTest:
     """
     def __init__(self, fi_info_df, port, exec_info, 
                  exclusions=None, base_port=6040, net_sleep=10, local_only=False, 
-                 server_start_only=False, timeout=15):
+                 server_start_only=False, timeout=5):
         self.local_only = local_only
         self.server_start_only = server_start_only
         self.working = [] 
@@ -432,20 +439,12 @@ class NetTest:
         threads = []
         self.results = [None] * len(df)
         self.timeout = timeout
-        for idx, net in enumerate(df.rows):
-            # Start a new thread for each network test
-            # thread = threading.Thread(target=self._async_test, args=(idx, net, port, exec_info, net_sleep))
-            # threads.append(thread)
-            # thread.start()
-            # port += 2
-            # thread.join()
+        for idx, net in enumerate(df.rows): 
             self._async_test(idx, net, port, exec_info, net_sleep)
             port += 2
 
         # Wait for all threads to complete    
-        for idx in range(len(df)): 
-            # thread = threads[idx]
-            # thread.join()
+        for idx in range(len(df)):  
             result = self.results[idx]
             if result is not None:
                 self.working.append(result)
@@ -491,7 +490,7 @@ class NetTest:
                                   fabric, out_hostfile, env=exec_info.env)
         # Test if the network works locally
         ping = ChiNetPingTest(provider, domain, port, "local", 
-                              exec_info, hostfile=compile.hostfile, timeout=5, net_sleep=8)
+                              exec_info, hostfile=compile.hostfile, timeout=5, net_sleep=5)
         net['shared'] = False
         shared = 'local'
         if ping.exit_code != 0:
@@ -698,7 +697,8 @@ class ResourceGraph:
     def introspect_net(self, exec_info, prune_nets=False, prune_port=4192, net_sleep=10):
         fi_info = FiInfo(exec_info.mod(hide_output=True))
         if prune_nets:
-            fi_info = NetTest(fi_info.df, prune_port, exec_info.mod(hide_output=True), exclusions=self.net, net_sleep=net_sleep)
+            fi_info = NetTest(fi_info.df, prune_port, exec_info.mod(hide_output=True), 
+            exclusions=self.net, net_sleep=net_sleep, server_start_only=True)
         net_df = fi_info.df
         net_df[:, 'speed'] = 0
         net_df.drop_columns(['version', 'type', 'protocol'])

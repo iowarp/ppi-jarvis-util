@@ -51,6 +51,7 @@ class LocalExec(Executable):
         self.last_stderr_size = 0
         self.print_stdout_thread = None
         self.print_stderr_thread = None
+        self.stop_print_worker = False
         self.exit_code = 0
 
         # Managing command execution
@@ -107,9 +108,12 @@ class LocalExec(Executable):
         # self.proc.wait()
         if self.timeout:
             try:
-                self.proc.wait(timeout=self.timeout)
+                time.sleep(self.timeout)
+                self.proc.kill()
+                self.stop_print_worker = True
             except:
                 self.proc.kill()
+                self.stop_print_worker = True
                 pass
         self.join_print_worker()
         self.set_exit_code()
@@ -125,19 +129,19 @@ class LocalExec(Executable):
             return None
 
     def print_stdout_worker(self):
-        while self.proc.poll() is None:
+        while self.proc.poll() is None and not self.stop_print_worker:
             self.print_to_outputs(self.proc.stdout, self.stdout,
                                   self.pipe_stdout_fp, sys.stdout)
-            time.sleep(25 / 1000)
+            time.sleep(1 / 1000)
         self.print_to_outputs(self.proc.stdout, self.stdout,
                               self.pipe_stdout_fp, sys.stdout)
 
     def print_stderr_worker(self):
-        while self.proc.poll() is None:
+        while self.proc.poll() is None and not self.stop_print_worker:
             self.print_to_outputs(self.proc.stderr, self.stderr,
                                   self.pipe_stderr_fp, sys.stderr)
-            
-            time.sleep(25 / 1000)
+
+            time.sleep(1 / 1000)
         self.print_to_outputs(self.proc.stderr, self.stderr,
                               self.pipe_stderr_fp, sys.stderr)
 
